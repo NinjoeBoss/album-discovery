@@ -173,10 +173,20 @@
   .gcard.m1 { outline: 4px solid #f1d35a; } .gcard.m2 { outline: 4px solid var(--medal-silver); } .gcard.m3 { outline: 4px solid #e7b88f; }
 
   /* modal */
-  .scrim { position: fixed; inset: 0; background: rgba(30,27,46,.6); display: none; align-items: flex-start; justify-content: center; padding: 30px 12px; overflow-y: auto; z-index: 20; }
+  .scrim { position: fixed; inset: 0; background: rgba(30,27,46,.6); display: none; align-items: flex-start; justify-content: center;
+    padding: max(30px, calc(env(safe-area-inset-top) + 16px)) 12px max(30px, calc(env(safe-area-inset-bottom) + 16px));
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; z-index: 20; }
+  body.locked { overflow: hidden; }
   .scrim.on { display: flex; }
   .modal { background: #fff; border-radius: 16px; max-width: 620px; width: 100%; padding: 18px; position: relative; }
-  .close { position: absolute; top: 10px; right: 12px; border: 0; background: var(--band); width: 34px; height: 34px; border-radius: 99px; font-size: 18px; cursor: pointer; }
+  .close { position: absolute; top: 10px; right: 12px; z-index: 1; border: 0; background: var(--band); width: 34px; height: 34px; border-radius: 99px; font-size: 18px; cursor: pointer; }
+  /* album popup header: cover on the left, title beside it, tiles and buttons under the title */
+  .mhero { display: grid; grid-template-columns: 200px 1fr; grid-template-areas: "cover head" "cover body"; column-gap: 20px; align-items: start; }
+  .mhero > .cover { grid-area: cover; }
+  .mhead { grid-area: head; padding-right: 40px; }
+  .mhead h2 { margin: 6px 0 2px; font-size: 24px; line-height: 1.15; }
+  .mhead .by { font-size: 16px; color: var(--muted); margin-bottom: 12px; }
+  .mbody { grid-area: body; }
   table.rt { width: 100%; border-collapse: collapse; margin-top: 12px; }
   table.rt td { padding: 9px 8px; border-top: 1px solid var(--band); font-size: 14px; vertical-align: top; }
   table.rt td.n { font-weight: 700; border-radius: 6px; white-space: nowrap; }
@@ -242,6 +252,16 @@
     .queue li { grid-template-columns: 54px 42px 1fr auto; gap: 10px; }
     .queue .thumb { width: 42px; height: 42px; }
     .brand h1 { font-size: 19px; }
+    /* album popup on phones: small cover beside the title, everything else full width below */
+    .scrim { padding-left: 8px; padding-right: 8px; }
+    .modal { padding: 14px; }
+    .mhero { grid-template-columns: 100px 1fr; grid-template-areas: "cover head" "body body"; column-gap: 14px; align-items: center; }
+    .mhead { padding-right: 34px; min-width: 0; }
+    .mhead h2 { font-size: 21px; overflow-wrap: anywhere; }
+    .mhead .by { font-size: 14px; margin-bottom: 0; }
+    .mbody { margin-top: 14px; }
+    .mbody .tile { flex: 1 1 auto; }
+    .mbody .listen .btn { flex: 1; text-align: center; }
   }
 </style>
 </head>
@@ -782,9 +802,9 @@ function openAlbum(row) {
   var r = rankOf(a);
   var soon = a.date && a.date > D.today;
   var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
-  var h = '<button class="close" onclick="closeAlbum()">×</button><div class="hero" style="grid-template-columns:minmax(120px,200px) 1fr">' + img(a, 'cover') +
-    '<div><div class="eyebrow">' + esc(a.season) + ' · #' + a.number + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2 style="font-size:24px">' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div>' +
-    '<div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
+  var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero">' + img(a, 'cover') +
+    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · #' + a.number + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
+    '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : fmt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
     '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div>' +
     '<div class="listen"><a class="btn spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a><a class="btn apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a></div></div></div>';
@@ -812,7 +832,7 @@ function openAlbum(row) {
       '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button></div>';
   }
   document.getElementById('modal').innerHTML = h;
-  document.getElementById('scrim').classList.add('on');
+  openScrim();
 }
 /* ---------- profile ---------- */
 
@@ -820,7 +840,7 @@ function openProfile() {
   var m = rateState.member, h = '<button class="close" onclick="closeAlbum()">×</button>';
   if (!m) {
     document.getElementById('modal').innerHTML = h + notMember().replace('class="card"', 'class=""');
-    document.getElementById('scrim').classList.add('on');
+    openScrim();
     return;
   }
   var due = D.albums.filter(function (a) { return !a.date || a.date <= D.today; });
@@ -857,7 +877,7 @@ function openProfile() {
 
   h += '<div class="actions" style="margin-top:18px"><button class="btn ghost" onclick="signOut()">Sign out</button></div>';
   document.getElementById('modal').innerHTML = h;
-  document.getElementById('scrim').classList.add('on');
+  openScrim();
 }
 
 /* ---------- remove an album ---------- */
@@ -871,7 +891,7 @@ function confirmRemove(row) {
     '<div class="actions"><button class="btn danger solid" id="rmBtn" onclick="doRemove(' + a.row + ')">Remove it</button>' +
     '<button class="btn ghost" onclick="closeAlbum()">Keep it</button></div><div class="msg" id="rmMsg"></div>';
   document.getElementById('modal').innerHTML = h;
-  document.getElementById('scrim').classList.add('on');
+  openScrim();
 }
 function doRemove(row) {
   var btn = document.getElementById('rmBtn'); btn.disabled = true; btn.textContent = 'Removing…';
@@ -889,7 +909,14 @@ function doRemove(row) {
     .removePick(row, false);
 }
 
-function closeAlbum() { document.getElementById('scrim').classList.remove('on'); }
+/* Shows the popup from the top and stops the page behind it from scrolling. */
+function openScrim() {
+  var s = document.getElementById('scrim');
+  s.classList.add('on');
+  s.scrollTop = 0;
+  document.body.classList.add('locked');
+}
+function closeAlbum() { document.getElementById('scrim').classList.remove('on'); document.body.classList.remove('locked'); }
 document.getElementById('scrim').addEventListener('click', function (e) { if (e.target.id === 'scrim') closeAlbum(); });
 
 /* ---------- helpers ---------- */
