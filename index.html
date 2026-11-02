@@ -61,7 +61,8 @@
   .empty-season .t1 { font-size: 18px; margin-bottom: 4px; }
 
   .pill { background: var(--plum2); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; text-transform: uppercase; letter-spacing: .6px; }
-  nav { display: flex; gap: 4px; margin-top: 14px; overflow-x: auto; }
+  nav { display: flex; gap: 4px; margin-top: 14px; overflow-x: auto; position: relative; scrollbar-width: none; }
+  nav::-webkit-scrollbar { display: none; }
   nav button { background: none; border: 0; color: #b9b2cf; font-size: 14px; font-weight: 700; padding: 10px 12px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
   nav button.on { color: #fff; border-bottom-color: var(--gold); }
   main { max-width: 980px; margin: 0 auto; padding: 18px calc(14px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); background: var(--canvas); min-height: calc(100vh - 120px); }
@@ -181,8 +182,8 @@
   .modal { background: #fff; border-radius: 16px; max-width: 620px; width: 100%; padding: 18px; position: relative; }
   .close { position: absolute; top: 10px; right: 12px; z-index: 1; border: 0; background: var(--band); width: 34px; height: 34px; border-radius: 99px; font-size: 18px; cursor: pointer; }
   /* album popup header: cover on the left, title beside it, tiles and buttons under the title */
-  .mhero { display: grid; grid-template-columns: 200px 1fr; grid-template-areas: "cover head" "cover body"; column-gap: 20px; align-items: start; }
-  .mhero > .cover { grid-area: cover; }
+  .mhero { --peek: 62px; display: grid; grid-template-columns: 190px 1fr; grid-template-areas: "cover head" "cover body"; column-gap: calc(20px + var(--peek)); align-items: start; }
+  .mhero > .disc { grid-area: cover; }
   .mhead { grid-area: head; padding-right: 40px; }
   .mhead h2 { margin: 6px 0 2px; font-size: 24px; line-height: 1.15; }
   .mhead .by { font-size: 16px; color: var(--muted); margin-bottom: 12px; }
@@ -235,6 +236,89 @@
   .syncing { position: fixed; top: calc(10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: var(--gold); color: #fff; font-size: 11px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; padding: 4px 12px; border-radius: 99px; z-index: 9; display: none; }
   .syncing.on { display: block; }
 
+  /* ---------- motion and graphics ---------- */
+  /* vinyl record that sits behind the cover in the album popup */
+  .disc { position: relative; }
+  .disc .cover { position: relative; z-index: 1; box-shadow: 0 6px 18px rgba(30,27,46,.28); }
+  .vinyl { position: absolute; top: 4%; left: 4%; width: 92%; height: 92%; z-index: 0; transform: translateX(var(--peek)); }
+  .rec { position: relative; width: 100%; height: 100%; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0 6%, rgba(255,255,255,.16) 11%, transparent 17% 52%, rgba(255,255,255,.1) 57%, transparent 63%),
+      repeating-radial-gradient(circle at 50% 50%, #17141f 0 2px, #26222f 2px 3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.35), inset 0 0 0 2px #0d0b12; }
+  .rec::before { content: ''; position: absolute; inset: 32%; border-radius: 50%;
+    background: radial-gradient(circle at 50% 22%, rgba(255,255,255,.85) 0 7%, transparent 7.5%), rgb(var(--glow));
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.18); }
+  .rec::after { content: ''; position: absolute; left: 50%; top: 50%; width: 6%; height: 6%; margin: -3% 0 0 -3%; border-radius: 50%; background: #f3f1f8; }
+  .vinyl::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.12), transparent 55%); }
+
+  /* album color glow: tint behind the popup header plus a colored halo */
+  .modal { --glow: 108 92 157; isolation: isolate; transition: box-shadow .6s ease; }
+  .modal::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 320px; border-radius: 16px 16px 0 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(180deg, rgb(var(--glow) / .32), rgb(var(--glow) / 0)); opacity: 0; transition: opacity .5s ease; }
+  .modal.album.glowing::before { opacity: 1; }
+  .modal.album.glowing { box-shadow: 0 18px 70px -8px rgb(var(--glow) / .8); }
+
+  /* sliding gold underline under the tabs */
+  .ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--gold); border-radius: 3px 3px 0 0; pointer-events: none; }
+  .ink.ready { transition: transform .38s cubic-bezier(.2,.8,.2,1), width .38s cubic-bezier(.2,.8,.2,1); }
+  nav.inked button.on { border-bottom-color: transparent; }
+
+  /* confetti layer */
+  .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
+
+  /* spinning record while loading */
+  .loading::before { content: ''; display: block; width: 58px; height: 58px; margin: 0 auto 16px; border-radius: 50%;
+    background: radial-gradient(circle, var(--canvas) 0 5%, transparent 5.5%), radial-gradient(circle at 50% 36%, #fff 0 4%, transparent 4.5%),
+      radial-gradient(circle, var(--gold) 0 30%, transparent 30.5%), repeating-radial-gradient(circle, #1e1b2e 0 2px, #2e2a40 2px 3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.25); }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes fadeIn { from { opacity: 0; } }
+  @keyframes fadeOut { to { opacity: 0; } }
+  @keyframes sheetUp { from { opacity: 0; transform: translateY(48px) scale(.97); } }
+  @keyframes sheetDown { to { opacity: 0; transform: translateY(36px) scale(.98); } }
+  @keyframes coverIn { from { opacity: 0; transform: scale(.82) rotate(-5deg); } }
+  @keyframes slideOut { from { transform: translateX(0) rotate(-40deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes grow { from { transform: scaleX(0); } }
+  @keyframes pop { 40% { transform: scale(1.18); } }
+  @keyframes shimmer { 0%, 72% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* pages fade up when you switch tabs; list items follow one after another */
+    main.enter > * { animation: rise .42s cubic-bezier(.2,.8,.2,1) backwards; }
+    main.enter > *:nth-child(2) { animation-delay: .05s; } main.enter > *:nth-child(3) { animation-delay: .1s; }
+    main.enter > *:nth-child(4) { animation-delay: .15s; } main.enter > *:nth-child(n+5) { animation-delay: .2s; }
+    .stagger { animation: rise .45s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(.08s + var(--i, 0) * 40ms); }
+    main.enter .bars .fill { transform-origin: left; animation: grow .9s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(.2s + var(--i, 0) * 70ms); }
+
+    /* popup slides up like an iPhone sheet */
+    .scrim.on { animation: fadeIn .22s ease backwards; }
+    .scrim.on .modal { animation: sheetUp .45s cubic-bezier(.2,.9,.3,1.08) backwards; }
+    .scrim.closing { animation: fadeOut .22s ease forwards; }
+    .scrim.closing .modal { animation: sheetDown .22s ease-in forwards; }
+    .scrim.on .disc .cover { animation: coverIn .5s cubic-bezier(.2,.9,.3,1.15) .08s backwards; }
+    .scrim.on .vinyl { animation: slideOut .8s cubic-bezier(.2,.8,.2,1) .28s backwards; }
+    .rec { animation: spin 2.6s linear infinite; }
+    .loading::before { animation: spin 1.4s linear infinite; }
+
+    /* taps feel physical */
+    .btn, nav button, .seg button, .who button, .close, .res { transition: transform .12s ease; }
+    .btn:active, .seg button:active, .who button:active, .close:active, .res:active { transform: scale(.95); }
+    .board li, .gcard, .queue li.tap, .card[onclick] { transition: transform .15s ease, box-shadow .2s ease; }
+    .board li:active, .gcard:active, .queue li.tap:active, .card[onclick]:active { transform: scale(.98); }
+    .pop { animation: pop .25s ease; }
+
+    /* gold medal shimmer */
+    .board li.m1, .gcard.m1 { position: relative; overflow: hidden; }
+    .board li.m1::after, .gcard.m1::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.6) 50%, transparent 65%); animation: shimmer 5s ease-in-out 1.2s infinite backwards; transform: translateX(-120%); }
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .gcard:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(30,27,46,.14); }
+  }
+
   @media (max-width: 600px) {
     .hero { grid-template-columns: 1fr; }
     .hero .cover { max-width: 300px; margin: 0 auto; }
@@ -255,7 +339,7 @@
     /* album popup on phones: small cover beside the title, everything else full width below */
     .scrim { padding-left: 8px; padding-right: 8px; }
     .modal { padding: 14px; }
-    .mhero { grid-template-columns: 100px 1fr; grid-template-areas: "cover head" "body body"; column-gap: 14px; align-items: center; }
+    .mhero { --peek: 34px; grid-template-columns: 88px 1fr; grid-template-areas: "cover head" "body body"; column-gap: calc(12px + var(--peek)); align-items: center; }
     .mhead { padding-right: 34px; min-width: 0; }
     .mhead h2 { font-size: 21px; overflow-wrap: anywhere; }
     .mhead .by { font-size: 14px; margin-bottom: 0; }
@@ -270,7 +354,8 @@
   <div class="brand"><h1>Album Discovery</h1>
     <select class="season-pick" id="season" onchange="pickSeason(this.value)" aria-label="Season"><option>Season</option></select>
     <button class="avatar" id="avatar" style="display:none" onclick="openProfile()" aria-label="Your profile"></button></div>
-  <nav id="nav">
+  <nav id="nav" class="inked">
+    <span class="ink" id="ink"></span>
     <button data-v="home" class="on">Home</button>
     <button data-v="rate">Rate</button>
     <button data-v="add">Add Album</button>
@@ -468,7 +553,7 @@ function renderHome() {
     '<h2>' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div>' +
     '<div class="tiles">' +
       '<div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
-      '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : fmt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
+      '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
       '<div class="tile"><b>Ratings in</b><span>' + a.count + ' of ' + D.members.length + '</span></div>' +
       '<div class="tile"><b>' + esc(a.season) + '</b><span>Album #' + a.number + '</span></div>' +
     '</div>' +
@@ -499,7 +584,7 @@ function renderHome() {
     h += '<li class="' + (i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')"><div class="rank">' + (i + 1) + '</div>' + img(x, 'thumb') +
       '<div><div class="t1">' + esc(x.album) + '</div><div class="t2" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">' + esc(x.artist) + ' · ' + face(x.pickedBy, 'tiny') + esc(x.pickedBy) +
       (isAll() ? ' <span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
-      '<div class="score"><b>' + fmt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
+      '<div class="score"><b>' + cnt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
   });
   return h + '</ol></div>';
 }
@@ -802,10 +887,10 @@ function openAlbum(row) {
   var r = rankOf(a);
   var soon = a.date && a.date > D.today;
   var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
-  var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero">' + img(a, 'cover') +
+  var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero"><div class="disc"><div class="vinyl"><div class="rec"></div></div>' + img(a, 'cover') + '</div>' +
     '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · #' + a.number + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
     '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
-    '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : fmt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
+    '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
     '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div>' +
     '<div class="listen"><a class="btn spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a><a class="btn apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a></div></div></div>';
 
@@ -832,7 +917,9 @@ function openAlbum(row) {
       '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button></div>';
   }
   document.getElementById('modal').innerHTML = h;
-  openScrim();
+  openScrim(true);
+  albumGlow(a);
+  runCounts(document.getElementById('modal'));
 }
 /* ---------- profile ---------- */
 
@@ -910,14 +997,148 @@ function doRemove(row) {
 }
 
 /* Shows the popup from the top and stops the page behind it from scrolling. */
-function openScrim() {
-  var s = document.getElementById('scrim');
+var closeTimer = null;
+function openScrim(isAlbum) {
+  var s = document.getElementById('scrim'), m = document.getElementById('modal');
+  clearTimeout(closeTimer);
+  s.classList.remove('closing');
+  m.classList.toggle('album', !!isAlbum);
+  if (!isAlbum) m.classList.remove('glowing');
   s.classList.add('on');
   s.scrollTop = 0;
   document.body.classList.add('locked');
 }
-function closeAlbum() { document.getElementById('scrim').classList.remove('on'); document.body.classList.remove('locked'); }
+/* Popup slides away, then hides. */
+function closeAlbum() {
+  var s = document.getElementById('scrim');
+  document.body.classList.remove('locked');
+  if (!s.classList.contains('on')) return;
+  if (calm()) { s.classList.remove('on'); return; }
+  s.classList.add('closing');
+  clearTimeout(closeTimer);
+  closeTimer = setTimeout(function () { s.classList.remove('on', 'closing'); }, 220);
+}
 document.getElementById('scrim').addEventListener('click', function (e) { if (e.target.id === 'scrim') closeAlbum(); });
+
+
+/* ---------- motion helpers ---------- */
+
+function calm() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+/* A number that counts up when it first appears. */
+function cnt(v) { return '<span class="cnt" data-v="' + v + '">' + fmt(v) + '</span>'; }
+function runCounts(root) {
+  if (calm()) return;
+  Array.prototype.forEach.call(root.querySelectorAll('.cnt'), function (el, i) {
+    var v = Number(el.dataset.v); if (isNaN(v)) return;
+    var start = null, delay = 120 + Math.min(i, 14) * 45, dur = 750;
+    el.textContent = (0).toFixed(2);
+    requestAnimationFrame(function f(t) {
+      if (start === null) start = t + delay;
+      var p = Math.min(1, Math.max(0, (t - start) / dur)), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = (v * e).toFixed(2);
+      if (p < 1) requestAnimationFrame(f);
+    });
+  });
+}
+
+/* Slides the gold underline to the current tab. */
+var inkReady = false;
+function moveInk() {
+  var nav = document.getElementById('nav'), ink = document.getElementById('ink'), b = nav && nav.querySelector('button.on');
+  if (!ink || !b || !b.offsetWidth) return;
+  if (!inkReady) ink.classList.remove('ready');
+  ink.style.width = b.offsetWidth + 'px';
+  ink.style.transform = 'translateX(' + b.offsetLeft + 'px)';
+  if (!inkReady) { void ink.offsetWidth; ink.classList.add('ready'); inkReady = true; }
+  if (nav.scrollWidth > nav.clientWidth) {
+    var left = b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2;
+    try { nav.scrollTo({ left: left, behavior: calm() ? 'auto' : 'smooth' }); } catch (e) { nav.scrollLeft = left; }
+  }
+}
+window.addEventListener('resize', function () { inkReady = false; moveInk(); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { inkReady = false; moveInk(); });
+
+/* Album color glow: reads the main color of a tiny copy of the cover art. Falls back to the picker's color. */
+var ART = null;
+function hexRgb(h) { h = String(h || '').replace('#', ''); if (h.length !== 6) return '108 92 157'; return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }).join(' '); }
+function pickColor(d) {
+  var r = 0, g = 0, b = 0, w = 0, ar = 0, ag = 0, ab = 0, n = 0;
+  for (var i = 0; i < d.length; i += 4) {
+    var R = d[i], G = d[i + 1], B = d[i + 2];
+    ar += R; ag += G; ab += B; n++;
+    var mx = Math.max(R, G, B), mn = Math.min(R, G, B), l = (mx + mn) / 510;
+    var sat = mx === mn ? 0 : (mx - mn) / (255 - Math.abs(mx + mn - 255));
+    var wt = sat * sat * Math.max(0, 1 - Math.abs(l - .5) * 1.6);
+    r += R * wt; g += G * wt; b += B * wt; w += wt;
+  }
+  var c = w > n * .02 ? [r / w, g / w, b / w] : [ar / n, ag / n, ab / n];
+  var luma = .299 * c[0] + .587 * c[1] + .114 * c[2];
+  if (luma < 70) c = c.map(function (x) { return x + (255 - x) * .3; }); // lift very dark covers so the glow shows
+  return c.map(function (x) { return Math.round(x); }).join(' ');
+}
+function artColor(a, cb) {
+  if (!ART) { try { ART = JSON.parse(storeGet('ad.artColors') || '{}'); } catch (e) { ART = {}; } }
+  var fallback = hexRgb(color(a.pickedBy));
+  if (!a.cover) { cb(fallback); return; }
+  if (ART[a.cover]) { cb(ART[a.cover]); return; }
+  var small = a.cover.replace(/\/\d+x\d+[a-z-]*\.(jpg|jpeg|png|webp)$/i, '/40x40bb.jpg');
+  var im = new Image();
+  im.crossOrigin = 'anonymous';
+  im.onload = function () {
+    try {
+      var c = document.createElement('canvas'); c.width = c.height = 24;
+      var x = c.getContext('2d'); x.drawImage(im, 0, 0, 24, 24);
+      var rgb = pickColor(x.getImageData(0, 0, 24, 24).data);
+      ART[a.cover] = rgb; storeSet('ad.artColors', JSON.stringify(ART));
+      cb(rgb);
+    } catch (e) { cb(fallback); }
+  };
+  im.onerror = function () { cb(fallback); };
+  im.src = small;
+}
+function albumGlow(a) {
+  var m = document.getElementById('modal');
+  m.dataset.row = a.row;
+  m.classList.remove('glowing');
+  m.style.setProperty('--glow', hexRgb(color(a.pickedBy)));
+  artColor(a, function (rgb) {
+    if (String(m.dataset.row) !== String(a.row)) return; // a different album opened meanwhile
+    m.style.setProperty('--glow', rgb);
+    requestAnimationFrame(function () { m.classList.add('glowing'); });
+  });
+}
+
+/* Confetti burst, from an element if given, otherwise from the middle of the screen. */
+function confetti(from) {
+  if (calm()) return;
+  var W = window.innerWidth, H = window.innerHeight, dpr = window.devicePixelRatio || 1;
+  var c = document.createElement('canvas'); c.className = 'confetti'; c.width = W * dpr; c.height = H * dpr;
+  var x = c.getContext('2d'); x.scale(dpr, dpr); document.body.appendChild(c);
+  var ox = W / 2, oy = H * .55;
+  if (from && from.getBoundingClientRect) { var rc = from.getBoundingClientRect(); if (rc.width) { ox = rc.left + rc.width / 2; oy = Math.min(H - 20, Math.max(40, rc.top)); } }
+  var cols = ['#d99a09', '#ffec99', '#6c5c9d', '#3d3557', '#1db954', '#fa2d48'];
+  for (var k in COLORS) cols.push(COLORS[k]);
+  var P = [];
+  for (var i = 0; i < 150; i++) {
+    P.push({ x: ox + (Math.random() - .5) * 40, y: oy, vx: (Math.random() - .5) * 13, vy: -(Math.random() * 13 + 6),
+      r: Math.random() * 6 + 5, a: Math.random() * 6.28, va: (Math.random() - .5) * .35, c: cols[i % cols.length], round: Math.random() < .3 });
+  }
+  var t0 = null;
+  requestAnimationFrame(function f(t) {
+    if (t0 === null) t0 = t;
+    var e = t - t0;
+    x.clearRect(0, 0, W, H);
+    x.globalAlpha = Math.max(0, 1 - Math.max(0, e - 1400) / 600);
+    P.forEach(function (p) {
+      p.vy += .33; p.vx *= .985; p.vy *= .995; p.x += p.vx; p.y += p.vy; p.a += p.va;
+      x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c;
+      if (p.round) { x.beginPath(); x.arc(0, 0, p.r / 2.4, 0, 6.28); x.fill(); }
+      else x.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2 * (0.6 + Math.abs(Math.sin(p.a * 2))));
+      x.restore();
+    });
+    if (e < 2000) requestAnimationFrame(f); else c.remove();
+  });
+}
 
 /* ---------- helpers ---------- */
 
@@ -942,16 +1163,34 @@ function pairStats(list) {
 
 /* ---------- actions ---------- */
 
+var shownView = null;
 function show(v) {
-  view = v;
+  var entering = v !== shownView;
+  view = v; shownView = v;
   Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
   var app = document.getElementById('app');
+  app.classList.remove('enter');
   app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats }[v]();
-  window.scrollTo(0, 0);
+  moveInk();
+  if (entering) {
+    window.scrollTo(0, 0);
+    if (!calm()) {
+      Array.prototype.forEach.call(app.querySelectorAll('.board li, .grid .gcard, .mgrid > .card, .bars .row, .queue li'), function (el, i) {
+        el.style.setProperty('--i', Math.min(i, 14)); el.classList.add('stagger');
+      });
+      app.classList.add('enter');
+      runCounts(app);
+    }
+  }
 }
 function goRate(row) { rateState.row = Number(row); loadMine(); show('rate'); }
 function pickAlbum(row) { rateState.row = Number(row); loadMine(); show('rate'); }
-function slide(v) { rateState.score = Number(v); document.getElementById('scoreBig').textContent = num(Number(v)); document.getElementById('scoreStars').textContent = stars(Number(v)); }
+function slide(v) {
+  rateState.score = Number(v);
+  document.getElementById('scoreBig').textContent = num(Number(v));
+  var st = document.getElementById('scoreStars'), next = stars(Number(v));
+  if (st.textContent !== next) { st.textContent = next; st.classList.remove('pop'); void st.offsetWidth; st.classList.add('pop'); }
+}
 function typed(v) { rateState.comment = v; document.getElementById('count').textContent = v.length + ' / ' + (D.commentMax || 200); }
 function save() {
   var msg = document.getElementById('msg');
@@ -964,6 +1203,7 @@ function save() {
       prep(data); loadMine(); show('rate');
       var m = document.getElementById('msg'); m.className = 'msg ok';
       m.textContent = 'Saved! ' + who + ' rated ' + a.album + ' ' + num(score) + ' (' + stars(score) + ').';
+      confetti(document.getElementById('saveBtn'));
     })
     .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Submit rating'; msg.className = 'msg err'; msg.textContent = e.message || 'Something went wrong.'; })
     .submitRating(rateState.row, rateState.member, rateState.score, rateState.fav, rateState.least, rateState.comment);
@@ -1002,6 +1242,7 @@ function savePick() {
         (res.season ? ' (' + esc(res.season) + ')' : '') + '.';
       addState.picked = null; addState.results = null; addState.query = ''; addState.changeRow = null;
       show('add');
+      confetti();
     })
     .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Try again'; addError(e.message || 'Something went wrong.'); })
     .submitPick(who, p.album, p.artist, p.year, p.cover, addState.changeRow);
