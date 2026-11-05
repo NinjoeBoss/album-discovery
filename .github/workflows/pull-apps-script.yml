@@ -64,6 +64,10 @@ jobs:
           if [ -n "$found" ]; then
             echo "These files contain email addresses, so nothing was committed:"
             echo "$found"
+            echo "Where they are (addresses hidden):"
+            for f in $found; do
+              grep -nEi -B3 -A3 '[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}' "$f" | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<email hidden>/g'
+            done
             exit 1
           fi
 
