@@ -344,12 +344,14 @@
   .modal.album.glowing::before { opacity: 1; }
   .modal.album.glowing { box-shadow: 0 18px 70px -8px rgb(var(--glow) / .8); }
 
-  /* swipe between tabs: the page follows your finger, then slides in from the side */
+  /* swipe between tabs: the next tab rides in beside the current one while you drag (like a phone carousel) */
   body { overflow-x: hidden; overflow-x: clip; }
-  main.dragging { will-change: transform; }
-  main.swipe-go { transition: transform .18s ease-in, opacity .18s ease-in; }
-  main.swipe-back { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
-  main.swipe-in { transition: transform .34s cubic-bezier(.2,.8,.2,1), opacity .25s ease; }
+  main.dragging, .peek > main { will-change: transform; backface-visibility: hidden; }
+  main.dragging *, .peek * { transition: none !important; }
+  main.dragging :active { transform: none !important; }
+  .peek { position: fixed; left: 0; right: 0; bottom: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+  .peek > main { min-height: 100%; }
+  .peek > main > * { animation: none !important; }
 
   /* sliding gold underline under the tabs */
   .ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--gold); border-radius: 3px 3px 0 0; pointer-events: none; }
@@ -1352,7 +1354,7 @@ function pairStats(list) {
 /* ---------- actions ---------- */
 
 var shownView = null;
-function show(v) {
+function show(v, quiet) { // quiet: a swipe already slid the page in, so skip the entrance animations
   var entering = v !== shownView;
   view = v; shownView = v;
   Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
@@ -1362,7 +1364,7 @@ function show(v) {
   moveInk();
   if (entering) {
     window.scrollTo(0, 0);
-    if (!calm()) {
+    if (!calm() && !quiet) {
       Array.prototype.forEach.call(app.querySelectorAll('.board li, .grid .gcard, .mgrid > .card, .bars .row, .queue li'), function (el, i) {
         el.style.setProperty('--i', Math.min(i, 14)); el.classList.add('stagger');
       });
@@ -1439,69 +1441,117 @@ function savePick() {
 document.getElementById('nav').addEventListener('click', function (e) { if (e.target.dataset.v && D) show(e.target.dataset.v); });
 
 /* Swipe left or right anywhere on the page to move to the next or previous tab.
+   While you drag, the next tab is drawn beside the current one and both move with your finger, and the gold
+   underline slides between the two tab names. Let go past about a third of the screen, or flick, and it finishes
+   the slide at your finger's speed; otherwise it springs back.
    Ignored on the score slider, a text box you're typing in, sideways scrolling strips, while a popup is open, and when signed out. */
 (function () {
-  var app = document.getElementById('app'), nav = document.getElementById('nav');
-  var t = null; // current touch: x0, y0, time, dx, mode ('?', 'x' or 'y')
+  var app = document.getElementById('app'), nav = document.getElementById('nav'), ink = document.getElementById('ink');
+  var VIEWS = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats };
+  var EASE = 'cubic-bezier(.22,.61,.36,1)';
+  var t = null, busy = false, peek = null, peekV = null, raf = 0;
   function tabs() { return Array.prototype.map.call(nav.querySelectorAll('button[data-v]'), function (b) { return b.dataset.v; }); }
+  function btn(v) { return nav.querySelector('button[data-v="' + v + '"]'); }
   function blocked(el) {
     for (; el && el !== app; el = el.parentElement) {
       if (el.type === 'range' || el.isContentEditable) return true; // score slider drags sideways itself
-      if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el === document.activeElement) return true; // typing: let the caret move
+      if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el === document.activeElement) return true; // typing
       if (el.scrollWidth > el.clientWidth + 2) { var ox = getComputedStyle(el).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
     }
     return false;
   }
-  function clean() { app.classList.remove('dragging', 'swipe-go', 'swipe-back', 'swipe-in'); app.style.transform = ''; app.style.opacity = ''; }
-  function moveTo(v, dir) { // dir 1 = next tab (page leaves to the left), -1 = previous
-    if (calm()) { clean(); show(v); return; }
-    var w = window.innerWidth;
-    app.classList.remove('dragging'); app.classList.add('swipe-go');
-    app.style.transform = 'translateX(' + (-dir * w * 0.45) + 'px)'; app.style.opacity = '0';
-    setTimeout(function () {
-      app.classList.remove('swipe-go');
-      app.style.transform = 'translateX(' + (dir * w * 0.3) + 'px)';
-      try { show(v); } catch (err) { clean(); throw err; }
-      void app.offsetWidth;
-      app.classList.add('swipe-in'); app.style.transform = ''; app.style.opacity = '';
-      setTimeout(clean, 360);
-    }, 180);
+  function setX(el, x, ms) {
+    el.style.transition = ms ? 'transform ' + ms + 'ms ' + EASE : 'none';
+    el.style.transform = x ? 'translate3d(' + x + 'px,0,0)' : '';
   }
+  /* The tab you're heading to, drawn read only beside the page (ids stripped so nothing clashes). */
+  function makePeek(v) {
+    if (peekV === v) return;
+    dropPeek();
+    var html; try { html = VIEWS[v](); } catch (e) { return; }
+    peek = document.createElement('div'); peek.className = 'peek';
+    peek.style.top = Math.max(0, document.querySelector('header').getBoundingClientRect().bottom) + 'px';
+    peek.innerHTML = '<main>' + html.replace(/\s(id|for|onclick|oninput|onchange)="[^"]*"/g, '') + '</main>';
+    document.body.appendChild(peek); peekV = v;
+  }
+  function dropPeek() { if (peek) peek.remove(); peek = null; peekV = null; }
+  /* Gold underline sits part way between the current tab name and the next one. */
+  function inkAt(from, to, f, ms) {
+    var a = btn(from), b = to ? btn(to) : a; if (!ink || !a || !b) return;
+    var x = a.offsetLeft + (b.offsetLeft - a.offsetLeft) * f, w = a.offsetWidth + (b.offsetWidth - a.offsetWidth) * f;
+    ink.style.transition = ms ? 'transform ' + ms + 'ms ' + EASE + ', width ' + ms + 'ms ' + EASE : 'none';
+    ink.style.transform = 'translateX(' + x + 'px)'; ink.style.width = w + 'px';
+  }
+  function draw() {
+    raf = 0; if (!t) return;
+    var W = window.innerWidth, dx = t.dx, list = tabs(), i = list.indexOf(view), j = i + (dx < 0 ? 1 : -1);
+    if (dx === 0 || j < 0 || j >= list.length) { // first or last tab: stretch a little, nothing beside it
+      dropPeek(); setX(app, dx / (1 + Math.abs(dx) / 120) * 0.6); inkAt(view, null, 0); t.target = null; return;
+    }
+    makePeek(list[j]); t.target = list[j];
+    setX(app, dx);
+    if (peek) setX(peek, dx + (dx < 0 ? W : -W));
+    inkAt(view, list[j], Math.min(1, Math.abs(dx) / W));
+  }
+  function finish(cb, ms) { setTimeout(function () { cb(); busy = false; }, ms + 20); }
   app.addEventListener('touchstart', function (e) {
     t = null;
-    if (!D || e.touches.length !== 1 || nav.style.display === 'none') return;
+    if (busy || !D || e.touches.length !== 1 || nav.style.display === 'none') return;
     if (document.getElementById('scrim').classList.contains('on') || blocked(e.target)) return;
     var p = e.touches[0];
-    t = { x0: p.clientX, y0: p.clientY, time: Date.now(), dx: 0, mode: '?' };
+    t = { x0: p.clientX, y0: p.clientY, dx: 0, mode: '?', pts: [{ x: p.clientX, at: e.timeStamp }] };
   }, { passive: true });
   app.addEventListener('touchmove', function (e) {
     if (!t) return;
-    if (e.touches.length !== 1) { if (t.mode === 'x') { app.classList.add('swipe-back'); app.style.transform = ''; setTimeout(clean, 300); } t = null; return; }
     var p = e.touches[0], dx = p.clientX - t.x0, dy = p.clientY - t.y0;
+    if (e.touches.length !== 1) { cancel(); return; }
     if (t.mode === '?') {
-      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-      t.mode = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      t.mode = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
       if (t.mode === 'y') { t = null; return; }
-      t.x0 = p.clientX; dx = 0; // start following from here so the page doesn't jump
-      clean(); app.classList.add('dragging');
+      app.classList.add('dragging');
     }
-    e.preventDefault(); // stop the page scrolling up and down mid swipe
-    var list = tabs(), i = list.indexOf(view);
-    var atEdge = (dx > 0 && i <= 0) || (dx < 0 && i >= list.length - 1);
+    e.preventDefault(); // no up and down scrolling mid swipe
     t.dx = dx;
-    if (!calm()) app.style.transform = 'translateX(' + (atEdge ? dx * 0.2 : dx) + 'px)';
+    t.pts.push({ x: p.clientX, at: e.timeStamp }); if (t.pts.length > 6) t.pts.shift();
+    if (!calm() && !raf) raf = requestAnimationFrame(draw);
   }, { passive: false });
+  function speed() { // px per ms over the last ~100ms, so a flick at the end counts even after a slow drag
+    var pts = t.pts, last = pts[pts.length - 1], k = pts.length - 1;
+    while (k > 0 && last.at - pts[k - 1].at < 100) k--;
+    var dt = last.at - pts[k].at; return dt > 0 ? (last.x - pts[k].x) / dt : 0;
+  }
+  function cancel() {
+    if (!t || t.mode !== 'x') { t = null; return; }
+    var W = window.innerWidth, ms = 260, dir = t.dx < 0 ? 1 : -1;
+    t = null; busy = true; if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    setX(app, 0, ms); if (peek) setX(peek, dir * W, ms);
+    inkAt(view, null, 0, ms);
+    finish(function () { dropPeek(); app.classList.remove('dragging'); setX(app, 0); app.style.transition = ''; ink.style.transition = ''; moveInk(); }, ms);
+  }
   function end() {
     if (!t || t.mode !== 'x') { t = null; return; }
-    var dx = t.dx, speed = Math.abs(dx) / Math.max(1, Date.now() - t.time); t = null;
-    var list = tabs(), i = list.indexOf(view), dir = dx < 0 ? 1 : -1, j = i + dir;
-    var far = Math.abs(dx) > Math.min(110, window.innerWidth * 0.25) || (speed > 0.45 && Math.abs(dx) > 40);
-    if (far && i !== -1 && j >= 0 && j < list.length) { moveTo(list[j], dir); return; }
-    app.classList.remove('dragging'); app.classList.add('swipe-back'); app.style.transform = '';
-    setTimeout(clean, 300);
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (!calm()) draw();
+    var W = window.innerWidth, dx = t.dx, v = speed(), target = t.target;
+    if (calm()) { t = null; app.classList.remove('dragging'); if (Math.abs(dx) > 80) { var l = tabs(), j = l.indexOf(view) + (dx < 0 ? 1 : -1); if (j >= 0 && j < l.length) show(l[j]); } return; }
+    var go = target && peek && (Math.abs(dx) > W * 0.33 || (Math.abs(v) > 0.3 && (v < 0) === (dx < 0)));
+    if (!go) { cancel(); return; }
+    t = null; busy = true;
+    var left = W - Math.abs(dx), ms = Math.round(Math.max(170, Math.min(330, left / Math.max(Math.abs(v), 1.6))));
+    var dir = dx < 0 ? 1 : -1;
+    setX(app, -dir * W, ms); setX(peek, 0, ms);
+    inkAt(view, target, 1, ms);
+    finish(function () {
+      // the peek already shows the new tab exactly where it will be, so swapping in the real one is invisible
+      app.classList.remove('dragging'); setX(app, 0); app.style.transition = '';
+      show(target, true);
+      dropPeek();
+      ink.style.transition = ''; inkReady = false; moveInk();
+    }, ms);
   }
   app.addEventListener('touchend', end);
-  app.addEventListener('touchcancel', end);
+  app.addEventListener('touchcancel', cancel);
 })();
 
 /* ---------- talking to the sheet (Apps Script API) ---------- */
