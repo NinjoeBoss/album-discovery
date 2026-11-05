@@ -344,6 +344,13 @@
   .modal.album.glowing::before { opacity: 1; }
   .modal.album.glowing { box-shadow: 0 18px 70px -8px rgb(var(--glow) / .8); }
 
+  /* swipe between tabs: the page follows your finger, then slides in from the side */
+  body { overflow-x: hidden; overflow-x: clip; }
+  main.dragging { will-change: transform; }
+  main.swipe-go { transition: transform .18s ease-in, opacity .18s ease-in; }
+  main.swipe-back { transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  main.swipe-in { transition: transform .34s cubic-bezier(.2,.8,.2,1), opacity .25s ease; }
+
   /* sliding gold underline under the tabs */
   .ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--gold); border-radius: 3px 3px 0 0; pointer-events: none; }
   .ink.ready { transition: transform .38s cubic-bezier(.2,.8,.2,1), width .38s cubic-bezier(.2,.8,.2,1); }
@@ -1430,6 +1437,72 @@ function savePick() {
 }
 
 document.getElementById('nav').addEventListener('click', function (e) { if (e.target.dataset.v && D) show(e.target.dataset.v); });
+
+/* Swipe left or right anywhere on the page to move to the next or previous tab.
+   Ignored on the score slider, a text box you're typing in, sideways scrolling strips, while a popup is open, and when signed out. */
+(function () {
+  var app = document.getElementById('app'), nav = document.getElementById('nav');
+  var t = null; // current touch: x0, y0, time, dx, mode ('?', 'x' or 'y')
+  function tabs() { return Array.prototype.map.call(nav.querySelectorAll('button[data-v]'), function (b) { return b.dataset.v; }); }
+  function blocked(el) {
+    for (; el && el !== app; el = el.parentElement) {
+      if (el.type === 'range' || el.isContentEditable) return true; // score slider drags sideways itself
+      if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el === document.activeElement) return true; // typing: let the caret move
+      if (el.scrollWidth > el.clientWidth + 2) { var ox = getComputedStyle(el).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
+    }
+    return false;
+  }
+  function clean() { app.classList.remove('dragging', 'swipe-go', 'swipe-back', 'swipe-in'); app.style.transform = ''; app.style.opacity = ''; }
+  function moveTo(v, dir) { // dir 1 = next tab (page leaves to the left), -1 = previous
+    if (calm()) { clean(); show(v); return; }
+    var w = window.innerWidth;
+    app.classList.remove('dragging'); app.classList.add('swipe-go');
+    app.style.transform = 'translateX(' + (-dir * w * 0.45) + 'px)'; app.style.opacity = '0';
+    setTimeout(function () {
+      app.classList.remove('swipe-go');
+      app.style.transform = 'translateX(' + (dir * w * 0.3) + 'px)';
+      try { show(v); } catch (err) { clean(); throw err; }
+      void app.offsetWidth;
+      app.classList.add('swipe-in'); app.style.transform = ''; app.style.opacity = '';
+      setTimeout(clean, 360);
+    }, 180);
+  }
+  app.addEventListener('touchstart', function (e) {
+    t = null;
+    if (!D || e.touches.length !== 1 || nav.style.display === 'none') return;
+    if (document.getElementById('scrim').classList.contains('on') || blocked(e.target)) return;
+    var p = e.touches[0];
+    t = { x0: p.clientX, y0: p.clientY, time: Date.now(), dx: 0, mode: '?' };
+  }, { passive: true });
+  app.addEventListener('touchmove', function (e) {
+    if (!t) return;
+    if (e.touches.length !== 1) { if (t.mode === 'x') { app.classList.add('swipe-back'); app.style.transform = ''; setTimeout(clean, 300); } t = null; return; }
+    var p = e.touches[0], dx = p.clientX - t.x0, dy = p.clientY - t.y0;
+    if (t.mode === '?') {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      t.mode = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
+      if (t.mode === 'y') { t = null; return; }
+      t.x0 = p.clientX; dx = 0; // start following from here so the page doesn't jump
+      clean(); app.classList.add('dragging');
+    }
+    e.preventDefault(); // stop the page scrolling up and down mid swipe
+    var list = tabs(), i = list.indexOf(view);
+    var atEdge = (dx > 0 && i <= 0) || (dx < 0 && i >= list.length - 1);
+    t.dx = dx;
+    if (!calm()) app.style.transform = 'translateX(' + (atEdge ? dx * 0.2 : dx) + 'px)';
+  }, { passive: false });
+  function end() {
+    if (!t || t.mode !== 'x') { t = null; return; }
+    var dx = t.dx, speed = Math.abs(dx) / Math.max(1, Date.now() - t.time); t = null;
+    var list = tabs(), i = list.indexOf(view), dir = dx < 0 ? 1 : -1, j = i + dir;
+    var far = Math.abs(dx) > Math.min(110, window.innerWidth * 0.25) || (speed > 0.45 && Math.abs(dx) > 40);
+    if (far && i !== -1 && j >= 0 && j < list.length) { moveTo(list[j], dir); return; }
+    app.classList.remove('dragging'); app.classList.add('swipe-back'); app.style.transform = '';
+    setTimeout(clean, 300);
+  }
+  app.addEventListener('touchend', end);
+  app.addEventListener('touchcancel', end);
+})();
 
 /* ---------- talking to the sheet (Apps Script API) ---------- */
 
