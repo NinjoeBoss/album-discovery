@@ -790,8 +790,7 @@ function renderRate() {
     if (!list.length) return;
     h += '<optgroup label="' + esc(sn) + '">';
     list.forEach(function (x) {
-      var mine = x.ratings[rateState.member] != null ? '  (you: ' + num(x.ratings[rateState.member]) + ')' : '';
-      h += '<option value="' + x.row + '"' + (x.row === rateState.row ? ' selected' : '') + '>' + esc(fmtDate(x.date) + ' · ' + x.album + ' · ' + x.artist + mine) + '</option>';
+      h += '<option value="' + x.row + '"' + (x.row === rateState.row ? ' selected' : '') + '>' + esc(fmtDate(x.date) + ' · ' + x.album + ' · ' + x.artist) + '</option>';
     });
     h += '</optgroup>';
   });
