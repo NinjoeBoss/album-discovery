@@ -60,7 +60,8 @@ jobs:
           { echo "# Every file in the live Apps Script project (pulled $(date -u +%Y-%m-%d))"
             echo "# Members* and Avatars* exist in Apps Script but are kept out of this public repo."
             cat /tmp/all-files.txt; } > apps-script/live/FILES.txt
-          found=$(grep -lEi '[A-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail|icloud)\.com' apps-script/live/* | grep -v FILES.txt || true)
+          # email@gmail.com is the placeholder in a comment, not a real address.
+          found=$(for f in apps-script/live/*; do sed 's/email@gmail\.com//Ig' "$f" | grep -qEi '[A-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail|icloud)\.com' && echo "$f"; done | grep -v FILES.txt || true)
           if [ -n "$found" ]; then
             echo "These files contain email addresses, so nothing was committed:"
             echo "$found"
