@@ -96,8 +96,10 @@
   nav button { background: none; border: 0; color: #b9b2cf; font-size: 14px; font-weight: 700; padding: 10px 12px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
   nav button.on { color: #fff; border-bottom-color: var(--gold); }
   main { max-width: 980px; margin: 0 auto; padding: 18px calc(14px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); background: var(--canvas); min-height: calc(100vh - 120px); }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
-  .section-title { font-size: 12px; font-weight: 900; color: var(--plum2); text-transform: uppercase; letter-spacing: 1px; margin: 22px 4px 10px; }
+  .card { background: var(--card); border: 0; border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: 0 1px 3px var(--shadow); }
+  /* one small uppercase label style everywhere */
+  .section-title, .eyebrow, .tile b, .field label, .stat .lbl { font-size: 11px; font-weight: 900; color: var(--plum2); text-transform: uppercase; letter-spacing: 1px; }
+  .section-title { margin: 26px 4px 10px; }
   .muted { color: var(--muted); }
   .stars { color: var(--gold); letter-spacing: 1px; }
   .loading { text-align: center; padding: 80px 20px; color: var(--muted); font-weight: 500; }
@@ -105,12 +107,31 @@
   /* hero */
   .hero { display: grid; grid-template-columns: minmax(140px, 260px) 1fr; gap: 20px; align-items: center; }
   .cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--band); display: block; }
-  .eyebrow { font-size: 11px; font-weight: 900; color: var(--plum2); letter-spacing: 1.2px; text-transform: uppercase; }
   .hero h2 { margin: 6px 0 2px; font-size: 30px; line-height: 1.1; }
-  .hero .by { font-size: 16px; color: var(--muted); margin-bottom: 14px; }
+  .hero .by { font-size: 16px; color: var(--muted); }
+  .htop { display: flex; gap: 16px; align-items: flex-start; }
+  .htop > div:first-child { flex: 1; min-width: 0; }
+  .bigavg { text-align: right; flex: none; padding-top: 18px; }
+  .bigavg b { display: block; font-size: 34px; font-weight: 900; line-height: 1; }
+  .bigavg .stars { font-size: 14px; display: block; margin-top: 3px; }
+  .bigavg small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .meta { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--muted); }
+  .meta .mini { margin: 0; width: 24px; height: 24px; }
+  .meta b { color: var(--ink); }
+  .faces { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .faces .row5 { display: flex; gap: 6px; }
+  .faces .mini { margin: 0; width: 32px; height: 32px; box-shadow: 0 0 0 2px var(--card); }
+  .faces .mini.off { opacity: .3; filter: grayscale(1); }
+  .faces .t2 { font-size: 13px; }
+  .hero .listen { align-items: center; margin-top: 18px; }
+  .btn.out { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); display: inline-flex; align-items: center; gap: 7px; }
+  .btn.out::before { content: ''; width: 8px; height: 8px; border-radius: 99px; background: var(--brand); }
+  .btn.out.spotify, .btn.out.apple { background: transparent; color: var(--ink); }
+  .btn.out.spotify { --brand: #1db954; } .btn.out.apple { --brand: #fa2d48; }
+  .btn.mine .yours { opacity: .75; font-weight: 500; margin-left: 4px; }
   .tiles { display: flex; gap: 8px; flex-wrap: wrap; }
   .tile { background: var(--band); border-radius: 10px; padding: 9px 12px; min-width: 96px; }
-  .tile b { display: block; font-size: 10px; letter-spacing: .8px; color: var(--plum2); text-transform: uppercase; margin-bottom: 3px; }
+  .tile b { display: block; margin-bottom: 3px; }
   .tile span { font-weight: 700; font-size: 15px; }
   .listen { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .btn { display: inline-block; text-decoration: none; border: 0; border-radius: 99px; padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer; }
@@ -134,13 +155,22 @@
   .next .thumb { width: 64px; height: 64px; }
   .next.empty { grid-template-columns: 1fr auto; background: var(--wait); border-color: var(--wait-edge); }
   .next .t1 { font-size: 17px; margin: 3px 0 2px; }
+  .next.tap { cursor: pointer; }
+  .next .chev { font-size: 26px; color: var(--muted); padding: 0 4px; line-height: 1; }
   .kickoff { color: var(--gold); }
 
   /* leaderboard: every row is the same height and the columns line up, whatever the text length */
   .board { list-style: none; margin: 0; padding: 0; }
-  .board li { display: grid; grid-template-columns: 34px 52px minmax(0, 1fr) 84px; gap: 12px; align-items: center; height: 70px; padding: 0 10px; border-radius: 10px; cursor: pointer; }
-  .board li:nth-child(even) { background: var(--band); }
-  .board li.m1 { background: var(--medal-gold); } .board li.m2 { background: var(--medal-silver); } .board li.m3 { background: var(--medal-bronze); }
+  .board li { display: grid; grid-template-columns: 34px 52px minmax(0, 1fr) 84px; gap: 12px; align-items: center; height: 70px; padding: 0 10px; border-radius: 10px; cursor: pointer; position: relative; }
+  .board li + li::before { content: ''; position: absolute; top: 0; left: 10px; right: 10px; border-top: 1px solid var(--line); }
+  .board li:hover { background: var(--band); }
+  .board li:hover::before, .board li:hover + li::before { border-color: transparent; }
+  .board .rank { width: 30px; height: 30px; border-radius: 99px; display: flex; align-items: center; justify-content: center; font-size: 15px; justify-self: center; }
+  .board li.m1 .rank { background: var(--medal-gold); box-shadow: inset 0 0 0 1.5px #f1d35a; }
+  .board li.m2 .rank { background: var(--medal-silver); box-shadow: inset 0 0 0 1.5px var(--medal-silver-edge); }
+  .board li.m3 .rank { background: var(--medal-bronze); box-shadow: inset 0 0 0 1.5px #e7b88f; }
+  .board .pname { display: none; } /* the photo shows who picked it */
+  .board-more { text-align: center; padding-top: 10px; }
   .board .binfo { min-width: 0; }
   .board .t1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .board .bline { display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-top: 3px; min-width: 0; }
@@ -164,7 +194,7 @@
   input[type=range] { width: 100%; accent-color: var(--plum2); height: 34px; }
   .scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
   .extras { margin-top: 20px; border-top: 1px solid var(--band); padding-top: 16px; display: grid; gap: 14px; }
-  .field label { display: block; font-size: 11px; font-weight: 900; color: var(--plum2); letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px; }
+  .field label { display: block; margin-bottom: 6px; }
   .field .hint { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; justify-content: space-between; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .msg { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 700; display: none; }
@@ -264,7 +294,7 @@
   .kv b { font-weight: 700; text-align: right; }
   .stat { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; }
   .stat .thumb { width: 64px; height: 64px; }
-  .stat .lbl { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+  .stat .lbl { }
   .bars .row { display: grid; grid-template-columns: 110px 1fr 40px; gap: 10px; align-items: center; margin: 8px 0; font-size: 14px; font-weight: 700; }
   .bars .track { background: var(--band); border-radius: 99px; height: 16px; overflow: hidden; }
   .bars .fill { background: var(--plum); height: 100%; border-radius: 99px; }
@@ -366,8 +396,8 @@
     .pop { animation: pop .25s ease; }
 
     /* gold medal shimmer */
-    .board li.m1, .gcard.m1 { position: relative; overflow: hidden; }
-    .board li.m1::after, .gcard.m1::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    .board li.m1 .rank, .gcard.m1 { position: relative; overflow: hidden; }
+    .board li.m1 .rank::after, .gcard.m1::after { content: ''; position: absolute; inset: 0; pointer-events: none;
       background: linear-gradient(105deg, transparent 35%, var(--shine) 50%, transparent 65%); animation: shimmer 5s ease-in-out 1.2s infinite backwards; transform: translateX(-120%); }
   }
   @media (hover: hover) and (prefers-reduced-motion: no-preference) {
@@ -381,12 +411,15 @@
     .board li { grid-template-columns: 24px 46px minmax(0, 1fr) 72px; gap: 10px; height: 64px; padding: 0 8px; }
     .board .score b { font-size: 16px; }
     .board .score .stars { font-size: 11px; }
-    .board .bline .pname { display: none; } /* photo alone shows who picked it, so the artist has room */
+    .board .rank { width: 24px; height: 24px; font-size: 13px; }
+    .bigavg b { font-size: 28px; }
+    .bigavg { padding-top: 14px; }
     .thumb { width: 46px; height: 46px; }
     .two, .songs { grid-template-columns: 1fr; }
     .chosen { grid-template-columns: 1fr; }
     .chosen .cover { max-width: 200px; }
     .next { grid-template-columns: 56px 1fr; }
+    .next.tap { grid-template-columns: 56px 1fr auto; }
     .next .thumb { width: 56px; height: 56px; }
     .next > .btn { grid-column: 1 / -1; }
     .next.empty { grid-template-columns: 1fr; }
@@ -649,26 +682,26 @@ function missingFor(a, m) {
 
 /* ---------- views ---------- */
 
+var BOARD_TOP = 10, boardAll = false;
+
 function renderHome() {
   var a = thisWeek();
   if (!a) return '<div class="card">No albums yet.</div>' + nextCard();
-  var missing = D.members.filter(function (m) { return a.ratings[m] == null; });
+  var mine = rateState.member ? a.ratings[rateState.member] : null;
   var h = installCard() + '<div class="card hero">' + img(a, 'cover') + '<div>' +
-    '<div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
-    '<h2>' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div>' +
-    '<div class="tiles">' +
-      '<div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
-      '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
-      '<div class="tile"><b>Ratings in</b><span>' + a.count + ' of ' + D.members.length + '</span></div>' +
-      '<div class="tile"><b>' + esc(a.season) + '</b><span>Album #' + a.number + '</span></div>' +
-    '</div>' +
-    '<div class="listen"><a class="btn spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a>' +
-    '<a class="btn apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a>' +
-    '<button class="btn primary" onclick="goRate(' + a.row + ')">' + (rateState.member && a.ratings[rateState.member] != null ? 'Update my rating' : 'Rate it') + '</button></div>' +
-    (rateState.member ? '<div class="waiting">' + (a.ratings[rateState.member] == null ? '<b>You haven\'t rated this one yet.</b>'
-      : 'You gave it <b>' + num(a.ratings[rateState.member]) + '</b> <span class="stars">' + stars(a.ratings[rateState.member]) + '</span>') + '</div>' : '') +
-    (missing.length ? '<div class="waiting muted">Still waiting on ' + missing.map(chip).join('') + '</div>'
-                    : '<div class="waiting"><b>Everyone has rated this one.</b></div>') +
+    '<div class="htop"><div><div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
+    '<h2>' + esc(a.album) + '</h2><div class="by">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
+    (a.avg == null ? '' : '<div class="bigavg"><b>' + cnt(a.avg) + '</b><span class="stars">' + stars(a.avg) + '</span><small>group avg</small></div>') + '</div>' +
+    '<div class="meta">' + face(a.pickedBy, 'mini') + '<span><b>' + esc(a.pickedBy) + '\'s pick</b> · ' + esc(a.season) + ', #' + a.number + '</span></div>' +
+    // Everyone's photo: full color once they've rated, faded until they do.
+    '<div class="faces"><div class="row5">' + D.members.map(function (m) {
+      var done = a.ratings[m] != null;
+      return '<span title="' + esc(m + (done ? ' has rated it' : ' hasn\'t rated yet')) + '">' + face(m, 'mini' + (done ? '' : ' off')) + '</span>';
+    }).join('') + '</div><span class="t2">' + (a.count === D.members.length ? 'Everyone has rated this one' : a.count + ' of ' + D.members.length + ' rated') + '</span></div>' +
+    '<div class="listen"><button class="btn primary' + (mine != null ? ' mine' : '') + '" onclick="goRate(' + a.row + ')">' +
+      (mine != null ? 'Your score: ' + num(mine) + '<span class="yours">· Edit</span>' : 'Rate it') + '</button>' +
+    '<a class="btn out spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a>' +
+    '<a class="btn out apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a></div>' +
     '</div></div>';
 
   h += nextCard();
@@ -684,15 +717,19 @@ function renderHome() {
     }
     return h;
   }
+  var shown = boardAll || ranked.length <= BOARD_TOP ? ranked : ranked.slice(0, BOARD_TOP);
   h += '<div class="card"><ol class="board">';
-  ranked.forEach(function (x, i) {
+  shown.forEach(function (x, i) {
     // One line each for album and artist; long names end in "…" (full name in the popup).
     h += '<li class="' + (i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')" title="' + esc(x.album + ' · ' + x.artist) + '"><div class="rank">' + (i + 1) + '</div>' + img(x, 'thumb') +
       '<div class="binfo"><div class="t1">' + esc(x.album) + '</div><div class="t2 bline"><span class="art">' + esc(x.artist) + '</span><span class="bw dot">·</span>' + face(x.pickedBy, 'tiny') + '<span class="bw pname">' + esc(x.pickedBy) + '</span>' +
       (isAll() ? '<span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
       '<div class="score"><b>' + cnt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
   });
-  return h + '</ol></div>';
+  h += '</ol>';
+  if (ranked.length > BOARD_TOP) h += '<div class="board-more"><button class="linkish" onclick="boardAll=!boardAll;show(\'home\')">' +
+    (boardAll ? 'Show top ' + BOARD_TOP : 'Show all ' + ranked.length) + '</button></div>';
+  return h + '</div>';
 }
 
 /* Home strip: next Thursday's album if it's in, otherwise whose turn it is. */
@@ -702,9 +739,9 @@ function nextCard() {
     return isKickoff(date) ? '<span class="kickoff">' + esc(seasonOfDate(date)) + ' kicks off</span> · ' + esc(fmtDate(date, true)) : 'Up next · ' + esc(fmtDate(date, true));
   };
   if (n) {
-    return '<div class="card next">' + img(n, 'thumb') + '<div><div class="eyebrow">' + label(n.date) + '</div>' +
+    return '<div class="card next tap" onclick="openAlbum(' + n.row + ')">' + img(n, 'thumb') + '<div><div class="eyebrow">' + label(n.date) + '</div>' +
       '<div class="t1">' + esc(n.album) + '</div><div class="t2">' + esc(n.artist) + (n.year ? ' · ' + esc(n.year) : '') + ' · picked by ' + esc(n.pickedBy) + '</div></div>' +
-      '<a class="btn ghost" href="' + esc(n.spotify) + '" target="_blank">Preview</a></div>';
+      '<span class="chev">›</span></div>';
   }
   var s = D.slots[0];
   if (!s) return '';
