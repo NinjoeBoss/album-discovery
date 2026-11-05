@@ -74,10 +74,26 @@ var AD_ROTATION = ['Brennan', 'Jonathan', 'William', 'Luke', 'Nathan'];
 /** Members who can remove anyone's unrated pick. */
 var AD_ADMINS = ['Jonathan'];
 
+/** Where the club's app lives. Opening this script's /exec link in a browser sends people there. */
+var AD_APP_URL = 'https://ninjoeboss.github.io/album-discovery/';
+
+/**
+ * The old Apps Script site was retired on Nov 5, 2026 (everyone uses the app now).
+ * Opening the /exec link shows a short page with a button to the app instead.
+ * The old page is still in the Index file; to bring it back, return
+ * HtmlService.createTemplateFromFile('Index').evaluate() here instead.
+ */
 function doGet() {
-  return HtmlService.createTemplateFromFile('Index').evaluate()
+  var url = AD_APP_URL;
+  var html = '<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">' +
+    '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1e1b2e;font-family:Roboto,Arial,sans-serif;color:#fff;text-align:center}' +
+    '.box{padding:32px 24px;max-width:360px}h1{font-size:26px;margin:0 0 8px}p{color:#b9b2cf;margin:0 0 22px;line-height:1.4}' +
+    'a{display:inline-block;background:#d99a09;color:#fff;text-decoration:none;font-weight:700;padding:13px 24px;border-radius:99px}</style></head>' +
+    '<body><div class="box"><h1>Album Discovery</h1><p>The club site lives in the app now. Rate albums, add your pick and see the leaderboard there.</p>' +
+    '<a href="' + url + '">Open the app</a></div></body></html>';
+  return HtmlService.createHtmlOutput(html)
     .setTitle('Album Discovery')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

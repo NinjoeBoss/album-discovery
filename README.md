@@ -18,7 +18,7 @@ It runs on any phone: open the link, then add it to the home screen. It opens fu
 3. Add a file **Members.gs** with the real member emails (format in `apps-script/Members.example.gs`). This file is never committed here.
 4. Run **setupApp** once and approve the permissions (it needs to send the sign in emails).
 5. **Deploy > New deployment > Web app**: Execute as **Me**, Who has access **Anyone**. Copy the URL ending in `/exec`.
-6. Also update the old site's deployment (**Manage deployments > edit > New version**) so it keeps working.
+6. (The old Apps Script site was retired Nov 5, 2026. Its `/exec` page now just links to this app.)
 
 ### 2. Point the app at the sheet
 Put the `/exec` URL in `config.js` as `apiUrl`.
@@ -29,5 +29,15 @@ Repo **Settings > Pages**: Source **Deploy from a branch**, Branch **main**, fol
 ## Making changes
 
 - Edit `index.html`, then bump `VERSION` in `sw.js` so phones pick up the new copy.
-- Server changes go in `apps-script/`. Paste them into Apps Script and deploy a new version of **both** deployments.
+- Server changes go in `apps-script/`. Pushing to `main` uploads them automatically (see below); no pasting into the editor.
 - Editor helpers: `listSessions` (who is signed in), `signOutEveryone`, `checkSeasons`, `checkMemberEmails`.
+
+## Automatic Apps Script updates
+
+`apps-script/` mirrors the Apps Script project, and two GitHub Actions keep them in sync:
+
+- **Deploy to Apps Script** (`.github/workflows/deploy-apps-script.yml`) runs on every push to `main` that changes `apps-script/`. It uploads the files with clasp and publishes a new version of the **Github** deployment, so the `/exec` URL in `config.js` never changes.
+- **Pull from Apps Script** (`.github/workflows/pull-apps-script.yml`) copies the live project back into `apps-script/`. Run it from the Actions tab (or by changing `apps-script/.pull`) after editing anything by hand in the script editor; otherwise the next deploy stops rather than overwrite it.
+
+Repo secrets they use: `CLASPRC_JSON` (the `.clasprc.json` from `clasp login`), `MEMBERS_GS` (the private Members.gs) and `AVATARS_HTML` (the private Avatars file). Members.gs and Avatars are never committed here. If the deploy ever fails with a login error, run `clasp login` again on a computer and replace `CLASPRC_JSON`.
+
