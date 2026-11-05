@@ -845,10 +845,6 @@ function renderRate() {
     (already ? 'Update my rating' : 'Submit rating') + '</button></div>' +
     '<div class="msg" id="msg"></div>';
 
-  var owed = D.albums.filter(function (x) { return (!x.date || x.date <= D.today) && missingFor(x, rateState.member).length; });
-  h += '<div class="todo muted">' + (owed.length ? 'Still to finish: ' + owed.map(function (x) {
-    return '<a href="#" onclick="pickAlbum(' + x.row + ');return false">' + esc(x.album) + '</a> <span class="muted">(' + missingFor(x, rateState.member).join(', ') + ')</span>';
-  }).join(' · ') : '<b>You\'re all caught up.</b>') + '</div>';
   return h + '</div>';
 }
 
