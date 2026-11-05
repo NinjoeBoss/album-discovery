@@ -1,6 +1,6 @@
 /* Album Discovery service worker: makes the app open fast and work offline.
  * Bump VERSION whenever index.html changes so phones pick up the new copy. */
-var VERSION = 'ad-v18';
+var VERSION = 'ad-v19';
 var SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
@@ -30,7 +30,9 @@ self.addEventListener('fetch', function (e) {
   if (url.origin !== location.origin) return;
 
   // The app itself: try the network first so updates arrive, fall back to the saved copy.
-  e.respondWith(fetch(req).then(function (res) {
+  // cache: 'no-cache' makes the browser check with GitHub every time instead of reusing
+  // its own 10 minute copy, so a new version shows on the next open.
+  e.respondWith(fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(function (res) {
     if (res.ok) { var copy = res.clone(); caches.open(VERSION).then(function (c) { c.put(req, copy); }); }
     return res;
   }).catch(function () {
