@@ -106,11 +106,18 @@
   .next .t1 { font-size: 17px; margin: 3px 0 2px; }
   .kickoff { color: var(--gold); }
 
-  /* leaderboard */
+  /* leaderboard: every row is the same height and the columns line up, whatever the text length */
   .board { list-style: none; margin: 0; padding: 0; }
-  .board li { display: grid; grid-template-columns: 34px 52px 1fr auto; gap: 12px; align-items: center; padding: 9px 10px; border-radius: 10px; cursor: pointer; }
+  .board li { display: grid; grid-template-columns: 34px 52px minmax(0, 1fr) 84px; gap: 12px; align-items: center; height: 70px; padding: 0 10px; border-radius: 10px; cursor: pointer; }
   .board li:nth-child(even) { background: var(--band); }
   .board li.m1 { background: var(--medal-gold); } .board li.m2 { background: var(--medal-silver); } .board li.m3 { background: var(--medal-bronze); }
+  .board .binfo { min-width: 0; }
+  .board .t1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board .bline { display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-top: 3px; min-width: 0; }
+  .board .bline .art { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .board .bline .tiny, .board .bline .stag, .board .bline .bw { flex: none; }
+  .board .score { white-space: nowrap; }
+  .board .score .stars { font-size: 13px; }
   .rank { font-weight: 900; font-size: 18px; color: var(--plum); text-align: center; }
   .thumb { width: 52px; height: 52px; border-radius: 6px; object-fit: cover; background: var(--band); }
   .t1 { font-weight: 700; } .t2 { font-size: 12px; color: var(--muted); }
@@ -327,7 +334,10 @@
     .hero { grid-template-columns: 1fr; }
     .hero .cover { max-width: 300px; margin: 0 auto; }
     .hero h2 { font-size: 26px; }
-    .board li { grid-template-columns: 28px 46px 1fr auto; gap: 10px; }
+    .board li { grid-template-columns: 24px 46px minmax(0, 1fr) 72px; gap: 10px; height: 64px; padding: 0 8px; }
+    .board .score b { font-size: 16px; }
+    .board .score .stars { font-size: 11px; }
+    .board .bline .pname { display: none; } /* photo alone shows who picked it, so the artist has room */
     .thumb { width: 46px; height: 46px; }
     .two, .songs { grid-template-columns: 1fr; }
     .chosen { grid-template-columns: 1fr; }
@@ -585,9 +595,10 @@ function renderHome() {
   }
   h += '<div class="card"><ol class="board">';
   ranked.forEach(function (x, i) {
-    h += '<li class="' + (i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')"><div class="rank">' + (i + 1) + '</div>' + img(x, 'thumb') +
-      '<div><div class="t1">' + esc(x.album) + '</div><div class="t2" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">' + esc(x.artist) + ' · ' + face(x.pickedBy, 'tiny') + esc(x.pickedBy) +
-      (isAll() ? ' <span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
+    // One line each for album and artist; long names end in "…" (full name in the popup).
+    h += '<li class="' + (i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')" title="' + esc(x.album + ' · ' + x.artist) + '"><div class="rank">' + (i + 1) + '</div>' + img(x, 'thumb') +
+      '<div class="binfo"><div class="t1">' + esc(x.album) + '</div><div class="t2 bline"><span class="art">' + esc(x.artist) + '</span><span class="bw dot">·</span>' + face(x.pickedBy, 'tiny') + '<span class="bw pname">' + esc(x.pickedBy) + '</span>' +
+      (isAll() ? '<span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
       '<div class="score"><b>' + cnt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
   });
   return h + '</ol></div>';
