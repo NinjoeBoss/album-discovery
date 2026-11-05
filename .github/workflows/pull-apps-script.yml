@@ -1,0 +1,77 @@
+# Downloads the live Apps Script files into apps-script/live/ so the repo
+# has an exact copy of what's running. Read only: it never changes Apps Script.
+# Runs when apps-script/.pull changes (Claude touches it), or by hand from the Actions tab.
+#
+# Private files are never committed: Members* (club emails) and Avatars* (photos).
+# If any other file contains an email address, the job stops without committing
+# and lists the file names so it can be handled first.
+name: Pull from Apps Script
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['apps-script/.pull']
+
+permissions:
+  contents: write
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Sign in with the saved login
+        env:
+          CLASPRC: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC" ]; then echo "The CLASPRC_JSON secret is missing."; exit 1; fi
+          printf '%s' "$CLASPRC" > ~/.clasprc.json
+
+      - name: Download the live files
+        run: |
+          mkdir -p /tmp/live && cd /tmp/live
+          cat > .clasp.json <<JSON
+          {"scriptId":"1JfGmMbyMc9Gc1eBPo6c4g3_ZmX1ezRNam3AC7O5F5tE-7xuuokXmOYC4","rootDir":".","fileExtension":"gs","scriptExtensions":[".gs"],"htmlExtensions":[".html"],"jsonExtensions":[".json"]}
+          JSON
+          clasp pull
+          echo "Files in the Apps Script project:"
+          ls -1 | grep -v '^\.clasp.json$' | tee /tmp/all-files.txt
+
+      - name: Copy into the repo (minus private files)
+        run: |
+          rm -rf apps-script/live && mkdir -p apps-script/live
+          cd /tmp/live
+          for f in *; do
+            case "$(echo "$f" | tr 'A-Z' 'a-z')" in
+              members*|avatars*) echo "Skipping private file: $f" ;;
+              *) cp "$f" "$GITHUB_WORKSPACE/apps-script/live/" ;;
+            esac
+          done
+          cd "$GITHUB_WORKSPACE"
+          { echo "# Every file in the live Apps Script project (pulled $(date -u +%Y-%m-%d))"
+            echo "# Members* and Avatars* exist in Apps Script but are kept out of this public repo."
+            cat /tmp/all-files.txt; } > apps-script/live/FILES.txt
+          found=$(grep -lEi '[A-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail|icloud)\.com' apps-script/live/* | grep -v FILES.txt || true)
+          if [ -n "$found" ]; then
+            echo "These files contain email addresses, so nothing was committed:"
+            echo "$found"
+            exit 1
+          fi
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add apps-script/live
+          if git diff --cached --quiet; then echo "No changes."; exit 0; fi
+          git commit -m "Pull live Apps Script files"
+          git push
