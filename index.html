@@ -128,6 +128,13 @@
   .btn.out::before { content: ''; width: 8px; height: 8px; border-radius: 99px; background: var(--brand); }
   .btn.out.spotify, .btn.out.apple { background: transparent; color: var(--ink); }
   .btn.out.spotify { --brand: #1db954; } .btn.out.apple { --brand: #fa2d48; }
+  .btn.pick { background: var(--plum); color: #fff; }
+  .btn.out.pick { background: transparent; color: var(--ink); --brand: var(--gold); }
+  /* artist names open the artist page on the member's streaming platform */
+  .artlink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; }
+  .artlink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
+  .pickplat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .pickplat .btn { padding: 13px 12px; font-size: 15px; text-align: center; }
   .btn.mine .yours { opacity: .75; font-weight: 500; margin-left: 4px; }
   .tiles { display: flex; gap: 8px; flex-wrap: wrap; }
   .tile { background: var(--band); border-radius: 10px; padding: 9px 12px; min-width: 96px; }
@@ -436,7 +443,7 @@
     /* buttons: Rate it full width, the two listen links side by side under it */
     .hero .listen { display: grid; grid-template-columns: 1fr 1fr; }
     .hero .listen .btn { justify-content: center; text-align: center; padding: 11px 12px; }
-    .hero .listen .btn.primary { grid-column: 1 / -1; }
+    .hero .listen .lo { display: none; } /* phones: just the brand dot and name, so it fits beside Rate */
     .thumb { width: 46px; height: 46px; }
     .two, .songs { grid-template-columns: 1fr; }
     .chosen { grid-template-columns: 1fr; }
@@ -569,6 +576,65 @@ function refreshThemeSeg() {
 if (window.matchMedia) {
   var mq = matchMedia('(prefers-color-scheme: dark)'), onSys = function () { if (themePref() === 'auto') applyTheme(true); };
   if (mq.addEventListener) mq.addEventListener('change', onSys); else if (mq.addListener) mq.addListener(onSys);
+}
+
+/* ---------- preferred streaming platform ---------- */
+
+/* Each member picks Spotify or Apple Music under their profile (saved on this phone).
+   Listen buttons and artist names then open there. Before they pick, the first tap asks. */
+var PLATFORMS = { spotify: 'Spotify', apple: 'Apple Music' };
+function platformPref() { var p = storeGet('ad.platform'); return PLATFORMS[p] ? p : ''; }
+function albumUrl(a, p) { return p === 'apple' ? a.apple : a.spotify; }
+function artistUrl(a, p) {
+  var u = p === 'apple' ? a.appleArtist : a.spotifyArtist;
+  if (u) return u;
+  var q = encodeURIComponent(a.artist || '');
+  return p === 'apple' ? 'https://music.apple.com/us/search?term=' + q : 'https://open.spotify.com/search/' + q + '/artists';
+}
+/* One listen button. style 'out' = outline (home), otherwise filled (album popup). */
+function listenBtn(a, style) {
+  var p = platformPref(), cls = 'btn ' + (style === 'out' ? 'out ' : '');
+  if (!p) return '<button class="' + cls + 'pick" onclick="askPlatform(\'album\',' + a.row + ')">Listen</button>';
+  return '<a class="' + cls + p + '" href="' + esc(albumUrl(a, p)) + '" target="_blank" rel="noopener"><span class="lo">Listen on </span>' + PLATFORMS[p] + '</a>';
+}
+/* Artist name that opens the artist's page (stops the tap from also opening the album popup). */
+function artistLink(a, cls) {
+  if (!a.artist) return '';
+  var p = platformPref(), c = 'artlink' + (cls ? ' ' + cls : '');
+  if (!p) return '<a class="' + c + '" href="#" onclick="event.stopPropagation();askPlatform(\'artist\',' + a.row + ');return false">' + esc(a.artist) + '</a>';
+  return '<a class="' + c + '" href="' + esc(artistUrl(a, p)) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + esc(a.artist + ' on ' + PLATFORMS[p]) + '">' + esc(a.artist) + '</a>';
+}
+var askFor = null;
+function askPlatform(kind, row) {
+  var fromAlbum = document.getElementById('scrim').classList.contains('on') && !!document.querySelector('#modal .mhead');
+  askFor = { kind: kind, row: row, back: fromAlbum };
+  document.getElementById('modal').innerHTML = '<button class="close" onclick="closeAlbum()">×</button>' +
+    '<div style="padding-right:40px"><div class="eyebrow">Listen on</div><h2 style="margin:4px 0 6px">Where do you listen?</h2>' +
+    '<div class="t2">Pick once and every Listen button and artist name opens there. You can change it anytime under your profile.</div></div>' +
+    '<div class="pickplat"><button class="btn spotify" onclick="choosePlatform(\'spotify\')">Spotify</button>' +
+    '<button class="btn apple" onclick="choosePlatform(\'apple\')">Apple Music</button></div>';
+  openScrim();
+}
+function choosePlatform(p) {
+  var f = askFor, a = f && albumByRow(f.row);
+  askFor = null;
+  storeSet('ad.platform', p);
+  if (a) window.open(f.kind === 'artist' ? artistUrl(a, p) : albumUrl(a, p), '_blank', 'noopener');
+  if (view) show(view);
+  if (a && f.back) openAlbum(a.row); else closeAlbum();
+}
+function platformSeg() {
+  var p = platformPref();
+  return '<div class="seg" id="platSeg">' + [['spotify', 'Spotify'], ['apple', 'Apple Music']].map(function (o) {
+    return '<button class="' + (p === o[0] ? 'on' : '') + '" onclick="setPlatform(\'' + o[0] + '\')">' + o[1] + '</button>';
+  }).join('') + '</div><div class="t2" style="margin-top:6px">' +
+    (p ? 'Listen buttons and artist names open in ' + PLATFORMS[p] + '.' : 'Not picked yet. Choose where Listen buttons and artist names should open.') + '</div>';
+}
+function setPlatform(p) {
+  storeSet('ad.platform', p);
+  if (view) show(view);
+  var sc = document.getElementById('scrim'), y = sc.scrollTop;
+  openProfile(); sc.scrollTop = y;
 }
 
 /* ---------- seasons ---------- */
@@ -717,7 +783,7 @@ function renderHome() {
   var mine = rateState.member ? a.ratings[rateState.member] : null;
   var h = installCard() + '<div class="card hero">' + img(a, 'cover') + '<div>' +
     '<div class="htop"><div><div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
-    '<h2>' + esc(a.album) + '</h2><div class="by">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div></div>' +
+    '<h2>' + esc(a.album) + '</h2><div class="by">' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div></div>' +
     (a.avg == null ? '' : '<div class="bigavg"><b>' + cnt(a.avg) + '</b><span class="stars">' + stars(a.avg) + '</span><small>group avg</small></div>') +
     '<div class="meta">' + face(a.pickedBy, 'mini') + '<span><b>' + esc(a.pickedBy) + '\'s pick</b> · ' + esc(a.season) + ', #' + a.number + '</span></div>' +
     // Everyone's photo: full color once they've rated, faded until they do.
@@ -727,8 +793,7 @@ function renderHome() {
     }).join('') + '</div><span class="t2">' + (a.count === D.members.length ? 'Everyone has rated this one' : a.count + ' of ' + D.members.length + ' rated') + '</span></div>' +
     '<div class="listen"><button class="btn primary' + (mine != null ? ' mine' : '') + '" onclick="goRate(' + a.row + ')">' +
       (mine != null ? 'Your score: ' + num(mine) + '<span class="yours">· Edit</span>' : 'Rate it') + '</button>' +
-    '<a class="btn out spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a>' +
-    '<a class="btn out apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a></div>' +
+    listenBtn(a, 'out') + '</div>' +
     '</div></div>';
 
   h += nextCard();
@@ -749,7 +814,7 @@ function renderHome() {
   shown.forEach(function (x, i) {
     // One line each for album and artist; long names end in "…" (full name in the popup).
     h += '<li class="' + (i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')" title="' + esc(x.album + ' · ' + x.artist) + '"><div class="rank">' + (i + 1) + '</div>' + img(x, 'thumb') +
-      '<div class="binfo"><div class="t1">' + esc(x.album) + '</div><div class="t2 bline"><span class="art">' + esc(x.artist) + '</span><span class="bw dot">·</span>' + face(x.pickedBy, 'tiny') + '<span class="bw pname">' + esc(x.pickedBy) + '</span>' +
+      '<div class="binfo"><div class="t1">' + esc(x.album) + '</div><div class="t2 bline">' + artistLink(x, 'art') + '<span class="bw dot">·</span>' + face(x.pickedBy, 'tiny') + '<span class="bw pname">' + esc(x.pickedBy) + '</span>' +
       (isAll() ? '<span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
       '<div class="score"><b>' + cnt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
   });
@@ -767,7 +832,7 @@ function nextCard() {
   };
   if (n) {
     return '<div class="card next tap" onclick="openAlbum(' + n.row + ')">' + img(n, 'thumb') + '<div><div class="eyebrow">' + label(n.date) + '</div>' +
-      '<div class="t1">' + esc(n.album) + '</div><div class="t2">' + esc(n.artist) + (n.year ? ' · ' + esc(n.year) : '') + ' · picked by ' + esc(n.pickedBy) + '</div></div>' +
+      '<div class="t1">' + esc(n.album) + '</div><div class="t2">' + artistLink(n) + (n.year ? ' · ' + esc(n.year) : '') + ' · picked by ' + esc(n.pickedBy) + '</div></div>' +
       '<span class="chev">›</span></div>';
   }
   var s = D.slots[0];
@@ -823,7 +888,7 @@ function renderRate() {
   // Cover on the left; title, artist, picker and your score beside it (keeps the page short).
   var score = '<div class="slider"><div class="big" id="scoreBig">' + num(rateState.score) + '</div><span class="stars" id="scoreStars">' + stars(rateState.score) + '</span></div>';
   if (a) h += '<div class="ratehead">' + img(a, 'cover') + '<div class="rh-info">' +
-    '<div class="rc-t">' + esc(a.album) + '</div><div class="rc-a"><span class="rc-art">' + esc(a.artist) + '</span>' +
+    '<div class="rc-t">' + esc(a.album) + '</div><div class="rc-a">' + artistLink(a, 'rc-art') + '' +
     (a.pickedBy ? '<span class="rc-by">' + face(a.pickedBy, 'tiny') + esc(a.pickedBy) + '</span>' : '') + '</div>' +
     score + '</div></div>';
   else h += score;
@@ -964,7 +1029,7 @@ function albumCards(list) {
   list.slice().reverse().forEach(function (a) {
     var soon = a.date && a.date > D.today;
     h += '<div class="gcard ' + medalClass(a) + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
-      '<div class="info"><div class="t1">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + '</div>' +
+      '<div class="info"><div class="t1">' + esc(a.album) + '</div><div class="t2">' + artistLink(a) + '</div>' +
       '<div class="t2" style="margin-top:4px">' + (soon ? 'Coming ' + esc(fmtDate(a.date)) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
   });
   return h + '</div>';
@@ -1059,11 +1124,11 @@ function openAlbum(row) {
   var soon = a.date && a.date > D.today;
   var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
   var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero"><div class="disc"><div class="vinyl"><div class="rec"></div></div>' + img(a, 'cover') + '</div>' +
-    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · #' + a.number + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
+    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · #' + a.number + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
     '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
     '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div>' +
-    '<div class="listen"><a class="btn spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a><a class="btn apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a></div></div></div>';
+    '<div class="listen">' + listenBtn(a) + '</div></div></div>';
 
   if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
     h += '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : esc(a.groupFav)) + '</div>' +
@@ -1168,6 +1233,7 @@ function openProfile() {
   }).join('') + '</ul>' + (owed.length > 8 ? '<div class="t2" style="margin-top:6px">Plus ' + (owed.length - 8) + ' more on the Rate page.</div>' : '')
     : '<div><b>You\'re all caught up.</b></div>';
 
+  h += '<div class="section-title" style="margin-left:0">Listen on</div>' + platformSeg();
   h += '<div class="section-title" style="margin-left:0">Appearance</div>' + themeSeg();
   h += '<div class="actions" style="margin-top:18px"><button class="btn ghost" onclick="signOut()">Sign out</button></div>';
   document.getElementById('modal').innerHTML = h;

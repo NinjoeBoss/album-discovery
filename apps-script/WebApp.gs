@@ -132,6 +132,7 @@ function getData() {
     values = rng.getValues();
     var formulas = rng.getFormulas();
 
+    if (typeof artistLinks_start_ === 'function') artistLinks_start_();
     values.forEach(function (row, i) {
       var title = String(row[L.album] || '').trim();
       if (!title || /^tbd$/i.test(title)) {
@@ -172,7 +173,9 @@ function getData() {
         count: nums.length,
         spotify: adLink_(L.spotify >= 0 ? formulas[i][L.spotify] : '', 'spotify', title, artist),
         apple: adLink_(L.apple >= 0 ? formulas[i][L.apple] : '', 'apple', title, artist),
-        cover: adCover_(title, artist)
+        cover: adCover_(title, artist),
+        spotifyArtist: typeof artistLinks_get_ === 'function' ? artistLinks_get_('spotify', artist) : '',
+        appleArtist: typeof artistLinks_get_ === 'function' ? artistLinks_get_('apple', artist) : ''
       });
     });
   }

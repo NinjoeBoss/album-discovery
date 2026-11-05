@@ -131,6 +131,103 @@ function testSpotify() {
   }
 }
 
+/* ---------- artist pages (for the app's clickable artist names) ---------- */
+
+/*
+ * Direct artist page links. Found ones are saved for good in Script Properties
+ * (artist pages don't move), so each artist is only looked up once. Each getData
+ * spends at most AD_ARTIST_LOOKUP_MS on new lookups; anything left over gets a
+ * search link this time and fills in on a later load.
+ */
+var AD_ARTIST_LOOKUP_MS = 6000;
+var adArtistMemo_ = null, adArtistDeadline_ = 0;
+
+/** Call once before a batch of artistLinks_get_ calls. */
+function artistLinks_start_() {
+  adArtistMemo_ = PropertiesService.getScriptProperties().getProperties();
+  adArtistDeadline_ = Date.now() + AD_ARTIST_LOOKUP_MS;
+}
+
+/** Artist page on 'spotify' or 'apple', or '' (the app then uses a search link). */
+function artistLinks_get_(service, artist) {
+  artist = String(artist || '').trim();
+  if (!artist) return '';
+  if (!adArtistMemo_) artistLinks_start_();
+  var key = ('artist|' + service + '|' + artist.toLowerCase()).slice(0, 200);
+  if (adArtistMemo_[key] != null) return adArtistMemo_[key];
+  var cache = CacheService.getScriptCache();
+  if (cache.get(key) === 'none') return '';
+  if (Date.now() > adArtistDeadline_) return '';
+  var link = '';
+  try {
+    link = service === 'apple' ? artistLinks_apple_(artist) : artistLinks_spotify_(artist);
+  } catch (e) {
+    return ''; // network or key trouble: try again next load
+  }
+  if (link) {
+    PropertiesService.getScriptProperties().setProperty(key, link);
+    adArtistMemo_[key] = link;
+  } else {
+    cache.put(key, 'none', 21600); // no match: don't search again for 6 hours
+  }
+  return link;
+}
+
+/** Names to try: the full credit, then the first name in it ("A & B" → "A"). */
+function artistLinks_names_(artist) {
+  var first = artist.split(/\s*(?:,|&|\band\b|\bx\b|\bfeat\.?|\bft\.?|\bwith\b)\s*/i)[0].trim();
+  return first && first.toLowerCase() !== artist.toLowerCase() ? [artist, first] : [artist];
+}
+
+function artistLinks_norm_(s) {
+  return String(s || '').toLowerCase().replace(/[‘’'".]/g, '').replace(/[^a-z0-9$¥]+/g, ' ').trim();
+}
+
+/** Exact name match first; otherwise the top result when it at least contains the name. */
+function artistLinks_pick_(items, name, nameOf) {
+  var n = artistLinks_norm_(name);
+  var exact = items.filter(function (it) { return artistLinks_norm_(nameOf(it)) === n; })[0];
+  if (exact) return exact;
+  var top = items[0];
+  return top && n && artistLinks_norm_(nameOf(top)).indexOf(n) >= 0 ? top : null;
+}
+
+function artistLinks_spotify_(artist) {
+  var token = albumLinks_spotifyToken_();
+  var names = artistLinks_names_(artist);
+  for (var i = 0; i < names.length; i++) {
+    var q = 'artist:"' + names[i].replace(/[‘’'"]/g, '') + '"';
+    var res = UrlFetchApp.fetch('https://api.spotify.com/v1/search?type=artist&limit=10&q=' + encodeURIComponent(q),
+      { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) throw new Error('Spotify artist lookup failed (' + res.getResponseCode() + ')');
+    var items = ((JSON.parse(res.getContentText()).artists) || {}).items || [];
+    var pick = artistLinks_pick_(items, names[i], function (a) { return a.name; });
+    if (pick && pick.external_urls && pick.external_urls.spotify) return pick.external_urls.spotify;
+  }
+  return '';
+}
+
+function artistLinks_apple_(artist) {
+  var names = artistLinks_names_(artist);
+  for (var i = 0; i < names.length; i++) {
+    var res = UrlFetchApp.fetch('https://itunes.apple.com/search?entity=musicArtist&limit=10&country=us&term=' + encodeURIComponent(names[i]),
+      { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) throw new Error('Apple Music artist lookup failed (' + res.getResponseCode() + ')');
+    var items = JSON.parse(res.getContentText()).results || [];
+    var pick = artistLinks_pick_(items, names[i], function (a) { return a.artistName; });
+    if (pick && pick.artistLinkUrl) return String(pick.artistLinkUrl).split('?')[0];
+  }
+  return '';
+}
+
+/** Editor helper: run to see the artist links for every album in the Logs. */
+function checkArtistLinks() {
+  artistLinks_start_();
+  getData().albums.forEach(function (a) {
+    Logger.log(a.artist + '  |  ' + (a.spotifyArtist || '(search)') + '  |  ' + (a.appleArtist || '(search)'));
+  });
+}
+
 /* ---------- helpers (not called from the sheet) ---------- */
 
 function albumLinks_spotifyToken_() {
