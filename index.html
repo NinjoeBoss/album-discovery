@@ -203,6 +203,20 @@
   .songs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
   .songs div { background: var(--band); border-radius: 10px; padding: 9px 12px; font-size: 14px; }
   .songs b { display: block; font-size: 10px; letter-spacing: .8px; color: var(--plum2); text-transform: uppercase; margin-bottom: 3px; }
+  /* song picks: each picked song in track order, with who loved and who disliked it */
+  .sp { list-style: none; margin: 4px 0 0; padding: 0; }
+  .sp li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--band); font-size: 14px; }
+  .sp li:first-child { border-top: 0; }
+  .sp .tn { color: var(--muted); font-size: 12px; font-weight: 700; text-align: right; }
+  .sp .sn { overflow-wrap: anywhere; line-height: 1.25; }
+  .sp .sn .tag { margin: 0 0 0 6px; vertical-align: 1px; }
+  .sp .pk { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; justify-content: flex-end; max-width: 150px; }
+  .sp .pk .tiny { width: 24px; height: 24px; font-size: 11px; }
+  .lv, .dl { font-weight: 900; font-size: 13px; line-height: 1; }
+  .lv { color: #c2185b; } .dl { color: var(--muted); }
+  .sp .pk .lv, .sp .pk .dl { margin: 0 2px 0 5px; }
+  .sp .pk .lv:first-child, .sp .pk .dl:first-child { margin-left: 0; }
+  .sp-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
   /* profile */
   .phead { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; padding-right: 40px; }
@@ -915,11 +929,13 @@ function openAlbum(row) {
   }
 
   if (!soon) {
-    h += '<table class="rt">';
+    h += songPicks(a);
+    h += '<div class="section-title" style="margin-left:0">Ratings</div><table class="rt">';
     D.members.forEach(function (m) {
       var v = a.ratings[m];
       var extra = '';
-      if (a.fav[m]) extra += '<div class="take">♥ ' + esc(a.fav[m]) + '</div>';
+      if (a.fav[m]) extra += '<div class="take"><span class="lv">♥</span> ' + esc(a.fav[m]) + '</div>';
+      if (a.least[m]) extra += '<div class="take"><span class="dl">✕</span> ' + esc(a.least[m]) + '</div>';
       if (a.comments[m]) extra += '<div class="take"><q>' + esc(a.comments[m]) + '</q></div>';
       h += '<tr><td class="n" style="background:' + color(m) + '"><span class="nm">' + face(m, 'tiny') + esc(m) + '</span></td><td><b>' + (v == null ? '<span class="muted">Not rated</span>' : num(v)) + '</b> <span class="stars">' + stars(v) + '</span>' +
         (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
@@ -936,6 +952,39 @@ function openAlbum(row) {
   albumGlow(a);
   runCounts(document.getElementById('modal'));
 }
+/* Every song someone picked as a favorite or least favorite, in track order, with whose pick it was. */
+function songPicks(a) {
+  var picks = {}, order = [];
+  var add = function (song, m, kind) {
+    if (!song) return;
+    if (!picks[song]) { picks[song] = { love: [], hate: [] }; order.push(song); }
+    picks[song][kind].push(m);
+  };
+  D.members.forEach(function (m) { add(a.fav[m], m, 'love'); add(a.least[m], m, 'hate'); });
+  if (!order.length) return '';
+  var tracks = a.tracks || [];
+  // Track order first; songs not on the loaded tracklist go at the end.
+  order.sort(function (x, y) {
+    var i = tracks.indexOf(x), j = tracks.indexOf(y);
+    return (i < 0 ? 1e4 : i) - (j < 0 ? 1e4 : j);
+  });
+  var faces = function (list) {
+    return list.map(function (m) { return '<span title="' + esc(m) + '">' + face(m, 'tiny') + '</span>'; }).join('');
+  };
+  var pickers = D.members.filter(function (m) { return a.fav[m] || a.least[m]; }).length;
+  var h = '<div class="section-title" style="margin-left:0">Song picks</div><ul class="sp">';
+  order.forEach(function (song) {
+    var p = picks[song], n = tracks.indexOf(song);
+    h += '<li><span class="tn">' + (n < 0 ? '' : n + 1) + '</span>' +
+      '<span class="sn">' + esc(song) + (p.love.length && p.hate.length ? '<span class="tag warn">Split</span>' : '') + '</span>' +
+      '<span class="pk">' + (p.love.length ? '<span class="lv">♥</span>' + faces(p.love) : '') +
+      (p.hate.length ? '<span class="dl">✕</span>' + faces(p.hate) : '') + '</span></li>';
+  });
+  h += '</ul>';
+  if (pickers < D.members.length) h += '<div class="sp-note">' + pickers + ' of ' + D.members.length + ' have picked songs so far.</div>';
+  return h;
+}
+
 /* ---------- profile ---------- */
 
 function openProfile() {
