@@ -111,10 +111,10 @@
   .hero .by { font-size: 16px; color: var(--muted); }
   .htop { display: flex; gap: 16px; align-items: flex-start; }
   .htop > div:first-child { flex: 1; min-width: 0; }
-  .bigavg { text-align: right; flex: none; padding-top: 18px; }
-  .bigavg b { display: block; font-size: 34px; font-weight: 900; line-height: 1; }
-  .bigavg .stars { font-size: 14px; display: block; margin-top: 3px; }
-  .bigavg small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .bigavg { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
+  .bigavg b { font-size: 30px; font-weight: 900; line-height: 1; }
+  .bigavg .stars { font-size: 16px; }
+  .bigavg small { font-size: 13px; color: var(--muted); }
   .meta { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--muted); }
   .meta .mini { margin: 0; width: 24px; height: 24px; }
   .meta b { color: var(--ink); }
@@ -413,7 +413,10 @@
     .board .score .stars { font-size: 11px; }
     .board .rank { width: 24px; height: 24px; font-size: 13px; }
     .bigavg b { font-size: 28px; }
-    .bigavg { padding-top: 14px; }
+    /* buttons: Rate it full width, the two listen links side by side under it */
+    .hero .listen { display: grid; grid-template-columns: 1fr 1fr; }
+    .hero .listen .btn { justify-content: center; text-align: center; padding: 11px 12px; }
+    .hero .listen .btn.primary { grid-column: 1 / -1; }
     .thumb { width: 46px; height: 46px; }
     .two, .songs { grid-template-columns: 1fr; }
     .chosen { grid-template-columns: 1fr; }
@@ -690,8 +693,8 @@ function renderHome() {
   var mine = rateState.member ? a.ratings[rateState.member] : null;
   var h = installCard() + '<div class="card hero">' + img(a, 'cover') + '<div>' +
     '<div class="htop"><div><div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
-    '<h2>' + esc(a.album) + '</h2><div class="by">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
-    (a.avg == null ? '' : '<div class="bigavg"><b>' + cnt(a.avg) + '</b><span class="stars">' + stars(a.avg) + '</span><small>group avg</small></div>') + '</div>' +
+    '<h2>' + esc(a.album) + '</h2><div class="by">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div></div>' +
+    (a.avg == null ? '' : '<div class="bigavg"><b>' + cnt(a.avg) + '</b><span class="stars">' + stars(a.avg) + '</span><small>group avg</small></div>') +
     '<div class="meta">' + face(a.pickedBy, 'mini') + '<span><b>' + esc(a.pickedBy) + '\'s pick</b> · ' + esc(a.season) + ', #' + a.number + '</span></div>' +
     // Everyone's photo: full color once they've rated, faded until they do.
     '<div class="faces"><div class="row5">' + D.members.map(function (m) {
