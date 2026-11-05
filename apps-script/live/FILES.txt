@@ -1,0 +1,12 @@
+# Every file in the live Apps Script project (pulled 2026-11-05)
+# Members* and Avatars* exist in Apps Script but are kept out of this public repo.
+Album Links.gs
+Api.gs
+Avatars.html
+CommentOfTheDay.gs
+Cover Art.gs
+Index.html
+Members.gs
+Tracklists.gs
+WebApp.gs
+appsscript.json

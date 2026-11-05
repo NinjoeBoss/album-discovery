@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1e1b2e; --plum: #3d3557; --plum2: #6c5c9d; --canvas: #eceaf3; --card: #ffffff;
+    --band: #f3f1f8; --line: #d9d4e2; --muted: #5e5873; --gold: #d99a09; --red: #802f3c;
+    --medal-gold: #ffec99; --medal-silver: #e3e7eb; --medal-bronze: #f7dac0; --wait: #fff9e0;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Roboto, Arial, sans-serif; background: var(--canvas); color: var(--ink); }
+  body.locked { overflow: hidden; }
+  button { font-family: inherit; }
+  header { background: var(--ink); color: #fff; padding: 18px 20px 0; position: sticky; top: 0; z-index: 5; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: .3px; }
+  .avatar { margin-left: auto; align-self: center; width: 38px; height: 38px; border-radius: 99px; border: 2px solid rgba(255,255,255,.85); font-weight: 900; font-size: 16px; color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: none; }
+  .avatar:hover { box-shadow: 0 0 0 3px var(--plum2); }
+  .avatar.guest { background: var(--plum); color: #fff; }
+  .avatar img, .pbig img, .mini img { width: 100%; height: 100%; border-radius: 99px; object-fit: cover; display: block; }
+  .avatar { overflow: hidden; }
+  .mini { width: 30px; height: 30px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; vertical-align: middle; margin-right: 8px; overflow: hidden; flex: none; }
+  .btn.danger { background: #fbe2e2; color: #8a1f1f; }
+  .btn.danger.solid { background: #a8323e; color: #fff; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 99px; font-weight: 700; font-size: 14px; z-index: 30; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 90vw; text-align: center; }
+
+  /* season dropdown in the header */
+  header select.season-pick { width: auto; flex: none; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+    color: #fff; background: var(--plum2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 10px center;
+    border: 0; border-radius: 99px; padding: 6px 28px 6px 12px; cursor: pointer; -webkit-appearance: none; appearance: none; }
+  header select.season-pick:hover, header select.season-pick:focus { outline: none; box-shadow: 0 0 0 2px var(--gold); }
+  header select.season-pick option { color: var(--ink); background: #fff; text-transform: none; font-weight: 700; }
+
+  /* season bar on Albums, Members, Stats */
+  .sbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .sbar .t1 { font-size: 20px; font-weight: 900; }
+  .seg { display: inline-flex; background: #fff; border: 1px solid var(--line); border-radius: 99px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+  .seg button { border: 0; background: none; border-radius: 99px; padding: 7px 14px; font-weight: 700; font-size: 13px; color: var(--plum); cursor: pointer; }
+  .seg button.on { background: var(--plum); color: #fff; }
+  .seg button .now { font-size: 9px; letter-spacing: .6px; text-transform: uppercase; background: var(--gold); color: #fff; border-radius: 99px; padding: 1px 6px; margin-left: 5px; vertical-align: 1px; }
+  .shead { display: flex; align-items: baseline; gap: 10px; margin: 22px 4px 10px; }
+  .shead .section-title { margin: 0; }
+  .shead .t2 { font-size: 12px; }
+  .empty-season { text-align: center; padding: 28px 16px; }
+  .empty-season .t1 { font-size: 18px; margin-bottom: 4px; }
+
+  .pill { background: var(--plum2); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; text-transform: uppercase; letter-spacing: .6px; }
+  nav { display: flex; gap: 4px; margin-top: 14px; overflow-x: auto; }
+  nav button { background: none; border: 0; color: #b9b2cf; font-size: 14px; font-weight: 700; padding: 10px 12px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+  nav button.on { color: #fff; border-bottom-color: var(--gold); }
+  main { max-width: 980px; margin: 0 auto; padding: 18px 14px 60px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .section-title { font-size: 12px; font-weight: 900; color: var(--plum2); text-transform: uppercase; letter-spacing: 1px; margin: 22px 4px 10px; }
+  .muted { color: var(--muted); }
+  .stars { color: var(--gold); letter-spacing: 1px; }
+  .loading { text-align: center; padding: 80px 20px; color: var(--muted); font-weight: 500; }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: minmax(140px, 260px) 1fr; gap: 20px; align-items: center; }
+  .cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--band); display: block; }
+  .eyebrow { font-size: 11px; font-weight: 900; color: var(--plum2); letter-spacing: 1.2px; text-transform: uppercase; }
+  .hero h2 { margin: 6px 0 2px; font-size: 30px; line-height: 1.1; }
+  .hero .by { font-size: 16px; color: var(--muted); margin-bottom: 14px; }
+  .tiles { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tile { background: var(--band); border-radius: 10px; padding: 9px 12px; min-width: 96px; }
+  .tile b { display: block; font-size: 10px; letter-spacing: .8px; color: var(--plum2); text-transform: uppercase; margin-bottom: 3px; }
+  .tile span { font-weight: 700; font-size: 15px; }
+  .listen { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .btn { display: inline-block; text-decoration: none; border: 0; border-radius: 99px; padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn.spotify { background: #1db954; color: #fff; }
+  .btn.apple { background: #fa2d48; color: #fff; }
+  .btn.primary { background: var(--plum); color: #fff; }
+  .btn.gold { background: var(--gold); color: #fff; }
+  .btn.ghost { background: var(--band); color: var(--plum); }
+  .waiting { margin-top: 14px; font-size: 13px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; font-size: 12px; font-weight: 700; margin: 3px 4px 0 0; color: var(--ink); vertical-align: middle; }
+  .tiny { width: 20px; height: 20px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; overflow: hidden; flex: none; background: rgba(255,255,255,.6); }
+  .tiny img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile .who2 { display: flex; align-items: center; gap: 8px; }
+  .tile .who2 .mini { margin: 0; width: 26px; height: 26px; }
+  td.n .nm { display: inline-flex; align-items: center; gap: 7px; }
+  .bars .row span:first-child { display: inline-flex; align-items: center; gap: 7px; }
+
+  /* up next strip */
+  .next { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; }
+  .next .thumb { width: 64px; height: 64px; }
+  .next.empty { grid-template-columns: 1fr auto; background: var(--wait); border-color: #f0e2a8; }
+  .next .t1 { font-size: 17px; margin: 3px 0 2px; }
+  .kickoff { color: var(--gold); }
+
+  /* leaderboard: every row is the same height and the columns line up, whatever the text length */
+  .board { list-style: none; margin: 0; padding: 0; }
+  .board li { display: grid; grid-template-columns: 34px 52px minmax(0, 1fr) 84px; gap: 12px; align-items: center; height: 70px; padding: 0 10px; border-radius: 10px; cursor: pointer; }
+  .board li:nth-child(even) { background: var(--band); }
+  .board li.m1 { background: var(--medal-gold); } .board li.m2 { background: var(--medal-silver); } .board li.m3 { background: var(--medal-bronze); }
+  .board .binfo { min-width: 0; }
+  .board .t1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board .bline { display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-top: 3px; min-width: 0; }
+  .board .bline .art { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .board .bline .tiny, .board .bline .stag, .board .bline .who { flex: none; }
+  .board .score { white-space: nowrap; }
+  .board .score .stars { font-size: 13px; }
+  .rank { font-weight: 900; font-size: 18px; color: var(--plum); text-align: center; }
+  .thumb { width: 52px; height: 52px; border-radius: 6px; object-fit: cover; background: var(--band); }
+  .t1 { font-weight: 700; } .t2 { font-size: 12px; color: var(--muted); }
+  .score { text-align: right; } .score b { font-size: 17px; display: block; }
+  .stag { display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: .5px; background: var(--band); color: var(--plum2); border-radius: 4px; padding: 1px 5px; }
+
+  /* rate */
+  select, textarea, input[type=text], input[type=search], input[type=number] { width: 100%; font: inherit; font-size: 16px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+  select { font-weight: 700; }
+  textarea { resize: vertical; min-height: 84px; line-height: 1.4; }
+  .slider { text-align: center; margin: 22px 0 8px; }
+  .slider .big { font-size: 56px; font-weight: 900; line-height: 1; }
+  .slider .stars { font-size: 30px; display: block; min-height: 38px; margin-top: 4px; }
+  input[type=range] { width: 100%; accent-color: var(--plum2); height: 34px; }
+  .scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .extras { margin-top: 20px; border-top: 1px solid var(--band); padding-top: 16px; display: grid; gap: 14px; }
+  .field label { display: block; font-size: 11px; font-weight: 900; color: var(--plum2); letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 6px; }
+  .field .hint { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; justify-content: space-between; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 700; display: none; }
+  .msg.ok { display: block; margin-bottom: 12px; background: #dff3e6; color: #1a6b3a; } .msg.err { display: block; background: #fbe2e2; color: #8a1f1f; }
+  .todo { margin-top: 10px; font-size: 13px; }
+
+  /* add album */
+  .rot { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--band); }
+  .rotrow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-top: 6px; }
+  .rotrow .chip { margin: 0; }
+  .rotrow .chip.up { box-shadow: 0 0 0 2px var(--gold); }
+  .rotrow .arrow { color: var(--muted); font-weight: 900; padding: 0 3px; }
+  .rotrow .upnext { font-size: 9px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: #fff; background: var(--gold); border-radius: 99px; padding: 1px 6px; margin-left: 2px; }
+  .searchrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .searchrow .btn { padding: 0 20px; font-size: 15px; }
+  .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 14px; }
+  .res { background: #fff; border: 2px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; text-align: left; padding: 0; color: var(--ink); }
+  .res:hover { border-color: var(--plum2); }
+  .res .cover { border-radius: 0; }
+  .res .info { padding: 8px 9px 10px; } .res .t1 { font-size: 13px; line-height: 1.2; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; background: var(--band); color: var(--plum2); border-radius: 4px; padding: 1px 5px; margin-top: 4px; }
+  .tag.warn { background: var(--wait); color: #8a6100; }
+  .chosen { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: start; }
+  .chosen .fields { display: grid; gap: 12px; }
+  .note { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--band); margin-top: 12px; }
+  .note.warn { background: var(--wait); }
+  .linkish { background: none; border: 0; color: var(--plum2); font-weight: 700; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; }
+  .queue { list-style: none; margin: 0; padding: 0; }
+  .queue li { display: grid; grid-template-columns: 74px 48px 1fr auto; gap: 12px; align-items: center; padding: 8px 6px; border-top: 1px solid var(--band); }
+  .queue li:first-child { border-top: 0; }
+  .queue li.divider { display: block; padding: 10px 6px 6px; border-top: 0; }
+  .queue li.divider span { display: inline-block; background: var(--plum); color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; border-radius: 99px; padding: 3px 10px; }
+  .queue .d { font-weight: 900; font-size: 13px; color: var(--plum); }
+  .queue .thumb { width: 48px; height: 48px; }
+  .queue .open { color: var(--muted); font-style: italic; }
+  .queue .chip { margin: 0; }
+  .queue li.tap { cursor: pointer; }
+
+  /* grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .gcard { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; }
+  .gcard .cover { border-radius: 0; }
+  .gcard .info { padding: 9px 10px 11px; } .gcard .t1 { font-size: 14px; line-height: 1.2; }
+  .gcard.m1 { outline: 4px solid #f1d35a; } .gcard.m2 { outline: 4px solid var(--medal-silver); } .gcard.m3 { outline: 4px solid #e7b88f; }
+
+  /* modal */
+  .scrim { position: fixed; inset: 0; background: rgba(30,27,46,.6); display: none; align-items: flex-start; justify-content: center;
+    padding: max(30px, calc(env(safe-area-inset-top) + 16px)) 12px max(30px, calc(env(safe-area-inset-bottom) + 16px));
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; z-index: 20; }
+  .scrim.on { display: flex; }
+  .modal { background: #fff; border-radius: 16px; max-width: 620px; width: 100%; padding: 18px; position: relative; }
+  .close { position: absolute; top: 10px; right: 12px; z-index: 1; border: 0; background: var(--band); width: 34px; height: 34px; border-radius: 99px; font-size: 18px; cursor: pointer; }
+  /* album popup header: cover on the left, title beside it, tiles and buttons under the title */
+  .mhero { display: grid; grid-template-columns: 200px 1fr; grid-template-areas: "cover head" "cover body"; column-gap: 20px; align-items: start; }
+  .mhero > .cover { grid-area: cover; }
+  .mhead { grid-area: head; padding-right: 40px; }
+  .mhead h2 { margin: 6px 0 2px; font-size: 24px; line-height: 1.15; }
+  .mhead .by { font-size: 16px; color: var(--muted); margin-bottom: 12px; }
+  .mbody { grid-area: body; }
+  table.rt { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  table.rt td { padding: 9px 8px; border-top: 1px solid var(--band); font-size: 14px; vertical-align: top; }
+  table.rt td.n { font-weight: 700; border-radius: 6px; white-space: nowrap; }
+  .take { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .take q { font-style: italic; color: var(--ink); }
+  .songs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .songs div { background: var(--band); border-radius: 10px; padding: 9px 12px; font-size: 14px; }
+  .songs b { display: block; font-size: 10px; letter-spacing: .8px; color: var(--plum2); text-transform: uppercase; margin-bottom: 3px; }
+
+  /* profile */
+  .phead { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; padding-right: 40px; }
+  .pbig { width: 64px; height: 64px; border-radius: 99px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; flex: none; }
+  .phead h2 { margin: 0; font-size: 24px; }
+  .you { display: inline-block; background: var(--plum); color: #fff; font-size: 10px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; border-radius: 99px; padding: 2px 8px; vertical-align: middle; margin-left: 6px; }
+  .owe { list-style: none; margin: 6px 0 0; padding: 0; }
+  .owe a { color: var(--plum); font-weight: 700; text-decoration: none; }
+  .owe li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--band); font-size: 14px; }
+
+  /* members + stats */
+  .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .mcard h3 { margin: 0 0 10px; font-size: 20px; display: flex; align-items: center; }
+  .kv { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--band); font-size: 14px; gap: 10px; }
+  .kv b { font-weight: 700; text-align: right; }
+  .stat { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; }
+  .stat .thumb { width: 64px; height: 64px; }
+  .stat .lbl { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+  .bars .row { display: grid; grid-template-columns: 110px 1fr 40px; gap: 10px; align-items: center; margin: 8px 0; font-size: 14px; font-weight: 700; }
+  .bars .track { background: var(--band); border-radius: 99px; height: 16px; overflow: hidden; }
+  .bars .fill { background: var(--plum); height: 100%; border-radius: 99px; }
+
+  @media (max-width: 600px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero .cover { max-width: 300px; margin: 0 auto; }
+    .hero h2 { font-size: 26px; }
+    .board li { grid-template-columns: 24px 46px minmax(0, 1fr) 72px; gap: 10px; height: 64px; padding: 0 8px; }
+    .board .score b { font-size: 16px; }
+    .board .score .stars { font-size: 11px; }
+    .board .bline .pname { display: none; } /* photo alone shows who picked it, so the artist has room */
+    .thumb { width: 46px; height: 46px; }
+    .two, .songs { grid-template-columns: 1fr; }
+    .chosen { grid-template-columns: 1fr; }
+    .chosen .cover { max-width: 200px; }
+    .next { grid-template-columns: 56px 1fr; }
+    .next .thumb { width: 56px; height: 56px; }
+    .next > .btn { grid-column: 1 / -1; }
+    .next.empty { grid-template-columns: 1fr; }
+    .results { grid-template-columns: repeat(2, 1fr); }
+    .queue li { grid-template-columns: 54px 42px 1fr auto; gap: 10px; }
+    .queue .thumb { width: 42px; height: 42px; }
+    .brand h1 { font-size: 19px; }
+    /* album popup on phones: small cover beside the title, everything else full width below */
+    .scrim { padding-left: 8px; padding-right: 8px; }
+    .modal { padding: 14px; }
+    .mhero { grid-template-columns: 100px 1fr; grid-template-areas: "cover head" "body body"; column-gap: 14px; align-items: center; }
+    .mhead { padding-right: 34px; min-width: 0; }
+    .mhead h2 { font-size: 21px; overflow-wrap: anywhere; }
+    .mhead .by { font-size: 14px; margin-bottom: 0; }
+    .mbody { margin-top: 14px; }
+    .mbody .tile { flex: 1 1 auto; }
+    .mbody .listen .btn { flex: 1; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1>Album Discovery</h1>
+    <select class="season-pick" id="season" onchange="pickSeason(this.value)" aria-label="Season"><option>Season</option></select>
+    <button class="avatar" id="avatar" style="display:none" onclick="openProfile()" aria-label="Your profile"></button></div>
+  <nav id="nav">
+    <button data-v="home" class="on">Home</button>
+    <button data-v="rate">Rate</button>
+    <button data-v="add">Add Album</button>
+    <button data-v="albums">Albums</button>
+    <button data-v="members">Members</button>
+    <button data-v="stats">Stats</button>
+  </nav>
+</header>
+<main id="app"><div class="loading">Loading this week's album…</div></main>
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+
+<?!= include('Avatars'); ?>
+<script>
+if (typeof AVATARS === 'undefined') var AVATARS = {};
+var COLORS = { Brennan: '#dbe8fa', Jonathan: '#e6ddf6', William: '#fae3d1', Luke: '#d8f0e3', Nathan: '#fadfec' };
+var FALLBACK = ['#e3f2fd', '#fff3e0', '#e8f5e9', '#fce4ec', '#ede7f6', '#e0f7fa'];
+var D = null, ranked = [], seasonRanks = {}, seasonSel = null, view = 'home';
+var rateState = { member: null, row: null, score: 7, fav: '', least: '', comment: '' };
+var addState = { query: '', results: null, searching: false, picked: null, changeRow: null, flash: null };
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function jsq(s) { return esc(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+function color(name) { if (COLORS[name]) return COLORS[name]; var i = D.members.indexOf(name); return FALLBACK[(i < 0 ? 0 : i) % FALLBACK.length]; }
+function stars(v) { if (v == null) return ''; var h = Math.round(v); return '★'.repeat(Math.floor(h / 2)) + (h % 2 ? '½' : ''); }
+function fmt(v) { return v == null ? '' : v.toFixed(2); }
+function num(v) { return v == null ? '' : String(Math.round(v * 100) / 100); }
+function fmtDate(s, long) { if (!s) return ''; var p = s.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]); return d.toLocaleDateString('en-US', long ? { weekday: 'long', month: 'long', day: 'numeric' } : { month: 'short', day: 'numeric' }); }
+function img(a, cls) { return a.cover ? '<img class="' + cls + '" src="' + esc(a.cover) + '" alt="">' : '<div class="' + cls + '"></div>'; }
+/* A member's club photo, or their initial on their color if there's no photo. */
+function face(name, cls) {
+  var url = AVATARS[name];
+  var bg = 'background:' + color(name);
+  if (!url) return '<span class="' + cls + '" style="' + bg + '">' + esc(name.charAt(0)) + '</span>';
+  return '<span class="' + cls + '" style="' + bg + '"><img src="' + esc(url) + '" alt="" onerror="this.parentNode.textContent=\'' + jsq(name.charAt(0)) + '\'"></span>';
+}
+function toast(text) {
+  var t = document.createElement('div'); t.className = 'toast'; t.textContent = text;
+  document.body.appendChild(t); setTimeout(function () { t.remove(); }, 3500);
+}
+function canRemove(a) {
+  return a && rateState.member && a.count === 0 && a.date && a.date >= D.today && (a.pickedBy === rateState.member || (D.me && D.me.admin));
+}
+function chip(name) { return '<span class="chip" style="background:' + color(name) + '">' + face(name, 'tiny') + esc(name) + '</span>'; }
+/* Rank inside the album's own season (each season has its own medals). */
+function rankOf(a) { var list = seasonRanks[a.season] || []; var i = list.indexOf(a); return i < 0 ? null : i + 1; }
+function medalClass(a) { var r = rankOf(a); return r && r <= 3 ? 'm' + r : ''; }
+function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function storeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function isQuiet(s) { return !s || s === 'No agreement yet'; }
+
+/* ---------- seasons ---------- */
+
+function seasonNames() { return (D.seasons || []).map(function (s) { return s.name; }); }
+function seasonObj(name) { return (D.seasons || []).filter(function (s) { return s.name === name; })[0] || null; }
+function isAll() { return seasonSel === 'all'; }
+function seasonLabel() { return isAll() ? 'All seasons' : seasonSel; }
+/* Albums in the season picked in the header dropdown. */
+function sAlbums() { return isAll() ? D.albums : D.albums.filter(function (a) { return a.season === seasonSel; }); }
+function prevSeason(name) { var n = seasonNames(), i = n.indexOf(name); return i > 0 ? n[i - 1] : null; }
+/* "Jul 16 to Nov 5" or "Nov 12 onward". A season ends the Thursday before the next one starts. */
+function seasonRange(name) {
+  var n = seasonNames(), i = n.indexOf(name), s = seasonObj(name);
+  if (!s) return '';
+  var next = n[i + 1] ? seasonObj(n[i + 1]) : null;
+  if (!next) return fmtDate(s.start) + ' onward';
+  var p = next.start.split('-'), end = new Date(+p[0], +p[1] - 1, +p[2] - 7);
+  var endYmd = end.getFullYear() + '-' + ('0' + (end.getMonth() + 1)).slice(-2) + '-' + ('0' + end.getDate()).slice(-2);
+  return fmtDate(s.start) + ' to ' + fmtDate(endYmd);
+}
+function rankList(list) {
+  return list.filter(function (a) { return a.avg != null; }).sort(function (x, y) {
+    return (y.avg - x.avg) || (y.count - x.count) || (x.row - y.row);
+  });
+}
+function buildRanks() {
+  seasonRanks = {};
+  seasonNames().forEach(function (n) { seasonRanks[n] = rankList(D.albums.filter(function (a) { return a.season === n; })); });
+  ranked = isAll() ? rankList(D.albums) : (seasonRanks[seasonSel] || []);
+}
+function renderSeasonSelect() {
+  var sel = document.getElementById('season');
+  var h = '';
+  seasonNames().slice().reverse().forEach(function (n) {
+    h += '<option value="' + esc(n) + '"' + (n === seasonSel ? ' selected' : '') + '>' + esc(n) + (n === D.currentSeason ? ' (now)' : '') + '</option>';
+  });
+  h += '<option value="all"' + (isAll() ? ' selected' : '') + '>All seasons</option>';
+  sel.innerHTML = h;
+}
+function pickSeason(v) {
+  seasonSel = v;
+  storeSet('ad.season', v);
+  buildRanks();
+  renderSeasonSelect();
+  show(view);
+}
+/* Segmented buttons at the top of Albums, Members and Stats (same choice as the header dropdown). */
+function seasonBar(extra) {
+  var h = '<div class="sbar"><div><div class="eyebrow">Showing</div><div class="t1">' + esc(seasonLabel()) + '</div>' +
+    '<div class="t2">' + (isAll() ? D.albums.length + ' albums across ' + seasonNames().length + ' seasons' : esc(seasonRange(seasonSel)) + ' · ' + sAlbums().length + (sAlbums().length === 1 ? ' album' : ' albums')) +
+    (extra ? ' · ' + extra : '') + '</div></div><div class="seg">';
+  seasonNames().forEach(function (n) {
+    h += '<button class="' + (n === seasonSel ? 'on' : '') + '" onclick="pickSeason(\'' + jsq(n) + '\')">' + esc(n) + (n === D.currentSeason ? '<span class="now">Now</span>' : '') + '</button>';
+  });
+  return h + '<button class="' + (isAll() ? 'on' : '') + '" onclick="pickSeason(\'all\')">All</button></div></div>';
+}
+/* Shown when the chosen season has nothing yet. */
+function emptySeason(name) {
+  var s = seasonObj(name), first = D.slots.filter(function (x) { return x.season === name; })[0];
+  return '<div class="card empty-season"><div class="t1">Nothing picked for ' + esc(name) + ' yet</div>' +
+    '<div class="t2">' + (s && s.start > D.today ? 'It kicks off ' + esc(fmtDate(s.start, true)) + '. ' : '') +
+    (first && first.turn ? first.turn + ' is up first.' : '') + '</div></div>';
+}
+
+function prep(data) {
+  D = data;
+  D.slots = D.slots || [];
+  if (!D.seasons || !D.seasons.length) D.seasons = [{ name: D.season || 'Season 1', start: '', count: D.albums.length }];
+  D.albums.forEach(function (a) { if (!a.season) a.season = D.seasons[D.seasons.length - 1].name; });
+  if (!D.currentSeason) D.currentSeason = D.seasons[D.seasons.length - 1].name;
+  if (!seasonSel) {
+    var saved = storeGet('ad.season');
+    seasonSel = (saved === 'all' || seasonNames().indexOf(saved) >= 0) ? saved : D.currentSeason;
+  }
+  if (!isAll() && seasonNames().indexOf(seasonSel) < 0) seasonSel = D.currentSeason;
+  buildRanks();
+  renderSeasonSelect();
+  D.me = D.me || { email: '', name: '' };
+  rateState.member = D.members.indexOf(D.me.name) >= 0 ? D.me.name : null;
+  var av = document.getElementById('avatar');
+  av.style.display = 'flex';
+  av.className = 'avatar' + (rateState.member ? '' : ' guest');
+  av.style.background = rateState.member ? color(rateState.member) : '';
+  var pic = rateState.member && AVATARS[rateState.member];
+  if (pic) av.innerHTML = '<img src="' + esc(pic) + '" alt="" onerror="this.parentNode.textContent=\'' + jsq(rateState.member.charAt(0)) + '\'">';
+  else av.textContent = rateState.member ? rateState.member.charAt(0) : '?';
+  av.title = rateState.member ? rateState.member + ' · ' + D.me.email : 'Not signed in as a member';
+}
+
+/* Shown on Rate and Add Album when this Google account isn't one of the members. */
+function notMember() {
+  return '<div class="card"><div class="eyebrow">Not on the club list</div><h2 style="margin:6px 0 8px">Who\'s this?</h2>' +
+    '<div class="muted">' + (D.me.email ? 'You\'re signed in to Google as <b>' + esc(D.me.email) + '</b>, which isn\'t linked to a member.'
+      : 'The site couldn\'t tell which Google account you\'re using.') +
+    ' If you\'re in the club, open the site in a browser where you\'re signed in only to your own Google account, or ask Jonathan to add this email.</div></div>';
+}
+
+function thisWeek() {
+  var past = D.albums.filter(function (a) { return a.date && a.date <= D.today; });
+  if (!past.length) return D.albums[D.albums.length - 1] || null;
+  return past.reduce(function (best, a) { return a.date > best.date ? a : best; });
+}
+
+/* Albums already lined up for a future Thursday, soonest first. */
+function upcoming() {
+  return D.albums.filter(function (a) { return a.date && a.date > D.today; }).sort(function (x, y) { return x.date < y.date ? -1 : 1; });
+}
+/* This member's next open Thursday in the rotation. */
+function slotFor(m) {
+  return D.slots.filter(function (s) { return s.turn === m; })[0] || null;
+}
+/* This member's own pick that's lined up and still unrated (can be changed). */
+function myPending(m) {
+  return D.albums.filter(function (a) { return a.pickedBy === m && a.count === 0 && a.date && a.date >= D.today; })
+    .sort(function (x, y) { return x.date < y.date ? -1 : 1; })[0] || null;
+}
+/* True when this date is the very first Thursday of a season after the first. */
+function isKickoff(date) {
+  var n = seasonNames();
+  return n.some(function (name, i) { return i > 0 && seasonObj(name).start === date; });
+}
+function seasonOfDate(date) {
+  var name = seasonNames()[0];
+  (D.seasons || []).forEach(function (s) { if (date && s.start && date >= s.start) name = s.name; });
+  return name;
+}
+
+/* What a member still owes on an album: a score, song picks, a comment. */
+function missingFor(a, m) {
+  var out = [];
+  if (a.ratings[m] == null) out.push('score');
+  if (!a.fav[m] || !a.least[m]) out.push('songs');
+  if (!a.comments[m]) out.push('comment');
+  return out;
+}
+
+/* ---------- views ---------- */
+
+function renderHome() {
+  var a = thisWeek();
+  if (!a) return '<div class="card">No albums yet.</div>' + nextCard();
+  var missing = D.members.filter(function (m) { return a.ratings[m] == null; });
+  var h = '<div class="card hero">' + img(a, 'cover') + '<div>' +
+    '<div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
+    '<h2>' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div>' +
+    '<div class="tiles">' +
+      '<div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
+      '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : fmt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
+      '<div class="tile"><b>Ratings in</b><span>' + a.count + ' of ' + D.members.length + '</span></div>' +
+      '<div class="tile"><b>' + esc(a.season) + '</b><span>Album #' + a.number + '</span></div>' +
+    '</div>' +
+    '<div class="listen"><a class="btn spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a>' +
+    '<a class="btn apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a>' +
+    '<button class="btn primary" onclick="goRate(' + a.row + ')">' + (rateState.member && a.ratings[rateState.member] != null ? 'Update my rating' : 'Rate it') + '</button></div>' +
+    (rateState.member ? '<div class="waiting">' + (a.ratings[rateState.member] == null ? '<b>You haven\'t rated this one yet.</b>'
+      : 'You gave it <b>' + num(a.ratings[rateState.member]) + '</b> <span class="stars">' + stars(a.ratings[rateState.member]) + '</span>') + '</div>' : '') +
+    (missing.length ? '<div class="waiting muted">Still waiting on ' + missing.map(chip).join('') + '</div>'
+                    : '<div class="waiting"><b>Everyone has rated this one.</b></div>') +
+    '</div></div>';
+
+  h += nextCard();
+
+  h += '<div class="section-title">' + esc(seasonLabel()) + ' leaderboard</div>';
+  if (!ranked.length) {
+    var prev = !isAll() && prevSeason(seasonSel), champ = prev && (seasonRanks[prev] || [])[0];
+    h += '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div>' +
+      '<div class="t2">' + (seasonObj(seasonSel) && seasonObj(seasonSel).start > D.today ? 'It kicks off ' + esc(fmtDate(seasonObj(seasonSel).start, true)) + '.' : 'The board fills in as albums get rated.') + '</div></div>';
+    if (champ) {
+      h += statCard(prev + ' champion', 'var(--gold)', champ, fmt(champ.avg) + ' <span class="stars">' + stars(champ.avg) + '</span> · picked by ' + esc(champ.pickedBy)) +
+        '<div style="text-align:center"><button class="btn ghost" onclick="pickSeason(\'' + jsq(prev) + '\')">See the ' + esc(prev) + ' standings</button></div>';
+    }
+    return h;
+  }
+  h += '<div class="card"><ol class="board">';
+  ranked.forEach(function (x, i) {
+    // One line each for album and artist; long names end in "…" (full name on hover and in the popup).
+    h += '<li class="' + (i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')" title="' + esc(x.album + ' · ' + x.artist) + '"><div class="rank">' + (i + 1) + '</div>' + img(x, 'thumb') +
+      '<div class="binfo"><div class="t1">' + esc(x.album) + '</div><div class="t2 bline"><span class="art">' + esc(x.artist) + '</span><span class="who dot">·</span>' + face(x.pickedBy, 'tiny') + '<span class="who pname">' + esc(x.pickedBy) + '</span>' +
+      (isAll() ? '<span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
+      '<div class="score"><b>' + fmt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
+  });
+  return h + '</ol></div>';
+}
+
+/* Home strip: next Thursday's album if it's in, otherwise whose turn it is. */
+function nextCard() {
+  var n = upcoming()[0];
+  var label = function (date) {
+    return isKickoff(date) ? '<span class="kickoff">' + esc(seasonOfDate(date)) + ' kicks off</span> · ' + esc(fmtDate(date, true)) : 'Up next · ' + esc(fmtDate(date, true));
+  };
+  if (n) {
+    return '<div class="card next">' + img(n, 'thumb') + '<div><div class="eyebrow">' + label(n.date) + '</div>' +
+      '<div class="t1">' + esc(n.album) + '</div><div class="t2">' + esc(n.artist) + (n.year ? ' · ' + esc(n.year) : '') + ' · picked by ' + esc(n.pickedBy) + '</div></div>' +
+      '<a class="btn ghost" href="' + esc(n.spotify) + '" target="_blank">Preview</a></div>';
+  }
+  var s = D.slots[0];
+  if (!s) return '';
+  return '<div class="card next empty"><div><div class="eyebrow">' + label(s.date) + '</div>' +
+    '<div class="t1">' + (D.turn ? chip(D.turn) + ' is up to pick' : 'No album yet') + '</div>' +
+    '<div class="t2">Nothing\'s been added for next Thursday yet.</div></div>' +
+    '<button class="btn gold" onclick="show(\'add\')">Add the album</button></div>';
+}
+
+/* Loads the saved score, songs and comment for the chosen member and album. */
+function loadMine() {
+  var a = albumByRow(rateState.row), m = rateState.member;
+  if (!a || !m) { rateState.fav = ''; rateState.least = ''; rateState.comment = ''; return; }
+  if (a.ratings[m] != null) rateState.score = a.ratings[m];
+  rateState.fav = a.fav[m] || '';
+  rateState.least = a.least[m] || '';
+  rateState.comment = a.comments[m] || '';
+}
+
+function songSelect(id, a, current, label) {
+  var list = (a && a.tracks) ? a.tracks.slice() : [];
+  if (current && list.indexOf(current) < 0) list.unshift(current);
+  var h = '<select id="' + id + '" onchange="rateState.' + id + '=this.value">' +
+    '<option value="">' + (list.length ? label : 'Tracklist not loaded yet') + '</option>';
+  list.forEach(function (s, i) {
+    h += '<option value="' + esc(s) + '"' + (s === current ? ' selected' : '') + '>' + (i + 1) + '. ' + esc(s) + '</option>';
+  });
+  return h + '</select>';
+}
+
+function renderRate() {
+  if (!rateState.row) { var w = thisWeek(); rateState.row = w ? w.row : null; loadMine(); }
+  var a = albumByRow(rateState.row);
+  var max = D.commentMax || 200;
+  var already = a && rateState.member && a.ratings[rateState.member] != null;
+
+  if (!rateState.member) return notMember();
+  var h = '<div class="card">';
+  h += '<div class="eyebrow" style="margin-bottom:8px">Rating as ' + chip(rateState.member) + '</div><select id="albumSel" onchange="pickAlbum(this.value)">';
+  // Every album you can rate, grouped by season (newest season first).
+  seasonNames().slice().reverse().forEach(function (sn) {
+    var list = D.albums.filter(function (x) { return x.season === sn && !(x.date && x.date > D.today && x.row !== rateState.row); }).reverse();
+    if (!list.length) return;
+    h += '<optgroup label="' + esc(sn) + '">';
+    list.forEach(function (x) {
+      var mine = x.ratings[rateState.member] != null ? '  (you: ' + num(x.ratings[rateState.member]) + ')' : '';
+      h += '<option value="' + x.row + '"' + (x.row === rateState.row ? ' selected' : '') + '>' + esc(fmtDate(x.date) + ' · ' + x.album + ' · ' + x.artist + mine) + '</option>';
+    });
+    h += '</optgroup>';
+  });
+  h += '</select>';
+
+  h += '<div class="slider"><div class="big" id="scoreBig">' + num(rateState.score) + '</div><span class="stars" id="scoreStars">' + stars(rateState.score) + '</span></div>' +
+    '<input type="range" min="1" max="10" step="0.25" value="' + rateState.score + '" oninput="slide(this.value)">' +
+    '<div class="scale"><span>1</span><span>5.5</span><span>10</span></div>';
+
+  h += '<div class="extras">' +
+    '<div class="two">' +
+      '<div class="field"><label>♥ Favorite song</label>' + songSelect('fav', a, rateState.fav, 'Pick your favorite') + '</div>' +
+      '<div class="field"><label>✕ Least favorite song</label>' + songSelect('least', a, rateState.least, 'Pick your least favorite') + '</div>' +
+    '</div>' +
+    '<div class="field"><label>Your take</label>' +
+      '<textarea id="comment" maxlength="' + max + '" placeholder="A sentence or two. One comment gets featured each day." oninput="typed(this.value)">' + esc(rateState.comment) + '</textarea>' +
+      '<div class="hint"><span>Optional</span><span id="count">' + rateState.comment.length + ' / ' + max + '</span></div></div>' +
+    '</div>';
+
+  h += '<div style="margin-top:16px"><button class="btn primary" style="width:100%;padding:14px;font-size:16px" id="saveBtn" onclick="save()">' +
+    (already ? 'Update my rating' : 'Submit rating') + '</button></div>' +
+    '<div class="msg" id="msg"></div>';
+
+  var owed = D.albums.filter(function (x) { return (!x.date || x.date <= D.today) && missingFor(x, rateState.member).length; });
+  h += '<div class="todo muted">' + (owed.length ? 'Still to finish: ' + owed.map(function (x) {
+    return '<a href="#" onclick="pickAlbum(' + x.row + ');return false">' + esc(x.album) + '</a> <span class="muted">(' + missingFor(x, rateState.member).join(', ') + ')</span>';
+  }).join(' · ') : '<b>You\'re all caught up.</b>') + '</div>';
+  return h + '</div>';
+}
+
+/* ---------- add album (New Album Thursday) ---------- */
+
+/* The weekly pick order, with whoever is up next ringed in gold. */
+function rotationStrip() {
+  if (!D.rotation || !D.rotation.length) return '';
+  return '<div class="rot"><div class="eyebrow">Pick order</div><div class="rotrow">' + D.rotation.map(function (n) {
+    return '<span class="chip' + (n === D.turn ? ' up' : '') + '" style="background:' + color(n) + '">' + face(n, 'tiny') + esc(n) +
+      (n === D.turn ? '<span class="upnext">Next</span>' : '') + '</span>';
+  }).join('<span class="arrow">›</span>') + '</div></div>';
+}
+function seasonTag(date) {
+  var s = seasonOfDate(date);
+  return s !== D.currentSeason || isKickoff(date) ? ' · ' + esc(s) : '';
+}
+
+function renderAdd() {
+  var m = rateState.member;
+  if (!m) return notMember() + queueCard();
+  var h = '<div class="card">';
+
+  var pending = myPending(m);
+  var changing = addState.changeRow != null;
+  var lockedOut = pending && pending.date > D.today && !changing;
+  var slot = changing ? { row: addState.changeRow, date: (albumByRow(addState.changeRow) || {}).date } : slotFor(m);
+
+  if (addState.flash) {
+    h += '<div class="msg ok" style="margin-top:0">' + addState.flash + '</div>';
+    addState.flash = null;
+  }
+  if (!changing) h += rotationStrip();
+
+  if (lockedOut) {
+    h += '<div class="eyebrow">You\'re lined up for ' + esc(fmtDate(pending.date, true)) + seasonTag(pending.date) + '</div>' +
+      '<div class="next" style="margin-top:10px">' + img(pending, 'thumb') + '<div><div class="t1">' + esc(pending.album) + '</div><div class="t2">' + esc(pending.artist) + (pending.year ? ' · ' + esc(pending.year) : '') + '</div></div>' +
+      '<div style="display:grid;gap:6px"><button class="btn ghost" onclick="startChange(' + pending.row + ')">Change it</button>' +
+      '<button class="btn danger" onclick="confirmRemove(' + pending.row + ')">Remove</button></div></div>' +
+      '<div class="note">You can swap or remove it any time before anyone rates it.</div></div>';
+    return h + queueCard();
+  }
+  if (!slot) return h + '<div class="note warn">' + (D.slots.length ? 'You don\'t have another turn coming up in the open weeks on the sheet yet.' : 'Every row on the sheet is filled. Ask Jonathan to add more rows.') + '</div></div>' + queueCard();
+
+  h += '<div class="eyebrow">' + (changing ? 'Change your pick for ' : 'Your turn: ') + esc(fmtDate(slot.date, true)) + seasonTag(slot.date) + '</div>';
+  if (!changing) {
+    var first = D.slots[0];
+    if (first && first.row === slot.row) h += '<div class="note">You\'re up next.' + (isKickoff(slot.date) ? ' Yours is the first album of ' + esc(seasonOfDate(slot.date)) + '!' : '') + '</div>';
+    else if (first) {
+      var before = D.slots[D.slots.indexOf(slot) - 1] || first;
+      h += '<div class="note">' + esc(fmtDate(before.date, true)) + ' is ' + (before.turn ? chip(before.turn) + '\'s turn' : 'open') + ', so yours is ' + esc(fmtDate(slot.date)) + '.</div>';
+    }
+  }
+
+  if (addState.picked) {
+    var p = addState.picked;
+    h += '<div class="chosen" style="margin-top:14px">' + (p.cover ? '<img class="cover" src="' + esc(p.cover) + '" alt="">' : '<div class="cover"></div>') +
+      '<div class="fields">' +
+        '<div class="field"><label>Album</label><input type="text" id="pAlbum" value="' + esc(p.album) + '" oninput="addState.picked.album=this.value" maxlength="150"></div>' +
+        '<div class="field"><label>Artist</label><input type="text" id="pArtist" value="' + esc(p.artist) + '" oninput="addState.picked.artist=this.value" maxlength="150"></div>' +
+        '<div class="field"><label>Year</label><input type="number" id="pYear" value="' + esc(p.year) + '" oninput="addState.picked.year=this.value" min="1900" max="2030" inputmode="numeric"></div>' +
+        (p.kind && p.kind !== 'Album' ? '<div class="note warn">Heads up: Apple lists this as a' + (p.kind === 'EP' ? 'n EP' : ' single') + ', not a full album.</div>' : '') +
+        (/\b(deluxe|remaster|edition|anniversary|expanded)\b/i.test(p.album) ? '<div class="t2">Tip: you can trim words like "Deluxe Edition" so the name matches the original album.</div>' : '') +
+      '</div></div>' +
+      '<div style="margin-top:16px;display:grid;gap:8px">' +
+        '<button class="btn primary" style="width:100%;padding:14px;font-size:16px" id="pickBtn" onclick="savePick()">' +
+          (changing ? 'Swap in this album' : 'Lock it in for ' + esc(fmtDate(slot.date))) + '</button>' +
+        '<button class="linkish" style="justify-self:center" onclick="addState.picked=null;show(\'add\')">Pick a different album</button>' +
+      '</div>';
+  } else {
+    h += '<div class="searchrow" style="margin-top:14px"><input type="search" id="q" placeholder="Search an album or artist" value="' + esc(addState.query) + '" onkeydown="if(event.key===\'Enter\')runSearch()" autocomplete="off">' +
+      '<button class="btn primary" onclick="runSearch()"' + (addState.searching ? ' disabled' : '') + '>' + (addState.searching ? 'Searching…' : 'Search') + '</button></div>';
+    if (addState.results) {
+      if (!addState.results.length) h += '<div class="note">No matches. Try adding the artist name, or type it in yourself below.</div>';
+      else {
+        h += '<div class="results">';
+        addState.results.forEach(function (r, i) {
+          var taken = alreadyPicked(r.album, r.artist);
+          h += '<button class="res" onclick="choose(' + i + ')">' + (r.cover ? '<img class="cover" src="' + esc(r.cover) + '" alt="">' : '<div class="cover"></div>') +
+            '<div class="info"><div class="t1">' + esc(r.album) + '</div><div class="t2">' + esc(r.artist) + (r.year ? ' · ' + esc(r.year) : '') + '</div>' +
+            (taken ? '<span class="tag warn">Picked in ' + esc(taken.season) + '</span>' : '<span class="tag">' + esc(r.kind) + (r.tracks ? ' · ' + r.tracks + (r.tracks === 1 ? ' song' : ' songs') : '') + '</span>') + '</div></button>';
+        });
+        h += '</div>';
+      }
+    }
+    h += '<div style="margin-top:12px"><button class="linkish" onclick="manual()">Can\'t find it? Type it in yourself</button></div>';
+  }
+  if (changing) h += '<div style="margin-top:10px"><button class="linkish" onclick="addState.changeRow=null;addState.picked=null;show(\'add\')">Keep my current pick</button></div>';
+  h += '<div class="msg" id="addMsg"></div></div>';
+  return h + queueCard();
+}
+
+/* Coming up: lined up albums plus the next few open Thursdays, with a marker where a new season starts. */
+function queueCard() {
+  var rows = upcoming().map(function (a) { return { date: a.date, a: a }; })
+    .concat(D.slots.slice(0, 5).map(function (s) { return { date: s.date, s: s }; }))
+    .sort(function (x, y) { return x.date < y.date ? -1 : 1; }).slice(0, 6);
+  if (!rows.length) return '';
+  var h = '<div class="section-title">Coming up</div><div class="card"><ul class="queue">';
+  rows.forEach(function (r) {
+    if (isKickoff(r.date)) h += '<li class="divider"><span>' + esc(seasonOfDate(r.date)) + ' starts</span></li>';
+    var d = '<div class="d">' + esc(fmtDate(r.date)) + '</div>';
+    if (r.a) h += '<li class="tap" onclick="openAlbum(' + r.a.row + ')">' + d + img(r.a, 'thumb') + '<div><div class="t1">' + esc(r.a.album) + '</div><div class="t2">' + esc(r.a.artist) + '</div></div>' + chip(r.a.pickedBy) + '</li>';
+    else h += '<li>' + d + '<div class="thumb"></div><div class="open">No album yet</div>' + (r.s.turn ? chip(r.s.turn) : '<span></span>') + '</li>';
+  });
+  return h + '</ul></div>';
+}
+
+/* The album already on the list with this name and artist (any season), or null. */
+function alreadyPicked(album, artist) {
+  var n = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+  return D.albums.filter(function (a) { return a.row !== addState.changeRow && n(a.album) === n(album) && n(a.artist) === n(artist); })[0] || null;
+}
+
+function albumCards(list) {
+  var h = '<div class="grid">';
+  list.slice().reverse().forEach(function (a) {
+    var soon = a.date && a.date > D.today;
+    h += '<div class="gcard ' + medalClass(a) + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
+      '<div class="info"><div class="t1">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + '</div>' +
+      '<div class="t2" style="margin-top:4px">' + (soon ? 'Coming ' + esc(fmtDate(a.date)) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
+  });
+  return h + '</div>';
+}
+
+function renderAlbums() {
+  var h = seasonBar();
+  var names = isAll() ? seasonNames().slice().reverse() : [seasonSel];
+  names.forEach(function (n) {
+    var list = D.albums.filter(function (a) { return a.season === n; });
+    if (isAll()) h += '<div class="shead"><div class="section-title">' + esc(n) + '</div><div class="t2">' + esc(seasonRange(n)) + ' · ' + list.length + (list.length === 1 ? ' album' : ' albums') + '</div></div>';
+    h += list.length ? albumCards(list) : emptySeason(n);
+  });
+  return h;
+}
+
+function renderMembers() {
+  var list = sAlbums();
+  var due = list.filter(function (a) { return !a.date || a.date <= D.today; });
+  var pairs = pairStats(list);
+  var h = seasonBar();
+  if (!list.length) return h + emptySeason(seasonSel);
+  h += '<div class="mgrid">';
+  D.members.forEach(function (m) {
+    var picks = list.filter(function (a) { return a.pickedBy === m; });
+    var pickAvg = avgOf(picks.map(function (a) { return a.avg; }));
+    var given = list.map(function (a) { return a.ratings[m]; }).filter(function (v) { return v != null; });
+    var owed = due.filter(function (a) { return a.ratings[m] == null; });
+    var said = due.filter(function (a) { return a.comments[m]; }).length;
+    var mine = pairs.filter(function (p) { return p.a === m || p.b === m; }).sort(function (x, y) { return x.gap - y.gap; })[0];
+    var fav = list.filter(function (a) { return a.ratings[m] != null; }).sort(function (x, y) { return y.ratings[m] - x.ratings[m]; })[0];
+    h += '<div class="card mcard" style="border-top:8px solid ' + color(m) + '"><h3>' + face(m, 'mini') + esc(m) + (m === rateState.member ? '<span class="you">You</span>' : '') + '</h3>' +
+      kv('Picks', picks.length) +
+      kv('Avg score of their picks', pickAvg == null ? 'No ratings yet' : fmt(pickAvg) + ' <span class="stars">' + stars(pickAvg) + '</span>') +
+      kv('Avg rating they give', given.length ? fmt(avgOf(given)) : 'Hasn\'t rated yet') +
+      kv('Albums rated', given.length + ' of ' + due.length) +
+      kv('Comments left', said + ' of ' + due.length) +
+      kv('Favorite' + (seasonSel === D.currentSeason ? ' so far' : ''), fav ? esc(fav.album) + ' (' + num(fav.ratings[m]) + ')' : 'None yet') +
+      kv('Taste twin', mine ? esc(mine.a === m ? mine.b : mine.a) + ' (' + mine.gap.toFixed(1) + ' apart)' : 'Not enough shared ratings') +
+      (owed.length ? '<div class="todo muted">Still to rate: ' + owed.map(function (a) { return esc(a.album); }).join(', ') + '</div>' : '') +
+      '</div>';
+  });
+  return h + '</div>';
+}
+
+function renderStats() {
+  var list = sAlbums();
+  var live = isAll() || seasonSel === D.currentSeason;
+  var h = seasonBar();
+  if (!ranked.length) return h + (list.length ? '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div><div class="t2">Stats show up once albums get rated.</div></div>' : emptySeason(seasonSel));
+  h += '<div class="mgrid">';
+  h += statCard(isAll() ? 'Top rated ever' : live ? 'Top rated so far' : 'Album of the season', 'var(--plum)', ranked[0], fmt(ranked[0].avg) + ' <span class="stars">' + stars(ranked[0].avg) + '</span> · picked by ' + esc(ranked[0].pickedBy) + (isAll() ? ' · ' + esc(ranked[0].season) : ''));
+  var worst = ranked.slice().sort(function (x, y) { return (x.avg - y.avg) || (y.count - x.count) || (x.row - y.row); })[0];
+  h += statCard(isAll() ? 'Most hated ever' : live ? 'Most hated so far' : 'Biggest flop', 'var(--red)', worst, fmt(worst.avg) + ' <span class="stars">' + stars(worst.avg) + '</span> · picked by ' + esc(worst.pickedBy) + (isAll() ? ' · ' + esc(worst.season) : ''));
+  var div = list.filter(function (a) { return a.count >= 2; }).map(function (a) {
+    var v = vals(a); return { a: a, spread: Math.max.apply(null, v) - Math.min.apply(null, v), lo: Math.min.apply(null, v), hi: Math.max.apply(null, v) };
+  }).sort(function (x, y) { return (y.spread - x.spread) || (x.a.row - y.a.row); })[0];
+  if (div) h += statCard('Most divisive', 'var(--plum2)', div.a, 'Ratings ranged ' + num(div.lo) + ' to ' + num(div.hi));
+
+  var take = null;
+  list.forEach(function (a) {
+    if (a.count < 2) return;
+    D.members.forEach(function (m) {
+      var v = a.ratings[m]; if (v == null) return;
+      var d = Math.abs(v - a.avg);
+      if (!take || d > take.d) take = { d: d, m: m, a: a, v: v };
+    });
+  });
+  if (take) h += statCard('Hottest take', 'var(--plum2)', take.a, esc(take.m) + ' rated it ' + num(take.v) + ' (' + (take.v - take.a.avg >= 0 ? '+' : '') + (take.v - take.a.avg).toFixed(1) + ' vs group)');
+
+  var pairs = pairStats(list).sort(function (x, y) { return x.gap - y.gap; });
+  if (pairs.length) {
+    h += '<div class="card"><div class="stat"><div></div><div><div class="lbl" style="color:var(--plum2)">Taste twins</div><div class="t1" style="font-size:18px;margin:4px 0">' + chip(pairs[0].a) + chip(pairs[0].b) + '</div><div class="t2">Ratings differ by ' + pairs[0].gap.toFixed(1) + ' on average</div></div></div></div>';
+    var far = pairs[pairs.length - 1];
+    h += '<div class="card"><div class="stat"><div></div><div><div class="lbl" style="color:var(--plum2)">Least in sync</div><div class="t1" style="font-size:18px;margin:4px 0">' + chip(far.a) + chip(far.b) + '</div><div class="t2">Ratings differ by ' + far.gap.toFixed(1) + ' on average</div></div></div></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="section-title">Toughest critics</div><div class="card bars">';
+  D.members.map(function (m) {
+    return { m: m, v: avgOf(list.map(function (a) { return a.ratings[m]; })) };
+  }).sort(function (x, y) { return (x.v == null) - (y.v == null) || x.v - y.v; }).forEach(function (r) {
+    h += '<div class="row"><span>' + face(r.m, 'tiny') + esc(r.m) + '</span><div class="track"><div class="fill" style="width:' + (r.v == null ? 0 : r.v * 10) + '%"></div></div><span>' + (r.v == null ? '–' : r.v.toFixed(1)) + '</span></div>';
+  });
+  return h + '<div class="t2" style="margin-top:8px">Average rating each person gives. Shortest bar is the toughest critic.</div></div>';
+}
+
+/* ---------- album detail ---------- */
+
+function openAlbum(row) {
+  var a = albumByRow(row); if (!a) return;
+  var r = rankOf(a);
+  var soon = a.date && a.date > D.today;
+  var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
+  var h = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button><div class="mhero">' + img(a, 'cover') +
+    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · #' + a.number + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
+    '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
+    '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : fmt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
+    '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div>' +
+    '<div class="listen"><a class="btn spotify" href="' + esc(a.spotify) + '" target="_blank">Spotify</a><a class="btn apple" href="' + esc(a.apple) + '" target="_blank">Apple Music</a></div></div></div>';
+
+  if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
+    h += '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : esc(a.groupFav)) + '</div>' +
+      '<div><b>✕ Most disliked</b>' + (isQuiet(a.groupLeast) ? '<span class="muted">No agreement yet</span>' : esc(a.groupLeast)) + '</div></div>';
+  }
+
+  if (!soon) {
+    h += '<table class="rt">';
+    D.members.forEach(function (m) {
+      var v = a.ratings[m];
+      var extra = '';
+      if (a.fav[m]) extra += '<div class="take">♥ ' + esc(a.fav[m]) + '</div>';
+      if (a.comments[m]) extra += '<div class="take"><q>' + esc(a.comments[m]) + '</q></div>';
+      h += '<tr><td class="n" style="background:' + color(m) + '"><span class="nm">' + face(m, 'tiny') + esc(m) + '</span></td><td><b>' + (v == null ? '<span class="muted">Not rated</span>' : num(v)) + '</b> <span class="stars">' + stars(v) + '</span>' +
+        (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
+    });
+    h += '</table><div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
+      (canRemove(a) ? '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button>' : '') + '</div>';
+  } else if (canRemove(a)) {
+    h += '<div class="actions">' +
+      (a.pickedBy === rateState.member ? '<button class="btn ghost" onclick="closeAlbum();startChange(' + a.row + ')">Change my pick</button>' : '') +
+      '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button></div>';
+  }
+  document.getElementById('modal').innerHTML = h;
+  openScrim();
+}
+/* ---------- profile ---------- */
+
+function openProfile() {
+  var m = rateState.member, h = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button>';
+  if (!m) {
+    document.getElementById('modal').innerHTML = h + notMember().replace('class="card"', 'class=""');
+    openScrim();
+    return;
+  }
+  var due = D.albums.filter(function (a) { return !a.date || a.date <= D.today; });
+  var picks = D.albums.filter(function (a) { return a.pickedBy === m; });
+  var pickAvg = avgOf(picks.map(function (a) { return a.avg; }));
+  var given = due.map(function (a) { return a.ratings[m]; }).filter(function (v) { return v != null; });
+  var owed = due.filter(function (a) { return missingFor(a, m).length; }).reverse();
+  var pending = myPending(m), slot = slotFor(m);
+  var top = due.filter(function (a) { return a.ratings[m] != null; }).sort(function (x, y) { return y.ratings[m] - x.ratings[m]; })[0];
+
+  h += '<div class="phead">' + face(m, 'pbig') +
+    '<div><h2>' + esc(m) + '</h2><div class="t2">Signed in with Google · ' + esc(D.me.email) + '</div></div></div>';
+
+  h += '<div class="eyebrow" style="margin-bottom:6px">All seasons</div><div class="tiles">' +
+    '<div class="tile"><b>Albums rated</b><span>' + given.length + ' of ' + due.length + '</span></div>' +
+    '<div class="tile"><b>Avg you give</b><span>' + (given.length ? fmt(avgOf(given)) : '–') + '</span></div>' +
+    '<div class="tile"><b>Your picks</b><span>' + picks.length + (pickAvg != null ? ' · ' + fmt(pickAvg) + ' avg' : '') + '</span></div>' +
+    '</div>';
+  if (top) h += '<div class="note">Your favorite so far: <b>' + esc(top.album) + '</b> (' + num(top.ratings[m]) + ', ' + esc(top.season) + ')</div>';
+
+  h += '<div class="section-title" style="margin-left:0">Your next pick</div>';
+  if (pending) h += '<div class="next">' + img(pending, 'thumb') + '<div><div class="eyebrow">' + esc(fmtDate(pending.date, true)) + seasonTag(pending.date) + '</div><div class="t1">' + esc(pending.album) + '</div><div class="t2">' + esc(pending.artist) + '</div></div>' +
+    '<div style="display:grid;gap:6px"><button class="btn ghost" onclick="closeAlbum();startChange(' + pending.row + ')">Change</button>' +
+    '<button class="btn danger" onclick="confirmRemove(' + pending.row + ')">Remove</button></div></div>';
+  else if (slot) h += '<div class="next empty" style="border-radius:10px;padding:12px"><div><div class="t1">Nothing lined up yet</div><div class="t2">Your next turn is ' + esc(fmtDate(slot.date, true)) + seasonTag(slot.date) + '.</div></div>' +
+    '<button class="btn gold" onclick="closeAlbum();show(\'add\')">Add album</button></div>';
+  else h += '<div class="muted">No open turn for you on the sheet yet.</div>';
+
+  h += '<div class="section-title" style="margin-left:0">Still to finish</div>';
+  h += owed.length ? '<ul class="owe">' + owed.slice(0, 8).map(function (a) {
+    return '<li><a href="#" onclick="closeAlbum();goRate(' + a.row + ');return false">' + esc(a.album) + '</a><span class="muted">' + missingFor(a, m).join(', ') + '</span></li>';
+  }).join('') + '</ul>' + (owed.length > 8 ? '<div class="t2" style="margin-top:6px">Plus ' + (owed.length - 8) + ' more on the Rate page.</div>' : '')
+    : '<div><b>You\'re all caught up.</b></div>';
+
+  h += '<div class="t2" style="margin-top:16px">Not you? Sign out of this Google account (or use a private window) and open the site again.</div>';
+  document.getElementById('modal').innerHTML = h;
+  openScrim();
+}
+
+/* ---------- remove an album ---------- */
+
+function confirmRemove(row) {
+  var a = albumByRow(row); if (!a) return;
+  var h = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button>' +
+    '<div class="stat" style="padding-right:40px">' + img(a, 'thumb') + '<div><div class="eyebrow" style="color:var(--red)">Remove album</div>' +
+    '<div class="t1" style="font-size:18px;margin:3px 0">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + ' · ' + esc(fmtDate(a.date, true)) + '</div></div></div>' +
+    '<div class="note">This takes it off the sheet. Nobody has rated it yet, so nothing else is lost. ' + esc(fmtDate(a.date)) + ' stays ' + esc(a.pickedBy) + '\'s turn.</div>' +
+    '<div class="actions"><button class="btn danger solid" id="rmBtn" onclick="doRemove(' + a.row + ')">Remove it</button>' +
+    '<button class="btn ghost" onclick="closeAlbum()">Keep it</button></div><div class="msg" id="rmMsg"></div>';
+  document.getElementById('modal').innerHTML = h;
+  openScrim();
+}
+function doRemove(row) {
+  var btn = document.getElementById('rmBtn'); btn.disabled = true; btn.textContent = 'Removing…';
+  google.script.run
+    .withSuccessHandler(function (res) {
+      prep(res.data); closeAlbum();
+      addState.changeRow = null; addState.picked = null;
+      show(view);
+      toast('Removed ' + res.album + '.');
+    })
+    .withFailureHandler(function (e) {
+      btn.disabled = false; btn.textContent = 'Remove it';
+      var m = document.getElementById('rmMsg'); m.className = 'msg err'; m.textContent = e.message || 'Something went wrong.';
+    })
+    .removePick(row, false);
+}
+
+/* Shows the popup from the top and stops the page behind it from scrolling. */
+function openScrim() {
+  var s = document.getElementById('scrim');
+  s.classList.add('on');
+  s.scrollTop = 0;
+  document.body.classList.add('locked');
+}
+function closeAlbum() { document.getElementById('scrim').classList.remove('on'); document.body.classList.remove('locked'); }
+document.getElementById('scrim').addEventListener('click', function (e) { if (e.target.id === 'scrim') closeAlbum(); });
+
+/* ---------- helpers ---------- */
+
+function albumByRow(row) { row = Number(row); return D.albums.filter(function (a) { return a.row === row; })[0]; }
+function vals(a) { return D.members.map(function (m) { return a.ratings[m]; }).filter(function (v) { return v != null; }); }
+function avgOf(arr) { arr = arr.filter(function (v) { return v != null; }); return arr.length ? arr.reduce(function (s, v) { return s + v; }, 0) / arr.length : null; }
+function kv(k, v) { return '<div class="kv"><span class="muted">' + k + '</span><b>' + v + '</b></div>'; }
+function statCard(label, col, a, line) {
+  return '<div class="card" style="cursor:pointer" onclick="openAlbum(' + a.row + ')"><div class="stat">' + img(a, 'thumb') + '<div><div class="lbl" style="color:' + col + '">' + esc(label) + '</div>' +
+    '<div class="t1" style="font-size:18px;margin:3px 0">' + esc(a.album) + '</div><div class="t2">' + line + '</div></div></div></div>';
+}
+function pairStats(list) {
+  list = list || D.albums;
+  var out = [];
+  for (var i = 0; i < D.members.length; i++) for (var j = i + 1; j < D.members.length; j++) {
+    var a = D.members[i], b = D.members[j], diffs = [];
+    list.forEach(function (x) { if (x.ratings[a] != null && x.ratings[b] != null) diffs.push(Math.abs(x.ratings[a] - x.ratings[b])); });
+    if (diffs.length >= 2) out.push({ a: a, b: b, gap: avgOf(diffs), n: diffs.length });
+  }
+  return out;
+}
+
+/* ---------- actions ---------- */
+
+function show(v) {
+  view = v;
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
+  var app = document.getElementById('app');
+  app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats }[v]();
+  window.scrollTo(0, 0);
+}
+function goRate(row) { rateState.row = Number(row); loadMine(); show('rate'); }
+function pickAlbum(row) { rateState.row = Number(row); loadMine(); show('rate'); }
+function slide(v) { rateState.score = Number(v); document.getElementById('scoreBig').textContent = num(Number(v)); document.getElementById('scoreStars').textContent = stars(Number(v)); }
+function typed(v) { rateState.comment = v; document.getElementById('count').textContent = v.length + ' / ' + (D.commentMax || 200); }
+function save() {
+  var msg = document.getElementById('msg');
+  if (rateState.fav && rateState.fav === rateState.least) { msg.className = 'msg err'; msg.textContent = 'Favorite and least favorite can\'t be the same song.'; return; }
+  var a = albumByRow(rateState.row);
+  var btn = document.getElementById('saveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+  var who = rateState.member, score = rateState.score;
+  google.script.run
+    .withSuccessHandler(function (data) {
+      prep(data); loadMine(); show('rate');
+      var m = document.getElementById('msg'); m.className = 'msg ok';
+      m.textContent = 'Saved! ' + who + ' rated ' + a.album + ' ' + num(score) + ' (' + stars(score) + ').';
+    })
+    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Submit rating'; msg.className = 'msg err'; msg.textContent = e.message || 'Something went wrong.'; })
+    .submitRating(rateState.row, rateState.member, rateState.score, rateState.fav, rateState.least, rateState.comment);
+}
+
+/* Add album actions */
+function startChange(row) { addState.changeRow = Number(row); addState.picked = null; addState.results = null; show('add'); }
+function addError(text) { var el = document.getElementById('addMsg'); if (el) { el.className = 'msg err'; el.textContent = text; } }
+function runSearch() {
+  var q = (document.getElementById('q') || {}).value || '';
+  addState.query = q.trim();
+  if (addState.query.length < 2) { addError('Type at least two letters.'); return; }
+  addState.searching = true; show('add');
+  google.script.run
+    .withSuccessHandler(function (list) { addState.searching = false; addState.results = list || []; show('add'); })
+    .withFailureHandler(function (e) { addState.searching = false; addState.results = null; show('add'); addError(e.message || 'Search failed. Try again.'); })
+    .searchAlbums(addState.query);
+}
+function choose(i) {
+  var r = addState.results[i];
+  addState.picked = { album: r.album, artist: r.artist, year: r.year, cover: r.cover, kind: r.kind };
+  show('add');
+}
+function manual() { addState.picked = { album: addState.query, artist: '', year: '', cover: '', kind: '' }; show('add'); }
+function savePick() {
+  var p = addState.picked;
+  if (!p.album.trim() || !p.artist.trim()) { addError('Fill in both the album and the artist.'); return; }
+  var dup = alreadyPicked(p.album, p.artist);
+  if (dup) { addError('That one was already picked by ' + dup.pickedBy + ' in ' + dup.season + '.'); return; }
+  var btn = document.getElementById('pickBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+  var who = rateState.member;
+  google.script.run
+    .withSuccessHandler(function (res) {
+      prep(res.data);
+      addState.flash = 'Locked in! ' + esc(p.album) + ' by ' + esc(p.artist) + ' is ' + esc(who) + '\'s pick for ' + esc(fmtDate(res.date, true)) +
+        (res.season ? ' (' + esc(res.season) + ')' : '') + '.';
+      addState.picked = null; addState.results = null; addState.query = ''; addState.changeRow = null;
+      show('add');
+    })
+    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Try again'; addError(e.message || 'Something went wrong.'); })
+    .submitPick(who, p.album, p.artist, p.year, p.cover, addState.changeRow);
+}
+
+document.getElementById('nav').addEventListener('click', function (e) { if (e.target.dataset.v && D) show(e.target.dataset.v); });
+
+if (typeof google !== 'undefined' && google.script) {
+  google.script.run
+    .withSuccessHandler(function (data) { prep(data); show('home'); })
+    .withFailureHandler(function (e) { document.getElementById('app').innerHTML = '<div class="card">Could not load the sheet: ' + esc(e.message) + '</div>'; })
+    .getData();
+}
+</script>
+</body>
+</html>
