@@ -188,12 +188,17 @@
   select, textarea, input[type=text], input[type=search], input[type=number] { width: 100%; font: inherit; font-size: 16px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
   select { font-weight: 700; }
   textarea { resize: vertical; min-height: 84px; line-height: 1.4; }
-  /* Rate tab: the album's cover above the score */
-  .ratecover { text-align: center; margin-top: 18px; }
-  .ratecover .cover { max-width: 240px; margin: 0 auto; box-shadow: 0 8px 22px rgba(30,27,46,.25); }
-  .ratecover .rc-t { font-weight: 800; font-size: 17px; margin-top: 12px; line-height: 1.25; }
-  .ratecover .rc-a { font-size: 14px; color: var(--muted); margin-top: 3px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 5px; }
-  .ratecover .rc-by { display: inline-flex; align-items: center; gap: 5px; }
+  /* Rate tab: cover on the left, album info and score on the right */
+  .ratehead { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 18px; }
+  .ratehead .cover { box-shadow: 0 6px 18px rgba(30,27,46,.25); }
+  .ratehead .rc-t { font-weight: 800; font-size: 18px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ratehead .rc-a { font-size: 14px; color: var(--muted); margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+  .ratehead .rc-art { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ratehead .rc-by { display: inline-flex; align-items: center; gap: 5px; }
+  .ratehead .slider { text-align: left; margin: 10px 0 0; }
+  .ratehead .slider .big { font-size: 44px; }
+  .ratehead .slider .stars { font-size: 22px; min-height: 28px; margin-top: 2px; }
+  .ratehead + input[type=range] { margin-top: 16px; }
   .slider { text-align: center; margin: 22px 0 8px; }
   .slider .big { font-size: 56px; font-weight: 900; line-height: 1; }
   .slider .stars { font-size: 30px; display: block; min-height: 38px; margin-top: 4px; }
@@ -436,7 +441,10 @@
     .two, .songs { grid-template-columns: 1fr; }
     .chosen { grid-template-columns: 1fr; }
     .chosen .cover { max-width: 200px; }
-    .ratecover .cover { max-width: 200px; }
+    .ratehead { grid-template-columns: 118px minmax(0, 1fr); gap: 14px; }
+    .ratehead .rc-t { font-size: 16px; }
+    .ratehead .slider .big { font-size: 38px; }
+    .ratehead .slider .stars { font-size: 20px; min-height: 24px; }
     .next { grid-template-columns: 56px 1fr; }
     .next.tap { grid-template-columns: 56px 1fr auto; }
     .next .thumb { width: 56px; height: 56px; }
@@ -812,12 +820,14 @@ function renderRate() {
   });
   h += '</select>';
 
-  // Cover art for the album being rated, so you can see what you're scoring.
-  if (a) h += '<div class="ratecover">' + img(a, 'cover') +
-    '<div class="rc-t">' + esc(a.album) + '</div><div class="rc-a">' + esc(a.artist) +
-    (a.pickedBy ? '<span class="rc-by">· ' + face(a.pickedBy, 'tiny') + esc(a.pickedBy) + '</span>' : '') + '</div></div>';
-
-  h += '<div class="slider"><div class="big" id="scoreBig">' + num(rateState.score) + '</div><span class="stars" id="scoreStars">' + stars(rateState.score) + '</span></div>' +
+  // Cover on the left; title, artist, picker and your score beside it (keeps the page short).
+  var score = '<div class="slider"><div class="big" id="scoreBig">' + num(rateState.score) + '</div><span class="stars" id="scoreStars">' + stars(rateState.score) + '</span></div>';
+  if (a) h += '<div class="ratehead">' + img(a, 'cover') + '<div class="rh-info">' +
+    '<div class="rc-t">' + esc(a.album) + '</div><div class="rc-a"><span class="rc-art">' + esc(a.artist) + '</span>' +
+    (a.pickedBy ? '<span class="rc-by">' + face(a.pickedBy, 'tiny') + esc(a.pickedBy) + '</span>' : '') + '</div>' +
+    score + '</div></div>';
+  else h += score;
+  h +=
     '<input type="range" min="1" max="10" step="0.25" value="' + rateState.score + '" oninput="slide(this.value)">' +
     '<div class="scale"><span>1</span><span>5.5</span><span>10</span></div>';
 
