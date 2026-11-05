@@ -3,7 +3,8 @@
 # Runs on every push to main that changes a file in apps-script/.
 #
 # Members.gs and Avatars.html are private, so they come from the MEMBERS_GS and
-# AVATARS_HTML secrets instead of the public repo.
+# AVATARS_HTML secrets instead of the public repo. SpotifyKeys.gs is built from
+# the optional SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET secrets.
 #
 # Safety: clasp replaces the whole project, so this stops without uploading if
 # the live project has a file that isn't in apps-script/ (for example something
@@ -53,6 +54,8 @@ jobs:
         env:
           MEMBERS_GS: ${{ secrets.MEMBERS_GS }}
           AVATARS_HTML: ${{ secrets.AVATARS_HTML }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
         run: |
           if [ -z "$MEMBERS_GS" ]; then echo "The MEMBERS_GS secret is missing."; exit 1; fi
           if [ -z "$AVATARS_HTML" ]; then echo "The AVATARS_HTML secret is missing."; exit 1; fi
@@ -60,12 +63,20 @@ jobs:
           for f in apps-script/*; do
             [ -f "$f" ] || continue
             case "$(basename "$f")" in
-              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*) ;;
+              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*) ;;
               *) cp "$f" /tmp/push/ ;;
             esac
           done
           printf '%s\n' "$MEMBERS_GS" > /tmp/push/Members.gs
           printf '%s\n' "$AVATARS_HTML" > /tmp/push/Avatars.html
+          if [ -n "$SPOTIFY_CLIENT_ID" ] && [ -n "$SPOTIFY_CLIENT_SECRET" ]; then
+            id=$(printf '%s' "$SPOTIFY_CLIENT_ID" | tr -d '[:space:]"\\')
+            sec=$(printf '%s' "$SPOTIFY_CLIENT_SECRET" | tr -d '[:space:]"\\')
+            printf '// Private: written by the deploy job from GitHub secrets. Not in the repo.\nvar AD_SPOTIFY_KEYS = { id: "%s", secret: "%s" };\n' "$id" "$sec" > /tmp/push/SpotifyKeys.gs
+            echo "Spotify keys: added from secrets"
+          else
+            echo "Spotify keys: no SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET secrets, skipping"
+          fi
           grep -q 'AD_MEMBER_EMAILS' /tmp/push/Members.gs || { echo "MEMBERS_GS doesn't look like Members.gs (no AD_MEMBER_EMAILS)."; exit 1; }
           grep -q 'AVATARS' /tmp/push/Avatars.html || { echo "AVATARS_HTML doesn't look like the Avatars file (no AVATARS)."; exit 1; }
           echo "Uploading:"; ls -1 /tmp/push
@@ -76,7 +87,10 @@ jobs:
           printf '{"scriptId":"%s","rootDir":".","fileExtension":"gs","scriptExtensions":[".gs"],"htmlExtensions":[".html"],"jsonExtensions":[".json"]}' "$SCRIPT_ID" > .clasp.json
           clasp pull > /dev/null
           missing=""
-          for f in *; do [ -e "/tmp/push/$f" ] || missing="$missing\n  $f"; done
+          for f in *; do
+            case "$f" in SpotifyKeys*) continue ;; esac
+            [ -e "/tmp/push/$f" ] || missing="$missing\n  $f"
+          done
           if [ -n "$missing" ]; then
             printf "These files are in Apps Script but not in the repo, so nothing was uploaded:$missing\n"
             echo "Run the 'Pull from Apps Script' job first so the repo has them."
@@ -99,3 +113,8 @@ jobs:
           clasp create-deployment --deploymentId "$DEPLOYMENT_ID" --description "$desc" \
             || clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "$desc"
           clasp list-deployments 2>/dev/null | grep "$DEPLOYMENT_ID" || clasp deployments | grep "$DEPLOYMENT_ID"
+
+      - name: Check the Spotify link lookup
+        run: |
+          sleep 5
+          curl -sSL --max-time 60 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=spotify" | head -c 400; echo

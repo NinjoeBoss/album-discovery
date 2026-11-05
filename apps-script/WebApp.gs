@@ -83,7 +83,10 @@ var AD_APP_URL = 'https://ninjoeboss.github.io/album-discovery/';
  * The old page is still in the Index file; to bring it back, return
  * HtmlService.createTemplateFromFile('Index').evaluate() here instead.
  */
-function doGet() {
+function doGet(e) {
+  if (e && e.parameter && e.parameter.check === 'spotify') {
+    return ContentService.createTextOutput(albumLinks_spotifyStatus_());
+  }
   var url = AD_APP_URL;
   var html = '<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">' +
     '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1e1b2e;font-family:Roboto,Arial,sans-serif;color:#fff;text-align:center}' +

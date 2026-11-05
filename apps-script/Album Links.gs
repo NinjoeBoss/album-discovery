@@ -80,9 +80,9 @@ function GET_SPOTIFY_LINK(album, artist) {
  */
 function testSpotify() {
   try {
-    var props = PropertiesService.getScriptProperties();
-    Logger.log('Client ID set: ' + !!props.getProperty('SPOTIFY_CLIENT_ID'));
-    Logger.log('Client secret set: ' + !!props.getProperty('SPOTIFY_CLIENT_SECRET'));
+    var keys = albumLinks_spotifyKeys_();
+    Logger.log('Client ID set: ' + !!keys.id);
+    Logger.log('Client secret set: ' + !!keys.secret);
     CacheService.getScriptCache().remove('albumLinks_spotify_token');
     Logger.log('Success: ' + GET_SPOTIFY_LINK('Graduation', 'Kanye West'));
   } catch (e) {
@@ -97,10 +97,9 @@ function albumLinks_spotifyToken_() {
   var cached = cache.get('albumLinks_spotify_token');
   if (cached) return cached;
 
-  var props = PropertiesService.getScriptProperties();
-  var id = props.getProperty('SPOTIFY_CLIENT_ID');
-  var secret = props.getProperty('SPOTIFY_CLIENT_SECRET');
-  if (!id || !secret) throw new Error('Spotify keys not set: add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in Project Settings > Script Properties');
+  var keys = albumLinks_spotifyKeys_();
+  var id = keys.id, secret = keys.secret;
+  if (!id || !secret) throw new Error('Spotify keys not set: add the SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET secrets on GitHub (or Script Properties)');
   id = id.trim();
   secret = secret.trim();
 
@@ -117,6 +116,34 @@ function albumLinks_spotifyToken_() {
   var data = JSON.parse(res.getContentText());
   cache.put('albumLinks_spotify_token', data.access_token, Math.max(60, data.expires_in - 120));
   return data.access_token;
+}
+
+/**
+ * Spotify keys come from Script Properties if set there, otherwise from the
+ * private SpotifyKeys.gs file the GitHub deploy writes from repo secrets.
+ */
+function albumLinks_spotifyKeys_() {
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('SPOTIFY_CLIENT_ID');
+  var secret = props.getProperty('SPOTIFY_CLIENT_SECRET');
+  if ((!id || !secret) && typeof AD_SPOTIFY_KEYS !== 'undefined') {
+    id = AD_SPOTIFY_KEYS.id;
+    secret = AD_SPOTIFY_KEYS.secret;
+  }
+  return { id: id || '', secret: secret || '' };
+}
+
+/** One line status for the deploy check. Never includes the keys themselves. */
+function albumLinks_spotifyStatus_() {
+  var k = albumLinks_spotifyKeys_();
+  if (!k.id || !k.secret) return 'Spotify: keys not set';
+  try {
+    CacheService.getScriptCache().remove('albumLinks_spotify_token');
+    CacheService.getScriptCache().remove(albumLinks_cacheKey_('sp', 'Graduation', 'Kanye West'));
+    return 'Spotify: working (test album ' + GET_SPOTIFY_LINK('Graduation', 'Kanye West') + ')';
+  } catch (e) {
+    return 'Spotify: problem: ' + String(e.message).replace(k.secret, '***').replace(k.id, '***');
+  }
 }
 
 /** Picks the result whose title and artist best match, preferring the standard edition. */
@@ -149,6 +176,9 @@ function albumLinks_cacheKey_(prefix, album, artist) {
 
 /*
  * OPTIONAL: turning on Spotify links
+ * Easiest: add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET as GitHub repo secrets
+ * (Settings > Secrets and variables > Actions); the deploy job puts them into a
+ * private SpotifyKeys.gs that never goes into the public repo. Or by hand:
  * 1. Someone with Spotify Premium signs in at https://developer.spotify.com/dashboard
  * 2. Create an app (any name; for Redirect URI you can enter https://example.com/callback;
  *    tick "Web API").
