@@ -964,12 +964,11 @@ function renderAlbums() {
 }
 
 function renderMembers() {
-  var list = sAlbums();
+  /* Members always covers every album; seasons don't apply here. */
+  var list = D.albums;
   var due = list.filter(function (a) { return !a.date || a.date <= D.today; });
   var pairs = pairStats(list);
-  var h = seasonBar();
-  if (!list.length) return h + emptySeason(seasonSel);
-  h += '<div class="mgrid">';
+  var h = '<div class="mgrid">';
   D.members.forEach(function (m) {
     var picks = list.filter(function (a) { return a.pickedBy === m; });
     var pickAvg = avgOf(picks.map(function (a) { return a.avg; }));
@@ -984,7 +983,7 @@ function renderMembers() {
       kv('Avg rating they give', given.length ? fmt(avgOf(given)) : 'Hasn\'t rated yet') +
       kv('Albums rated', given.length + ' of ' + due.length) +
       kv('Comments left', said + ' of ' + due.length) +
-      kv('Favorite' + (seasonSel === D.currentSeason ? ' so far' : ''), fav ? esc(fav.album) + ' (' + num(fav.ratings[m]) + ')' : 'None yet') +
+      kv('Favorite', fav ? esc(fav.album) + ' (' + num(fav.ratings[m]) + ')' : 'None yet') +
       kv('Taste twin', mine ? esc(mine.a === m ? mine.b : mine.a) + ' (' + mine.gap.toFixed(1) + ' apart)' : 'Not enough shared ratings') +
       (owed.length ? '<div class="todo muted">Still to rate: ' + owed.map(function (a) { return esc(a.album); }).join(', ') + '</div>' : '') +
       '</div>';
@@ -1358,6 +1357,7 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
   var entering = v !== shownView;
   view = v; shownView = v;
   Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
+  document.getElementById('season').style.visibility = v === 'members' ? 'hidden' : ''; // Members ignores seasons
   var app = document.getElementById('app');
   app.classList.remove('enter');
   app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats }[v]();
