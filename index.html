@@ -128,6 +128,7 @@
   .btn.out::before { content: ''; width: 8px; height: 8px; border-radius: 99px; background: var(--brand); }
   .btn.out.spotify, .btn.out.apple { background: transparent; color: var(--ink); }
   .btn.out.spotify { --brand: #1db954; } .btn.out.apple { --brand: #fa2d48; }
+  .hero .listen .lo { display: none; } /* home: just the brand dot and "Spotify" / "Apple Music" */
   .btn.pick { background: var(--plum); color: #fff; }
   .btn.out.pick { background: transparent; color: var(--ink); --brand: var(--gold); }
   /* artist names open the artist page on the member's streaming platform */
@@ -443,7 +444,6 @@
     /* buttons: Rate it full width, the two listen links side by side under it */
     .hero .listen { display: grid; grid-template-columns: 1fr 1fr; }
     .hero .listen .btn { justify-content: center; text-align: center; padding: 11px 12px; }
-    .hero .listen .lo { display: none; } /* phones: just the brand dot and name, so it fits beside Rate */
     .thumb { width: 46px; height: 46px; }
     .two, .songs { grid-template-columns: 1fr; }
     .chosen { grid-template-columns: 1fr; }

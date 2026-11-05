@@ -1,6 +1,6 @@
 /* Album Discovery service worker: makes the app open fast and work offline.
  * Bump VERSION whenever index.html changes so phones pick up the new copy. */
-var VERSION = 'ad-v23';
+var VERSION = 'ad-v24';
 var SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
