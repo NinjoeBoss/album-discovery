@@ -43,6 +43,8 @@ jobs:
           {"scriptId":"1JfGmMbyMc9Gc1eBPo6c4g3_ZmX1ezRNam3AC7O5F5tE-7xuuokXmOYC4","rootDir":".","fileExtension":"gs","scriptExtensions":[".gs"],"htmlExtensions":[".html"],"jsonExtensions":[".json"]}
           JSON
           clasp pull
+          echo "Deployments:"
+          clasp list-deployments 2>/dev/null || clasp deployments
           echo "Files in the Apps Script project:"
           ls -1 | grep -v '^\.clasp.json$' | tee /tmp/all-files.txt
 
