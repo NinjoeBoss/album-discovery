@@ -117,7 +117,11 @@ jobs:
       - name: Check the Spotify link lookup
         run: |
           sleep 5
-          status=$(curl -sSL --max-time 60 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=spotify" | head -c 400 | tr '\n\r' '  ')
+          probe=""
+          if [ -s apps-script/.spotify-probe ]; then
+            probe="&$(head -1 apps-script/.spotify-probe)"
+          fi
+          status=$(curl -sSL --max-time 90 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=spotify$probe" | head -c 3000 | tr '\n\r' '  ')
           echo "$status"
           case "$status" in
             "Spotify: working"*) echo "::notice title=Spotify check::$status" ;;

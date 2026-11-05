@@ -55,23 +55,64 @@ function GET_SPOTIFY_LINK(album, artist) {
   var hit = cache.get(key);
   if (hit) return hit;
 
+  var pick = null;
+  var queries = albumLinks_spotifyQueries_(album, artist);
+  for (var i = 0; i < queries.length && !pick; i++) {
+    var items = albumLinks_spotifySearch_(queries[i]);
+    try {
+      pick = albumLinks_bestMatch_(items, album, artist,
+        function (a) { return a.name; },
+        function (a) { return (a.artists || []).map(function (x) { return x.name; }).join(', '); });
+    } catch (e) { /* try the next, looser search */ }
+  }
+  if (!pick) throw new Error('No close match found on Spotify');
+
+  var link = pick.external_urls.spotify;
+  cache.put(key, link, 21600);
+  return link;
+}
+
+/**
+ * Searches to try, strictest first. Apostrophes and other punctuation are
+ * dropped because Spotify's album:/artist: filters only bind the first word
+ * of an unquoted multiword title (e.g. "There's No Gettin' Over Me").
+ */
+function albumLinks_spotifyQueries_(album, artist) {
+  var clean = function (s) { return String(s || '').replace(/[\u2018\u2019'"]/g, '').replace(/\s+/g, ' ').trim(); };
+  var a = clean(album), ar = clean(artist);
+  var list = [];
+  if (ar) list.push('album:"' + a + '" artist:"' + ar + '"');
+  list.push(ar ? a + ' ' + ar : a);
+  if (ar) list.push('artist:"' + ar + '" ' + a);
+  return list;
+}
+
+/** Runs one Spotify album search (10 results, the dev mode maximum). */
+function albumLinks_spotifySearch_(q) {
   var token = albumLinks_spotifyToken_();
-  var q = 'album:' + album + (artist ? ' artist:' + artist : '');
   var res = UrlFetchApp.fetch(
     'https://api.spotify.com/v1/search?type=album&limit=10&q=' + encodeURIComponent(q),
     { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
   if (res.getResponseCode() !== 200) {
     throw new Error('Spotify lookup failed (' + res.getResponseCode() + '): ' + res.getContentText().slice(0, 300));
   }
+  return ((JSON.parse(res.getContentText()).albums) || {}).items || [];
+}
 
-  var items = ((JSON.parse(res.getContentText()).albums) || {}).items || [];
-  var pick = albumLinks_bestMatch_(items, album, artist,
-    function (a) { return a.name; },
-    function (a) { return (a.artists || []).map(function (x) { return x.name; }).join(', '); });
-
-  var link = pick.external_urls.spotify;
-  cache.put(key, link, 21600);
-  return link;
+/** Debug: what each search returns for an album, used by ?check=spotify&album=..&artist=.. */
+function albumLinks_spotifyProbe_(album, artist) {
+  var out = [];
+  albumLinks_spotifyQueries_(album, artist).forEach(function (q) {
+    var items = [];
+    try { items = albumLinks_spotifySearch_(q); } catch (e) { out.push(q + ' => ' + e.message); return; }
+    out.push(q + ' => ' + (items.slice(0, 5).map(function (a) {
+      return a.name + ' / ' + (a.artists || []).map(function (x) { return x.name; }).join(', ') + ' [' + a.album_type + ']';
+    }).join(' | ') || 'no results'));
+  });
+  var cache = CacheService.getScriptCache();
+  cache.remove(albumLinks_cacheKey_('sp', album, artist));
+  try { out.push('PICK => ' + GET_SPOTIFY_LINK(album, artist)); } catch (e) { out.push('PICK => ' + e.message); }
+  return out.join(' || ');
 }
 
 /**

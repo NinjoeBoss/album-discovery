@@ -85,7 +85,9 @@ var AD_APP_URL = 'https://ninjoeboss.github.io/album-discovery/';
  */
 function doGet(e) {
   if (e && e.parameter && e.parameter.check === 'spotify') {
-    return ContentService.createTextOutput(albumLinks_spotifyStatus_());
+    var st = albumLinks_spotifyStatus_();
+    if (e.parameter.album) st += ' || ' + albumLinks_spotifyProbe_(e.parameter.album, e.parameter.artist || '');
+    return ContentService.createTextOutput(st);
   }
   var url = AD_APP_URL;
   var html = '<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">' +
