@@ -55,6 +55,7 @@ function adApiDispatch_(req) {
     case 'submitPick': return submitPick(args[0], args[1], args[2], args[3], args[4], args[5]);
     case 'removePick': return removePick(args[0], args[1]);
     case 'avatars': return adAvatars_();
+    case 'setPlatform': return setPlatform(args[0]);
     case 'signOut':
       PropertiesService.getScriptProperties().deleteProperty('sess|' + req.session);
       return true;

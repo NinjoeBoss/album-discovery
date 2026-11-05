@@ -207,7 +207,7 @@ function getData() {
     seasons: AD_SEASONS.map(function (s) {
       return { name: s.name, start: s.start, count: perSeason[s.name] || 0 };
     }),
-    me: { email: email, name: meName, admin: AD_ADMINS.indexOf(meName) >= 0 },
+    me: { email: email, name: meName, admin: AD_ADMINS.indexOf(meName) >= 0, platform: meName ? adPlatformOf_(meName) : '' },
     members: memberNames,
     albums: albums,
     slots: slots,
@@ -222,6 +222,23 @@ function getData() {
  * Saves a rating plus (optionally) favorite song, least favorite song and a comment.
  * Pass null for any extra you don't want to touch; pass '' to clear it.
  */
+/* ---------- preferred streaming platform (saved per member, follows them to any device) ---------- */
+
+function adPlatformOf_(name) {
+  var p = PropertiesService.getScriptProperties().getProperty('pref|platform|' + name);
+  return p === 'spotify' || p === 'apple' ? p : '';
+}
+
+/** Saves the signed in member's choice: 'spotify' or 'apple'. */
+function setPlatform(p) {
+  p = String(p || '');
+  if (p !== 'spotify' && p !== 'apple') throw new Error('Pick Spotify or Apple Music.');
+  var name = AD_MEMBER_EMAILS[adEmail_()] || '';
+  if (!name) throw new Error('Sign in first.');
+  PropertiesService.getScriptProperties().setProperty('pref|platform|' + name, p);
+  return p;
+}
+
 function submitRating(albumRow, member, score, fav, least, comment) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);

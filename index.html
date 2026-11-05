@@ -583,7 +583,33 @@ if (window.matchMedia) {
 /* Each member picks Spotify or Apple Music under their profile (saved on this phone).
    Listen buttons and artist names then open there. Before they pick, the first tap asks. */
 var PLATFORMS = { spotify: 'Spotify', apple: 'Apple Music' };
-function platformPref() { var p = storeGet('ad.platform'); return PLATFORMS[p] ? p : ''; }
+function platformPref() {
+  var p = storeGet('ad.platform');
+  if (!PLATFORMS[p]) p = D && D.me && D.me.platform;
+  return PLATFORMS[p] ? p : '';
+}
+/* Saves the choice on this phone AND to the member's account on the server, so it sticks
+   even if iOS drops the phone copy, and follows them to other devices. */
+function savePlatform(p) {
+  storeSet('ad.platform', p);
+  storeSet('ad.platformSync', '1'); // cleared once the server has it
+  if (D && D.me) { D.me.platform = p; storeSet('ad.data', JSON.stringify(D)); }
+  if (!storeGet('ad.session')) return;
+  api('setPlatform', [p]).then(function () {
+    if (storeGet('ad.platform') === p) storeDel('ad.platformSync');
+  }, function () { /* stays flagged; sent again on the next load */ });
+}
+/* On each data load: the account's choice wins, unless this phone has a change the server hasn't got yet. */
+function syncPlatform(data) {
+  var me = data.me || {}, local = storeGet('ad.platform');
+  if (!me.name) return;
+  if (PLATFORMS[local] && (storeGet('ad.platformSync') || !PLATFORMS[me.platform])) {
+    me.platform = local;
+    savePlatform(local);
+  } else if (PLATFORMS[me.platform]) {
+    storeSet('ad.platform', me.platform);
+  }
+}
 function albumUrl(a, p) { return p === 'apple' ? a.apple : a.spotify; }
 function artistUrl(a, p) {
   var u = p === 'apple' ? a.appleArtist : a.spotifyArtist;
@@ -618,7 +644,7 @@ function askPlatform(kind, row) {
 function choosePlatform(p) {
   var f = askFor, a = f && albumByRow(f.row);
   askFor = null;
-  storeSet('ad.platform', p);
+  savePlatform(p);
   if (a) window.open(f.kind === 'artist' ? artistUrl(a, p) : albumUrl(a, p), '_blank', 'noopener');
   if (view) show(view);
   if (a && f.back) openAlbum(a.row); else closeAlbum();
@@ -631,7 +657,7 @@ function platformSeg() {
     (p ? 'Listen buttons and artist names open in ' + PLATFORMS[p] + '.' : 'Not picked yet. Choose where Listen buttons and artist names should open.') + '</div>';
 }
 function setPlatform(p) {
-  storeSet('ad.platform', p);
+  savePlatform(p);
   if (view) show(view);
   var sc = document.getElementById('scrim'), y = sc.scrollTop;
   openProfile(); sc.scrollTop = y;
@@ -702,6 +728,7 @@ function emptySeason(name) {
 
 function prep(data) {
   D = data;
+  syncPlatform(data);
   storeSet('ad.data', JSON.stringify(data));
   D.slots = D.slots || [];
   if (!D.seasons || !D.seasons.length) D.seasons = [{ name: D.season || 'Season 1', start: '', count: D.albums.length }];
@@ -1735,7 +1762,7 @@ function checkCode() {
   }, function (e) { signState.busy = false; signState.code = ''; signState.err = e.message; renderSignIn(); });
 }
 function signedOut() {
-  storeDel('ad.session'); storeDel('ad.data');
+  storeDel('ad.session'); storeDel('ad.data'); storeDel('ad.platform'); storeDel('ad.platformSync');
   D = null; closeAlbum();
   signState = { members: null, name: null, hint: '', busy: false, err: '' };
   loadMembers();
