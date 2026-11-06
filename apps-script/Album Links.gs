@@ -326,3 +326,155 @@ function albumLinks_cacheKey_(prefix, album, artist) {
  *      SPOTIFY_CLIENT_SECRET  = <your client secret>
  * 5. Back in the sheet, Spotify links switch from search links to album links on their own.
  */
+/* ---------- song links (tap a song in the app to play it) ---------- */
+
+/**
+ * Direct links for songs on one album, for one platform ('spotify' or 'apple').
+ * Returns { '<song>': 'https://...' }. Songs come from the album's own page first
+ * (Apple: the album's id; Spotify: the album's track list), so the right version
+ * opens, then a song search. Found links are saved for good; misses get a search link.
+ */
+function songLinks(row, p, songs) {
+  p = p === 'apple' ? 'apple' : 'spotify';
+  songs = (Array.isArray(songs) ? songs : []).map(function (s) { return String(s || '').trim(); })
+    .filter(function (s, i, all) { return s && all.indexOf(s) === i; }).slice(0, 12);
+  if (!songs.length) return {};
+
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(AD_SHEET_NAME);
+  var L = adLayout_(sh);
+  row = Number(row);
+  if (!(row > L.headerRow) || row > sh.getLastRow()) throw new Error('That album could not be found.');
+  var rng = sh.getRange(row, 1, 1, L.lastCol);
+  var v = rng.getValues()[0], f = rng.getFormulas()[0];
+  var album = String(v[L.album] || '').trim(), artist = String(v[L.artist] || '').trim();
+  if (!album) throw new Error('That album could not be found.');
+
+  var props = PropertiesService.getScriptProperties();
+  var cache = CacheService.getScriptCache();
+  var out = {}, todo = [];
+  songs.forEach(function (s) {
+    var key = songLinks_key_(p, album, artist, s);
+    var saved = props.getProperty(key);
+    if (saved) out[s] = saved;
+    else if (cache.get(key) === 'none') out[s] = songLinks_search_(p, s, artist);
+    else todo.push(s);
+  });
+  if (!todo.length) return out;
+
+  // The album's own track list, so a song resolves to this album's version.
+  var albumTracks = [];
+  try {
+    var col = p === 'apple' ? L.apple : L.spotify;
+    var albumUrl = adLink_(col >= 0 ? f[col] : '', p, album, artist);
+    albumTracks = p === 'apple' ? songLinks_appleAlbum_(albumUrl) : songLinks_spotifyAlbum_(albumUrl);
+  } catch (e) { /* fall back to searching each song */ }
+
+  todo.forEach(function (s) {
+    var key = songLinks_key_(p, album, artist, s), url = '';
+    try {
+      url = songLinks_match_(albumTracks, s) || (p === 'apple' ? songLinks_appleSearch_(s, artist) : songLinks_spotifySearch_(s, artist));
+    } catch (e) { url = ''; }
+    if (url) { props.setProperty(key, url); out[s] = url; }
+    else { cache.put(key, 'none', 21600); out[s] = songLinks_search_(p, s, artist); }
+  });
+  return out;
+}
+
+function songLinks_key_(p, album, artist, song) {
+  var d = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, [album, artist, song].join('|').toLowerCase(), Utilities.Charset.UTF_8);
+  return 'song|' + p + '|' + Utilities.base64EncodeWebSafe(d);
+}
+
+function songLinks_search_(p, song, artist) {
+  var q = encodeURIComponent(song + ' ' + (artist || ''));
+  return p === 'apple' ? 'https://music.apple.com/us/search?term=' + q : 'https://open.spotify.com/search/' + q;
+}
+
+/** "Song Name (feat. X) - Remastered 2011" -> "song name" */
+function songLinks_norm_(s) {
+  return String(s || '').toLowerCase()
+    .replace(/\s*[\(\[][^\)\]]*[\)\]]/g, ' ')
+    .replace(/\s+-\s+.*$/, '')
+    .replace(/[‘’'".]/g, '').replace(/&/g, 'and')
+    .replace(/[^a-z0-9$]+/g, ' ').trim();
+}
+
+/** tracks = [{ name, url }]. Exact title first, then the same title without (feat.) / " - Remaster" bits. */
+function songLinks_match_(tracks, song) {
+  if (!tracks || !tracks.length) return '';
+  var exact = tracks.filter(function (t) { return t.name === song; })[0];
+  if (exact) return exact.url;
+  var n = songLinks_norm_(song);
+  var loose = n && tracks.filter(function (t) { return songLinks_norm_(t.name) === n; })[0];
+  return loose ? loose.url : '';
+}
+
+function songLinks_appleAlbum_(albumUrl) {
+  var m = String(albumUrl || '').match(/music\.apple\.com\/.*\/album\/(?:[^\/?]+\/)?(\d+)/);
+  if (!m) return [];
+  var res = UrlFetchApp.fetch('https://itunes.apple.com/lookup?entity=song&limit=200&country=us&id=' + m[1], { muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) return [];
+  return (JSON.parse(res.getContentText()).results || [])
+    .filter(function (r) { return r.wrapperType === 'track' && r.trackViewUrl; })
+    .map(function (r) { return { name: String(r.trackName || '').trim(), url: songLinks_appleUrl_(r.trackViewUrl) }; });
+}
+
+/** Keeps the ?i=<song id> part (that's what opens the song), drops tracking bits. */
+function songLinks_appleUrl_(u) {
+  var m = String(u).match(/^([^?]+)\?(?:.*&)?i=(\d+)/);
+  return m ? m[1] + '?i=' + m[2] : String(u).split('&')[0];
+}
+
+function songLinks_appleSearch_(song, artist) {
+  var res = UrlFetchApp.fetch('https://itunes.apple.com/search?entity=song&limit=25&country=us&term=' +
+    encodeURIComponent(song + ' ' + (artist || '')), { muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) return '';
+  var ar = artistLinks_norm_(artist);
+  var items = (JSON.parse(res.getContentText()).results || []).filter(function (r) {
+    return r.trackViewUrl && (!ar || artistLinks_norm_(r.artistName).indexOf(ar) >= 0);
+  }).map(function (r) { return { name: String(r.trackName || '').trim(), url: songLinks_appleUrl_(r.trackViewUrl) }; });
+  return songLinks_match_(items, song);
+}
+
+function songLinks_spotifyAlbum_(albumUrl) {
+  var m = String(albumUrl || '').match(/open\.spotify\.com\/album\/([A-Za-z0-9]+)/);
+  if (!m) return [];
+  var token = albumLinks_spotifyToken_(), out = [];
+  var next = 'https://api.spotify.com/v1/albums/' + m[1] + '/tracks?limit=50&market=US';
+  for (var page = 0; next && page < 4; page++) {
+    var res = UrlFetchApp.fetch(next, { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) break;
+    var j = JSON.parse(res.getContentText());
+    (j.items || []).forEach(function (t) {
+      if (t.external_urls && t.external_urls.spotify) out.push({ name: String(t.name || '').trim(), url: t.external_urls.spotify });
+    });
+    next = j.next;
+  }
+  return out;
+}
+
+function songLinks_spotifySearch_(song, artist) {
+  var token = albumLinks_spotifyToken_();
+  var clean = function (s) { return String(s || '').replace(/[‘’'"]/g, ''); };
+  var queries = ['track:"' + clean(song) + '"' + (artist ? ' artist:"' + clean(artist) + '"' : ''), clean(song) + ' ' + clean(artist)];
+  var ar = artistLinks_norm_(artist);
+  for (var i = 0; i < queries.length; i++) {
+    var res = UrlFetchApp.fetch('https://api.spotify.com/v1/search?type=track&limit=10&market=US&q=' + encodeURIComponent(queries[i]),
+      { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) continue;
+    var items = ((JSON.parse(res.getContentText()).tracks) || {}).items || [];
+    items = items.filter(function (t) {
+      return t.external_urls && t.external_urls.spotify &&
+        (!ar || (t.artists || []).some(function (x) { return artistLinks_norm_(x.name).indexOf(ar) >= 0 || ar.indexOf(artistLinks_norm_(x.name)) >= 0; }));
+    }).map(function (t) { return { name: String(t.name || '').trim(), url: t.external_urls.spotify }; });
+    var hit = songLinks_match_(items, song);
+    if (hit) return hit;
+  }
+  return '';
+}
+
+/** Run from the editor if a song opens the wrong version; clears saved song links so they're looked up again. */
+function clearSavedSongLinks() {
+  var props = PropertiesService.getScriptProperties();
+  Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('song|') === 0) props.deleteProperty(k); });
+}

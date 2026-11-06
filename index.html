@@ -169,6 +169,10 @@
   /* artist names open the artist page on the member's streaming platform */
   .artlink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; }
   .artlink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
+  /* song names that play the song on the member's platform */
+  .songlink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; }
+  .songlink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
+  .songlink .play { display: inline-block; font-size: .72em; margin-right: 5px; color: var(--plum-text); text-decoration: none; vertical-align: 1px; opacity: .8; }
   .pickplat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
   .pickplat .btn { padding: 13px 12px; font-size: 15px; text-align: center; }
   .btn.mine .yours { opacity: .75; font-weight: 500; margin-left: 4px; }
@@ -690,12 +694,12 @@ function artistLink(a, cls) {
   return '<a class="' + c + '" href="' + esc(artistUrl(a, p)) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + esc(a.artist + ' on ' + PLATFORMS[p]) + '">' + esc(a.artist) + '</a>';
 }
 var askFor = null;
-function askPlatform(kind, row) {
+function askPlatform(kind, row, song) {
   var fromAlbum = document.getElementById('scrim').classList.contains('on') && !!document.querySelector('#modal .mhead');
-  askFor = { kind: kind, row: row, back: fromAlbum };
+  askFor = { kind: kind, row: row, song: song, back: fromAlbum };
   document.getElementById('modal').innerHTML = '<button class="close" onclick="closeAlbum()">×</button>' +
     '<div style="padding-right:40px"><div class="eyebrow">Listen on</div><h2 style="margin:4px 0 6px">Where do you listen?</h2>' +
-    '<div class="t2">Pick once and every Listen button and artist name opens there. You can change it anytime under your profile.</div></div>' +
+    '<div class="t2">Pick once and every Listen button, artist name and song opens there. You can change it anytime under your profile.</div></div>' +
     '<div class="pickplat"><button class="btn spotify" onclick="choosePlatform(\'spotify\')">Spotify</button>' +
     '<button class="btn apple" onclick="choosePlatform(\'apple\')">Apple Music</button></div>';
   openScrim();
@@ -704,10 +708,93 @@ function choosePlatform(p) {
   var f = askFor, a = f && albumByRow(f.row);
   askFor = null;
   savePlatform(p);
-  if (a) window.open(f.kind === 'artist' ? artistUrl(a, p) : albumUrl(a, p), '_blank', 'noopener');
+  if (a && f.kind === 'song') openSong(a, f.song, p);
+  else if (a) window.open(f.kind === 'artist' ? artistUrl(a, p) : albumUrl(a, p), '_blank', 'noopener');
   if (view) show(view);
   if (a && f.back) openAlbum(a.row); else closeAlbum();
 }
+/* ---------- songs that play on tap ---------- */
+
+/* Direct song links, looked up by the server once and remembered on this phone
+   (ad.songLinks, keyed "platform|row|album|song"). Until one is known, a tap searches for the song. */
+var songMemo = null, songLoading = {};
+function songMemoGet() {
+  if (!songMemo) { try { songMemo = JSON.parse(storeGet('ad.songLinks') || '{}') || {}; } catch (e) { songMemo = {}; } }
+  return songMemo;
+}
+function songKey(p, a, song) { return p + '|' + a.row + '|' + a.album + '|' + song; }
+/* "Song Name (2 votes)" from the sheet's group columns -> "Song Name" */
+function songName(s) { return String(s || '').replace(/\s*\(\d+ votes?\)\s*$/i, '').trim(); }
+function songSearchUrl(a, song, p) {
+  var q = encodeURIComponent(song + ' ' + (a.artist || ''));
+  return p === 'apple' ? 'https://music.apple.com/us/search?term=' + q : 'https://open.spotify.com/search/' + q;
+}
+function songUrl(a, song, p) { return songMemoGet()[songKey(p, a, song)] || ''; }
+/* A song title that plays the song. label = what to show (defaults to the song). */
+function songLink(a, song, label) {
+  song = songName(song);
+  if (!song) return esc(label || '');
+  var p = platformPref(), text = '<span class="play" aria-hidden="true">▶</span>' + esc(label || song);
+  var data = ' data-row="' + a.row + '" data-song="' + esc(song) + '"';
+  if (!p) return '<a class="songlink" href="#"' + data + ' onclick="event.stopPropagation();askPlatform(\'song\',' + a.row + ',this.dataset.song);return false">' + text + '</a>';
+  var u = songUrl(a, song, p);
+  return '<a class="songlink" href="' + esc(u || songSearchUrl(a, song, p)) + '"' + data + (u ? ' data-ok="1"' : '') +
+    ' target="_blank" rel="noopener" title="' + esc('Play on ' + PLATFORMS[p]) + '" onclick="return songTap(event, this)">' + text + '</a>';
+}
+/* Every song shown in an album's popup: group picks plus each member's favorite and least favorite. */
+function albumSongs(a) {
+  var list = [songName(a.groupLeast), songName(a.groupFav)];
+  D.members.forEach(function (m) { list.push(a.least[m], a.fav[m]); });
+  return list.filter(function (x, i) { return x && !isQuiet(x) && list.indexOf(x) === i; });
+}
+/* Asks the server for the songs this phone doesn't have links for yet, then fixes up the links on screen. */
+function loadSongLinks(a, p, songs) {
+  p = p || platformPref();
+  if (!a || !p || !storeGet('ad.session')) return Promise.resolve();
+  var memo = songMemoGet();
+  var need = (songs || albumSongs(a)).filter(function (x) { return !memo[songKey(p, a, x)]; });
+  if (!need.length) return Promise.resolve();
+  var lk = p + '|' + a.row + '|' + need.join('\n');
+  if (songLoading[lk]) return songLoading[lk];
+  songLoading[lk] = api('songLinks', [a.row, p, need]).then(function (res) {
+    Object.keys(res || {}).forEach(function (song) {
+      // Search links aren't saved, so a later tap can try again once the song turns up.
+      if (/\/search/.test(res[song])) return;
+      memo[songKey(p, a, song)] = res[song];
+    });
+    storeSet('ad.songLinks', JSON.stringify(memo));
+    Array.prototype.forEach.call(document.querySelectorAll('a.songlink[data-row="' + a.row + '"]'), function (el) {
+      var u = memo[songKey(p, a, el.dataset.song)];
+      if (u) { el.href = u; el.dataset.ok = '1'; }
+    });
+  }).catch(function () { /* the search link stays */ }).then(function () { delete songLoading[lk]; });
+  return songLoading[lk];
+}
+/* Tap on a song. Known link: let it open normally (so Spotify / Apple Music can take over).
+   Not known yet: open a tab right away (phones block tabs opened later), then point it at the song. */
+function songTap(ev, el) {
+  ev.stopPropagation();
+  if (el.dataset.ok) return true;
+  var a = albumByRow(Number(el.dataset.row));
+  if (!a) return true;
+  ev.preventDefault();
+  openSong(a, el.dataset.song, platformPref());
+  return false;
+}
+function openSong(a, song, p) {
+  var known = songUrl(a, song, p);
+  if (known) { window.open(known, '_blank', 'noopener'); return; }
+  var w = null;
+  try { w = window.open('', '_blank'); } catch (e) {}
+  if (w) { try { w.document.title = 'Finding ' + song + '…'; w.document.body.style.cssText = 'font:16px Roboto,Arial,sans-serif;padding:24px;color:#6C5C9D'; w.document.body.textContent = 'Finding ' + song + ' on ' + PLATFORMS[p] + '…'; } catch (e) {} }
+  else toast('Finding ' + song + '…');
+  loadSongLinks(a, p, [song]).then(function () {
+    var u = songUrl(a, song, p) || songSearchUrl(a, song, p);
+    if (w && !w.closed) { try { w.location.replace(u); return; } catch (e) { try { w.close(); } catch (e2) {} } }
+    window.open(u, '_blank', 'noopener');
+  });
+}
+
 function platformSeg() {
   var p = platformPref();
   return '<div class="seg" id="platSeg">' + [['spotify', 'Spotify'], ['apple', 'Apple Music']].map(function (o) {
@@ -1212,8 +1299,8 @@ function openAlbum(row) {
     '<div class="listen">' + listenBtn(a) + '</div></div></div>';
 
   if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
-    h += '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : esc(a.groupFav)) + '</div>' +
-      '<div><b>✕ Most disliked</b>' + (isQuiet(a.groupLeast) ? '<span class="muted">No agreement yet</span>' : esc(a.groupLeast)) + '</div></div>';
+    h += '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupFav, a.groupFav)) + '</div>' +
+      '<div><b>✕ Most disliked</b>' + (isQuiet(a.groupLeast) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupLeast, a.groupLeast)) + '</div></div>';
   }
 
   if (!soon) {
@@ -1222,8 +1309,8 @@ function openAlbum(row) {
     D.members.forEach(function (m) {
       var v = a.ratings[m];
       var extra = '';
-      if (a.fav[m]) extra += '<div class="take"><span class="lv">♥</span> ' + esc(a.fav[m]) + '</div>';
-      if (a.least[m]) extra += '<div class="take"><span class="dl">✕</span> ' + esc(a.least[m]) + '</div>';
+      if (a.fav[m]) extra += '<div class="take"><span class="lv">♥</span> ' + songLink(a, a.fav[m]) + '</div>';
+      if (a.least[m]) extra += '<div class="take"><span class="dl">✕</span> ' + songLink(a, a.least[m]) + '</div>';
       if (a.comments[m]) extra += '<div class="take"><q>' + esc(a.comments[m]) + '</q></div>';
       h += '<tr><td class="n" style="background:' + color(m) + '"><span class="nm">' + face(m, 'tiny') + esc(m) + '</span></td><td><b>' + (v == null ? '<span class="muted">Not rated</span>' : num(v)) + '</b> <span class="stars">' + stars(v) + '</span>' +
         (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
@@ -1239,6 +1326,7 @@ function openAlbum(row) {
   openScrim(true);
   albumGlow(a);
   runCounts(document.getElementById('modal'));
+  loadSongLinks(a);
 }
 /* Every song someone picked as a favorite or least favorite, in track order, with whose pick it was. */
 function songPicks(a) {
@@ -1264,7 +1352,7 @@ function songPicks(a) {
   order.forEach(function (song) {
     var p = picks[song], n = tracks.indexOf(song);
     h += '<li><span class="tn">' + (n < 0 ? '' : n + 1) + '</span>' +
-      '<span class="sn">' + esc(song) + (p.love.length && p.hate.length ? '<span class="tag warn">Split</span>' : '') + '</span>' +
+      '<span class="sn">' + songLink(a, song) + (p.love.length && p.hate.length ? '<span class="tag warn">Split</span>' : '') + '</span>' +
       '<span class="pk">' + (p.love.length ? '<span class="lv">♥</span>' + faces(p.love) : '') +
       (p.hate.length ? '<span class="dl">✕</span>' + faces(p.hate) : '') + '</span></li>';
   });
