@@ -1,0 +1,16 @@
+name: DNS check
+on:
+  push:
+    branches: [custom-domain]
+    paths: ['.github/workflows/dns-check.yml']
+jobs:
+  dig:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for s in 8.8.8.8 1.1.1.1; do
+            A=$(dig +short @$s club-music.net A | tr '\n' ' ')
+            Q=$(dig +short @$s club-music.net AAAA | tr '\n' ' ')
+            W=$(dig +short @$s www.club-music.net CNAME | tr '\n' ' ')
+            echo "::notice title=DNS via $s::A: $A | AAAA: $Q | www CNAME: $W"
+          done
