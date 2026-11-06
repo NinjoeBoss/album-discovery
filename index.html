@@ -264,12 +264,6 @@
   .todo { margin-top: 10px; font-size: 13px; }
 
   /* add album */
-  .rot { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--band); }
-  .rotrow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-top: 6px; }
-  .rotrow .chip { margin: 0; }
-  .rotrow .chip.up { box-shadow: 0 0 0 2px var(--gold); }
-  .rotrow .arrow { color: var(--muted); font-weight: 900; padding: 0 3px; }
-  .rotrow .upnext { font-size: 9px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: #fff; background: var(--gold); border-radius: 99px; padding: 1px 6px; margin-left: 2px; }
   .searchrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
   .searchrow .btn { padding: 0 20px; font-size: 15px; }
   .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 14px; }
@@ -1087,14 +1081,6 @@ function renderRate() {
 
 /* ---------- add album (New Album Thursday) ---------- */
 
-/* The weekly pick order, with whoever is up next ringed in gold. */
-function rotationStrip() {
-  if (!D.rotation || !D.rotation.length) return '';
-  return '<div class="rot"><div class="eyebrow">Pick order</div><div class="rotrow">' + D.rotation.map(function (n) {
-    return '<span class="chip' + (n === D.turn ? ' up' : '') + '" style="background:' + color(n) + '">' + face(n, 'tiny') + esc(n) +
-      (n === D.turn ? '<span class="upnext">Next</span>' : '') + '</span>';
-  }).join('<span class="arrow">›</span>') + '</div></div>';
-}
 function seasonTag(date) {
   var s = seasonOfDate(date);
   return s !== D.currentSeason || isKickoff(date) ? ' · ' + esc(s) : '';
@@ -1114,7 +1100,6 @@ function renderAdd() {
     h += '<div class="msg ok" style="margin-top:0">' + addState.flash + '</div>';
     addState.flash = null;
   }
-  if (!changing) h += rotationStrip();
 
   if (lockedOut) {
     h += '<div class="eyebrow">You\'re lined up for ' + esc(fmtDate(pending.date, true)) + seasonTag(pending.date) + '</div>' +
