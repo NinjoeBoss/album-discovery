@@ -1049,7 +1049,7 @@ function renderAdd() {
 function queueCard() {
   var rows = upcoming().map(function (a) { return { date: a.date, a: a }; })
     .concat(D.slots.slice(0, 5).map(function (s) { return { date: s.date, s: s }; }))
-    .sort(function (x, y) { return x.date < y.date ? -1 : 1; }).slice(0, 6);
+    .sort(function (x, y) { return x.date < y.date ? -1 : 1; }).slice(0, 5);
   if (!rows.length) return '';
   var h = '<div class="section-title">Coming up</div><div class="card"><ul class="queue">';
   rows.forEach(function (r) {
