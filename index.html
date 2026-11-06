@@ -1329,11 +1329,13 @@ function openScrim(isAlbum) {
   s.classList.add('on');
   s.scrollTop = 0;
   document.body.classList.add('locked');
+  popupOpen = true; syncBack();
 }
 /* Popup slides away, then hides. */
 function closeAlbum() {
   var s = document.getElementById('scrim');
   document.body.classList.remove('locked');
+  if (popupOpen) { popupOpen = false; syncBack(); }
   if (!s.classList.contains('on')) return;
   if (calm()) { s.classList.remove('on'); return; }
   s.classList.add('closing');
@@ -1341,6 +1343,33 @@ function closeAlbum() {
   closeTimer = setTimeout(function () { s.classList.remove('on', 'closing'); }, 220);
 }
 document.getElementById('scrim').addEventListener('click', function (e) { if (e.target.id === 'scrim') closeAlbum(); });
+
+/* ---------- phone back button ----------
+ * Android's back button (and back gestures) walks browser history. The app keeps
+ * up to two history entries of its own: one while you're on a tab other than Home,
+ * one more while a popup is open. So back closes the popup, then returns to Home,
+ * and only leaves the app from Home. */
+var popupOpen = false, backTimer = null, backWaiting = false;
+function backWanted() { return (D && view !== 'home' ? 1 : 0) + (popupOpen ? 1 : 0); }
+function backHave() { var st = history.state; return st && st.adLvl ? st.adLvl : 0; }
+/* Called after anything that changes the tab or opens/closes a popup. Batched, so
+ * "close popup then switch tab" in one tap settles to one history change. */
+function syncBack() {
+  if (!window.history || !history.pushState) return;
+  clearTimeout(backTimer);
+  backTimer = setTimeout(function () {
+    if (backWaiting) return; // a history.go is still landing; popstate runs us again
+    var want = backWanted(), have = backHave();
+    if (want > have) { for (var i = have + 1; i <= want; i++) history.pushState({ adLvl: i }, ''); }
+    else if (want < have) { backWaiting = true; history.go(want - have); }
+  }, 0);
+}
+window.addEventListener('popstate', function () {
+  if (backWaiting) { backWaiting = false; syncBack(); return; } // our own cleanup, not the user
+  if (popupOpen) closeAlbum();
+  else if (D && view !== 'home') show('home');
+  syncBack();
+});
 
 
 /* ---------- motion helpers ---------- */
@@ -1495,6 +1524,7 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
   app.classList.remove('enter');
   app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats }[v]();
   moveInk();
+  syncBack();
   if (entering) {
     window.scrollTo(0, 0);
     if (!calm() && !quiet) {
@@ -1785,7 +1815,7 @@ function checkCode() {
 }
 function signedOut() {
   storeDel('ad.session'); storeDel('ad.data'); storeDel('ad.platform'); storeDel('ad.platformSync');
-  D = null; closeAlbum();
+  D = null; closeAlbum(); syncBack();
   signState = { members: null, name: null, hint: '', busy: false, err: '' };
   loadMembers();
 }
