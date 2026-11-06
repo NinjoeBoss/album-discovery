@@ -873,23 +873,17 @@ function renderHome() {
   return h + '</div>';
 }
 
-/* Home strip: next Thursday's album if it's in, otherwise whose turn it is. */
+/* Home strip: only when next Thursday's album is already locked in.
+   If the very next week is still open (even if a later week is picked), show nothing. */
 function nextCard() {
   var n = upcoming()[0];
-  var label = function (date) {
-    return isKickoff(date) ? '<span class="kickoff">' + esc(seasonOfDate(date)) + ' kicks off</span> · ' + esc(fmtDate(date, true)) : 'Up next · ' + esc(fmtDate(date, true));
-  };
-  if (n) {
-    return '<div class="card next tap" onclick="openAlbum(' + n.row + ')">' + img(n, 'thumb') + '<div><div class="eyebrow">' + label(n.date) + '</div>' +
-      '<div class="t1">' + esc(n.album) + '</div><div class="t2">' + artistLink(n) + (n.year ? ' · ' + esc(n.year) : '') + ' · picked by ' + esc(n.pickedBy) + '</div></div>' +
-      '<span class="chev">›</span></div>';
-  }
-  var s = D.slots[0];
-  if (!s) return '';
-  return '<div class="card next empty"><div><div class="eyebrow">' + label(s.date) + '</div>' +
-    '<div class="t1">' + (D.turn ? chip(D.turn) + ' is up to pick' : 'No album yet') + '</div>' +
-    '<div class="t2">Nothing\'s been added for next Thursday yet.</div></div>' +
-    '<button class="btn gold" onclick="show(\'add\')">Add the album</button></div>';
+  if (!n) return '';
+  var open = D.slots.filter(function (s) { return s.date && s.date > D.today; })[0];
+  if (open && open.date < n.date) return '';
+  var label = isKickoff(n.date) ? '<span class="kickoff">' + esc(seasonOfDate(n.date)) + ' kicks off</span> · ' + esc(fmtDate(n.date, true)) : 'Up next · ' + esc(fmtDate(n.date, true));
+  return '<div class="card next tap" onclick="openAlbum(' + n.row + ')">' + img(n, 'thumb') + '<div><div class="eyebrow">' + label + '</div>' +
+    '<div class="t1">' + esc(n.album) + '</div><div class="t2">' + artistLink(n) + (n.year ? ' · ' + esc(n.year) : '') + ' · picked by ' + esc(n.pickedBy) + '</div></div>' +
+    '<span class="chev">›</span></div>';
 }
 
 /* Loads the saved score, songs and comment for the chosen member and album. */
