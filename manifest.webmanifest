@@ -1,6 +1,6 @@
 {
-  "name": "Album Discovery",
-  "short_name": "Discovery",
+  "name": "Club Music",
+  "short_name": "Club Music",
   "description": "Our weekly album club: rate this week's pick, add yours, see the leaderboard.",
   "start_url": "./",
   "scope": "./",

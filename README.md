@@ -1,4 +1,4 @@
-# Album Discovery
+# Club Music
 
 The installable app for our weekly album club. Rate this week's pick, add yours when it's your turn, and see the leaderboard by season.
 

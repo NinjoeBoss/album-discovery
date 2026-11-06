@@ -1,5 +1,5 @@
 /**
- * Album Discovery app API
+ * Club Music app API
  *
  * Answers the installable app hosted on GitHub Pages. The app sends every
  * request as a POST with a plain text JSON body:
@@ -87,11 +87,11 @@ function adRequestCode_(name) {
 
   MailApp.sendEmail({
     to: email,
-    name: 'Album Discovery',
-    subject: 'Your Album Discovery code: ' + code,
+    name: 'Club Music',
+    subject: 'Your Club Music code: ' + code,
     body: 'Hi ' + name + ',\n\nYour sign in code is ' + code + '. It works for ' + AD_CODE_MINUTES + ' minutes.\n\nIf you didn\'t ask for this, you can ignore it.',
     htmlBody: '<div style="font-family:Roboto,Arial,sans-serif;color:#1e1b2e">' +
-      '<p>Hi ' + name + ',</p><p>Your Album Discovery sign in code:</p>' +
+      '<p>Hi ' + name + ',</p><p>Your Club Music sign in code:</p>' +
       '<p style="font-size:32px;font-weight:900;letter-spacing:6px;background:#eceaf3;padding:14px 20px;border-radius:12px;display:inline-block">' + code + '</p>' +
       '<p style="color:#5e5873">It works for ' + AD_CODE_MINUTES + ' minutes. If you didn\'t ask for this, you can ignore it.</p></div>'
   });

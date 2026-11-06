@@ -1,5 +1,5 @@
 /**
- * Album Discovery: automatic album links
+ * Club Music: automatic album links
  *
  * Adds two custom functions for the sheet:
  *   =GET_APPLE_MUSIC_LINK(album, artist)  works right away, no setup

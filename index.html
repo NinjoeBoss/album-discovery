@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<title>Album Discovery</title>
+<title>Club Music</title>
 <meta name="theme-color" content="#1e1b2e">
 <meta name="description" content="Our weekly album club: rate this week's pick, add yours, see the leaderboard.">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Discovery">
+<meta name="apple-mobile-web-app-title" content="Club Music">
 <script>
 /* Light / dark mode: 'auto' follows the phone's setting. Set before the page draws so there's no flash. */
 (function () {
@@ -477,7 +477,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><h1>Album Discovery</h1>
+  <div class="brand"><h1>Club Music</h1>
     <select class="season-pick" id="season" onchange="pickSeason(this.value)" aria-label="Season"><option>Season</option></select>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch light or dark mode" title="Switch light or dark mode">
       <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
@@ -1804,7 +1804,7 @@ function chrome(on) {
 
 function renderSignIn() {
   chrome(false);
-  var h = '<div class="card signin"><img class="logo" src="icons/icon-192.png" alt=""><div class="eyebrow">Album Discovery</div>';
+  var h = '<div class="card signin"><img class="logo" src="icons/icon-192.png" alt=""><div class="eyebrow">Club Music</div>';
   if (!signState.members) {
     h += '<h2>Who are you?</h2><div class="muted">' + (signState.err ? '' : 'Loading the club…') + '</div>' +
       (signState.err ? '<div class="actions" style="justify-content:center"><button class="btn primary" onclick="loadMembers()">Try again</button></div>' : '');
@@ -1869,7 +1869,7 @@ function installCard() {
   if (standalone() || storeGet('ad.installHidden')) return '';
   var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   if (!ios && !deferredInstall) return '';
-  return '<div class="card install"><img src="icons/icon-192.png" alt=""><div><div class="t1">Put Album Discovery on your home screen</div>' +
+  return '<div class="card install"><img src="icons/icon-192.png" alt=""><div><div class="t1">Put Club Music on your home screen</div>' +
     '<div class="t2">' + (ios ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>.' : 'Opens full screen like any other app.') + '</div>' +
     (ios ? '' : '<button class="btn gold" style="margin-top:8px" onclick="installApp()">Install</button>') +
     '</div><button class="x" onclick="hideInstall()" aria-label="Hide">×</button></div>';

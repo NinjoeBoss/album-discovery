@@ -1,5 +1,5 @@
 /**
- * Album Discovery: Comment of the Day
+ * Club Music: Comment of the Day
  *
  * Picks one comment from the Comments tab each day and saves it on the
  * hidden "Fantano Bank" tab (K2:K5). The Season 1 card reads the saved pick,

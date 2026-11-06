@@ -1,5 +1,5 @@
 /**
- * Album Discovery: tracklists from iTunes
+ * Club Music: tracklists from iTunes
  *
  * Adds one custom function used by the Tracklists tab:
  *   =GET_TRACKLIST(album, artist)

@@ -1,5 +1,5 @@
 /**
- * Album Discovery website (server side), beta
+ * Club Music website (server side), beta
  *
  * Reads the season tab live and serves the website in Index.html.
  * Columns are found by their header names, so moving columns around
@@ -94,10 +94,10 @@ function doGet(e) {
     '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1e1b2e;font-family:Roboto,Arial,sans-serif;color:#fff;text-align:center}' +
     '.box{padding:32px 24px;max-width:360px}h1{font-size:26px;margin:0 0 8px}p{color:#b9b2cf;margin:0 0 22px;line-height:1.4}' +
     'a{display:inline-block;background:#d99a09;color:#fff;text-decoration:none;font-weight:700;padding:13px 24px;border-radius:99px}</style></head>' +
-    '<body><div class="box"><h1>Album Discovery</h1><p>The club site lives in the app now. Rate albums, add your pick and see the leaderboard there.</p>' +
+    '<body><div class="box"><h1>Club Music</h1><p>The club site lives in the app now. Rate albums, add your pick and see the leaderboard there.</p>' +
     '<a href="' + url + '">Open the app</a></div></body></html>';
   return HtmlService.createHtmlOutput(html)
-    .setTitle('Album Discovery')
+    .setTitle('Club Music')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
