@@ -1549,17 +1549,54 @@ function save() {
   var msg = document.getElementById('msg');
   if (rateState.fav && rateState.fav === rateState.least) { msg.className = 'msg err'; msg.textContent = 'Favorite and least favorite can\'t be the same song.'; return; }
   var a = albumByRow(rateState.row);
-  var btn = document.getElementById('saveBtn'); btn.disabled = true; btn.textContent = 'Saving…';
-  var who = rateState.member, score = rateState.score;
+  if (!a || !rateState.member) { msg.className = 'msg err'; msg.textContent = 'Pick an album first.'; return; }
+  var who = rateState.member, score = rateState.score, row = a.row;
+  var fav = rateState.fav, least = rateState.least, comment = rateState.comment;
+
+  // Show it as saved right away; the sheet catches up in the background.
+  var before = { rating: a.ratings[who], fav: a.fav[who] || '', least: a.least[who] || '', comment: a.comments[who] || '' };
+  applyRating(a, who, score, fav, least, String(comment || '').trim());
+  prep(D); loadMine(); show('rate');
+  var m = document.getElementById('msg'); m.className = 'msg ok';
+  m.textContent = 'Saved! ' + who + ' rated ' + a.album + ' ' + num(score) + ' (' + stars(score) + ').';
+  confetti(document.getElementById('saveBtn'));
+
+  savesPending++;
+  var badge = document.getElementById('syncing'); badge.classList.add('on');
   google.script.run
     .withSuccessHandler(function (data) {
-      prep(data); loadMine(); show('rate');
-      var m = document.getElementById('msg'); m.className = 'msg ok';
-      m.textContent = 'Saved! ' + who + ' rated ' + a.album + ' ' + num(score) + ' (' + stars(score) + ').';
-      confetti(document.getElementById('saveBtn'));
+      if (--savesPending > 0) return; // a newer save is still on its way; its answer will be the fresh one
+      badge.classList.remove('on');
+      prep(data);
+      if (safeToRedraw()) show(view);
     })
-    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Submit rating'; msg.className = 'msg err'; msg.textContent = e.message || 'Something went wrong.'; })
-    .submitRating(rateState.row, rateState.member, rateState.score, rateState.fav, rateState.least, rateState.comment);
+    .withFailureHandler(function (e) {
+      savesPending--;
+      if (!savesPending) badge.classList.remove('on');
+      var b = albumByRow(row);
+      if (b) applyRating(b, who, before.rating, before.fav, before.least, before.comment);
+      prep(D);
+      if (view === 'rate' && rateState.row === row) {
+        loadMine(); show('rate');
+        var m2 = document.getElementById('msg'); m2.className = 'msg err';
+        m2.textContent = 'That didn\'t save: ' + (e.message || 'something went wrong') + ' Try again.';
+      } else {
+        toast('Your rating for ' + a.album + ' didn\'t save. Open Rate to try again.');
+      }
+    })
+    .submitRating(row, who, score, fav, least, comment);
+}
+var savesPending = 0;
+
+/* Puts a rating (and songs / comment) on an album in the local copy and redoes its average. */
+function applyRating(a, who, score, fav, least, comment) {
+  a.ratings[who] = score == null ? null : Number(score);
+  if (fav != null) a.fav[who] = fav;
+  if (least != null) a.least[who] = least;
+  if (comment != null) a.comments[who] = comment;
+  var nums = D.members.map(function (n) { return a.ratings[n]; }).filter(function (v) { return v != null; });
+  a.count = nums.length;
+  a.avg = nums.length ? nums.reduce(function (s, v) { return s + v; }, 0) / nums.length : null;
 }
 
 /* Add album actions */
@@ -1850,6 +1887,7 @@ function refresh(first) {
   var badge = document.getElementById('syncing');
   badge.classList.add('on');
   api('getData').then(function (data) {
+    if (savesPending) return; // a rating is still saving; its answer brings fresher numbers
     badge.classList.remove('on');
     prep(data);
     if (first || safeToRedraw()) show(view);

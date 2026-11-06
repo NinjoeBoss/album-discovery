@@ -132,7 +132,10 @@ function getData() {
     values = rng.getValues();
     var formulas = rng.getFormulas();
 
-    if (typeof artistLinks_start_ === 'function') artistLinks_start_();
+    // One read of every saved cover, link and artist page instead of one per album.
+    if (typeof artistLinks_start_ === 'function') { artistLinks_start_(); adProps_ = adArtistMemo_; }
+    else adProps_ = PropertiesService.getScriptProperties().getProperties();
+    adLinkDeadline_ = Date.now() + AD_LINK_LOOKUP_MS;
     values.forEach(function (row, i) {
       var title = String(row[L.album] || '').trim();
       if (!title || /^tbd$/i.test(title)) {
@@ -673,14 +676,41 @@ function adCell_(values, i, col) {
   return String(values[i][col] || '').trim();
 }
 
-/** Uses a link typed into the sheet if there is one, then the AlbumLinks script, then a search link. */
+/**
+ * Saved lookups for this request (filled once by getData from Script Properties),
+ * and how long one load may spend finding links it hasn't saved yet.
+ */
+var adProps_ = null;
+var AD_LINK_LOOKUP_MS = 5000;
+var adLinkDeadline_ = 0;
+
+function adSaved_(key) {
+  if (!adProps_) adProps_ = PropertiesService.getScriptProperties().getProperties();
+  return adProps_[key] || '';
+}
+function adSave_(key, value) {
+  PropertiesService.getScriptProperties().setProperty(key, value);
+  if (adProps_) adProps_[key] = value;
+}
+
+/**
+ * Uses a link typed into the sheet if there is one, then a saved link, then the
+ * AlbumLinks script (saved for good once found), then a search link.
+ */
 function adLink_(formula, service, album, artist) {
   var m = String(formula || '').match(/HYPERLINK\(\s*"(https?:\/\/[^"]+)"/i);
   if (m) return m[1];
-  try {
-    if (service === 'apple' && typeof GET_APPLE_MUSIC_LINK === 'function') return GET_APPLE_MUSIC_LINK(album, artist);
-    if (service === 'spotify' && typeof GET_SPOTIFY_LINK === 'function') return GET_SPOTIFY_LINK(album, artist);
-  } catch (e) { /* fall through to a search link */ }
+  var key = ('link|' + service + '|' + album + '|' + artist).slice(0, 250);
+  var saved = adSaved_(key);
+  if (saved) return saved;
+  if (!adLinkDeadline_ || Date.now() < adLinkDeadline_) {
+    try {
+      var found = '';
+      if (service === 'apple' && typeof GET_APPLE_MUSIC_LINK === 'function') found = GET_APPLE_MUSIC_LINK(album, artist);
+      if (service === 'spotify' && typeof GET_SPOTIFY_LINK === 'function') found = GET_SPOTIFY_LINK(album, artist);
+      if (found && /^https:\/\//.test(found)) { adSave_(key, found); return found; }
+    } catch (e) { /* fall through to a search link; tried again next load */ }
+  }
   var q = encodeURIComponent(album + ' ' + artist);
   return service === 'apple'
     ? 'https://music.apple.com/us/search?term=' + q
@@ -689,9 +719,8 @@ function adLink_(formula, service, album, artist) {
 
 /** Album art: saved once found, so the site stays fast. */
 function adCover_(album, artist) {
-  var props = PropertiesService.getScriptProperties();
   var key = ('cover|' + album + '|' + artist).slice(0, 250);
-  var saved = props.getProperty(key);
+  var saved = adSaved_(key);
   if (saved) return saved;
 
   var url = '';
@@ -708,7 +737,7 @@ function adCover_(album, artist) {
   if (!url) {
     try { if (typeof GET_ALBUM_COVER === 'function') url = String(GET_ALBUM_COVER(album, artist) || ''); } catch (e) {}
   }
-  if (url) props.setProperty(key, url);
+  if (url) adSave_(key, url);
   return url;
 }
 
@@ -730,4 +759,9 @@ function adBestMatch_(items, album, artist) {
 function clearSavedCovers() {
   var props = PropertiesService.getScriptProperties();
   Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('cover|') === 0) props.deleteProperty(k); });
+}
+/** Run this from the editor if an album's Spotify or Apple Music link is wrong; it clears saved links so they're looked up again. */
+function clearSavedLinks() {
+  var props = PropertiesService.getScriptProperties();
+  Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('link|') === 0) props.deleteProperty(k); });
 }
