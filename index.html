@@ -595,17 +595,40 @@ function savePlatform(p) {
   storeSet('ad.platformSync', '1'); // cleared once the server has it
   if (D && D.me) { D.me.platform = p; storeSet('ad.data', JSON.stringify(D)); }
   if (!storeGet('ad.session')) return;
+  platformStatus = 'saving';
   api('setPlatform', [p]).then(function () {
-    if (storeGet('ad.platform') === p) storeDel('ad.platformSync');
-  }, function () { /* stays flagged; sent again on the next load */ });
+    // The flag stays until a later load confirms the account has it (a load that was
+    // already on its way could still carry the old choice).
+    if (storeGet('ad.platform') === p) platformStatus = 'saved';
+    refreshPlatformNote();
+  }, function (e) {
+    platformStatus = 'Couldn\'t save to your account: ' + ((e && e.message) || e) + ' It\'s kept on this phone and will try again.';
+    refreshPlatformNote();
+  });
+}
+var platformStatus = '';
+function refreshPlatformNote() {
+  var el = document.getElementById('platNote');
+  if (el) el.textContent = platformNote();
+}
+function platformNote() {
+  var p = platformPref();
+  if (!p) return 'Not picked yet. Choose where Listen buttons and artist names should open.';
+  if (platformStatus === 'saving') return 'Saving ' + PLATFORMS[p] + ' to your account…';
+  if (platformStatus === 'saved') return 'Saved to your account: ' + PLATFORMS[p] + '.';
+  if (platformStatus) return platformStatus;
+  return 'Listen buttons and artist names open in ' + PLATFORMS[p] + '.';
 }
 /* On each data load: the account's choice wins, unless this phone has a change the server hasn't got yet. */
 function syncPlatform(data) {
   var me = data.me || {}, local = storeGet('ad.platform');
   if (!me.name) return;
-  if (PLATFORMS[local] && (storeGet('ad.platformSync') || !PLATFORMS[me.platform])) {
-    me.platform = local;
-    savePlatform(local);
+  var pending = storeGet('ad.platformSync');
+  if (pending && PLATFORMS[local] && me.platform === local) {
+    storeDel('ad.platformSync'); // the account has it now
+  } else if (PLATFORMS[local] && (pending || !PLATFORMS[me.platform])) {
+    me.platform = local; // this phone's newer choice wins over a load that started before it was saved
+    if (!pending || platformStatus !== 'saving') savePlatform(local);
   } else if (PLATFORMS[me.platform]) {
     storeSet('ad.platform', me.platform);
   }
@@ -653,8 +676,7 @@ function platformSeg() {
   var p = platformPref();
   return '<div class="seg" id="platSeg">' + [['spotify', 'Spotify'], ['apple', 'Apple Music']].map(function (o) {
     return '<button class="' + (p === o[0] ? 'on' : '') + '" onclick="setPlatform(\'' + o[0] + '\')">' + o[1] + '</button>';
-  }).join('') + '</div><div class="t2" style="margin-top:6px">' +
-    (p ? 'Listen buttons and artist names open in ' + PLATFORMS[p] + '.' : 'Not picked yet. Choose where Listen buttons and artist names should open.') + '</div>';
+  }).join('') + '</div><div class="t2" id="platNote" style="margin-top:6px">' + esc(platformNote()) + '</div>';
 }
 function setPlatform(p) {
   savePlatform(p);
