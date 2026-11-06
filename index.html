@@ -172,7 +172,11 @@
   /* song names that play the song on the member's platform */
   .songlink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; }
   .songlink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
-  .songlink .play { display: inline-block; font-size: .72em; margin-right: 5px; color: var(--plum-text); text-decoration: none; vertical-align: 1px; opacity: .8; }
+  /* small round badge in the member's platform color, with a play triangle cut in white */
+  .songlink .play { display: inline-block; position: relative; width: 15px; height: 15px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; background: var(--muted); }
+  .songlink .play::after { content: ''; position: absolute; left: 5.5px; top: 4px; border-style: solid; border-width: 3.5px 0 3.5px 5.5px; border-color: transparent transparent transparent #fff; }
+  .songlink .play.spotify { background: #1db954; }
+  .songlink .play.apple { background: #fa2d48; }
   .pickplat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
   .pickplat .btn { padding: 13px 12px; font-size: 15px; text-align: center; }
   .btn.mine .yours { opacity: .75; font-weight: 500; margin-left: 4px; }
@@ -734,7 +738,7 @@ function songUrl(a, song, p) { return songMemoGet()[songKey(p, a, song)] || ''; 
 function songLink(a, song, label) {
   song = songName(song);
   if (!song) return esc(label || '');
-  var p = platformPref(), text = '<span class="play" aria-hidden="true">▶</span>' + esc(label || song);
+  var p = platformPref(), text = '<span class="play ' + (p || 'none') + '" aria-hidden="true"></span>' + esc(label || song);
   var data = ' data-row="' + a.row + '" data-song="' + esc(song) + '"';
   if (!p) return '<a class="songlink" href="#"' + data + ' onclick="event.stopPropagation();askPlatform(\'song\',' + a.row + ',this.dataset.song);return false">' + text + '</a>';
   var u = songUrl(a, song, p);
