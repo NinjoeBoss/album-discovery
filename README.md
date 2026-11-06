@@ -24,7 +24,7 @@ It runs on any phone: open the link, then add it to the home screen. It opens fu
 Put the `/exec` URL in `config.js` as `apiUrl`.
 
 ### 3. Turn on GitHub Pages
-Repo **Settings > Pages**: Source **Deploy from a branch**, Branch **main**, folder **/ (root)**. The app appears at `https://ninjoeboss.github.io/album-discovery/`.
+Repo **Settings > Pages**: Source **Deploy from a branch**, Branch **main**, folder **/ (root)**. Custom domain: `club-music.net` (the `CNAME` file). The app appears at `https://club-music.net/`; the old `https://ninjoeboss.github.io/album-discovery/` address redirects there.
 
 ## Making changes
 
