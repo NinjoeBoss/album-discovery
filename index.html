@@ -126,6 +126,23 @@
   .hero { display: grid; grid-template-columns: minmax(140px, 260px) 1fr; gap: 20px; align-items: center; }
   .cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--band); display: block; }
   .hero h2 { margin: 6px 0 2px; font-size: 30px; line-height: 1.1; }
+  /* home cover ambience: a blurred, saturated copy of the art glows behind the cover, plus a halo and a card tint in
+     the cover's main color (--glow, from artColor; the picker's color until it's read). Breathes slowly unless motion is reduced. */
+  .card.hero { --glow: 108 92 157; position: relative; overflow: hidden; isolation: isolate;
+    background: radial-gradient(120% 90% at 0% 50%, rgb(var(--glow) / .20), transparent 62%), var(--card); transition: background .8s ease; }
+  html[data-theme="dark"] .card.hero { background: radial-gradient(120% 90% at 0% 50%, rgb(var(--glow) / .26), transparent 62%), var(--card); }
+  .hart { position: relative; z-index: 0; }
+  .hart .amb { position: absolute; inset: -14%; width: 128%; height: 128%; object-fit: cover; border-radius: 50%; z-index: -1;
+    filter: blur(34px) saturate(1.7); opacity: .7; pointer-events: none; transform: translateZ(0); }
+  .hart::before { content: ''; position: absolute; inset: -22%; border-radius: 50%; z-index: -2; pointer-events: none;
+    background: radial-gradient(closest-side, rgb(var(--glow) / .55), rgb(var(--glow) / 0)); transition: background .8s ease; }
+  html[data-theme="dark"] .hart .amb { opacity: .85; }
+  .hart .cover { position: relative; box-shadow: 0 10px 30px -6px rgb(var(--glow) / .65), 0 2px 6px rgba(30,27,46,.2); transition: box-shadow .8s ease; }
+  @media (prefers-reduced-motion: no-preference) {
+    .hart .amb { animation: ambBreathe 9s ease-in-out infinite; }
+    .hart::before { animation: ambBreathe 9s ease-in-out -4.5s infinite; }
+  }
+  @keyframes ambBreathe { 0%, 100% { transform: scale(1) rotate(0deg); opacity: .62; } 50% { transform: scale(1.07) rotate(4deg); opacity: .85; } }
   .hero .by { font-size: 16px; color: var(--muted); }
   .htop { display: flex; gap: 16px; align-items: flex-start; }
   .htop > div:first-child { flex: 1; min-width: 0; }
@@ -452,7 +469,8 @@
 
   @media (max-width: 600px) {
     .hero { grid-template-columns: 1fr; }
-    .hero .cover { max-width: 300px; margin: 0 auto; }
+    .hart { max-width: 300px; width: 100%; margin: 6px auto 4px; }
+    .card.hero, html[data-theme="dark"] .card.hero { background: radial-gradient(110% 70% at 50% 0%, rgb(var(--glow) / .24), transparent 65%), var(--card); }
     .hero h2 { font-size: 26px; }
     .board li { grid-template-columns: 24px 46px minmax(0, 1fr) 72px; gap: 10px; height: 64px; padding: 0 8px; }
     .board .score b { font-size: 16px; }
@@ -848,7 +866,9 @@ function renderHome() {
   var a = thisWeek();
   if (!a) return '<div class="card">No albums yet.</div>' + nextCard();
   var mine = rateState.member ? a.ratings[rateState.member] : null;
-  var h = installCard() + '<div class="card hero">' + img(a, 'cover') + '<div>' +
+  var glow = (ART && a.cover && ART[a.cover]) || hexRgb(color(a.pickedBy, true));
+  var h = installCard() + '<div class="card hero" data-row="' + a.row + '" style="--glow:' + glow + '"><div class="hart">' +
+    (a.cover ? '<img class="amb" src="' + esc(a.cover) + '" alt="" aria-hidden="true">' : '') + img(a, 'cover') + '</div><div>' +
     '<div class="htop"><div><div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
     '<h2>' + esc(a.album) + '</h2><div class="by">' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div></div>' +
     (a.avg == null ? '' : '<div class="bigavg"><b>' + cnt(a.avg) + '</b><span class="stars">' + stars(a.avg) + '</span><small>group avg</small></div>') +
@@ -1471,6 +1491,13 @@ function albumGlow(a) {
   });
 }
 
+/* Home hero: once the cover's main color is known, tint the ambience with it (cached after the first read). */
+function heroGlow() {
+  var el = document.querySelector('#app .card.hero'); if (!el) return;
+  var a = (D.albums || []).filter(function (x) { return String(x.row) === el.dataset.row; })[0]; if (!a) return;
+  artColor(a, function (rgb) { if (el.isConnected) el.style.setProperty('--glow', rgb); });
+}
+
 /* Confetti burst, from an element if given, otherwise from the middle of the screen. */
 function confetti(from) {
   if (calm()) return;
@@ -1537,6 +1564,7 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
   app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats }[v]();
   moveInk();
   syncBack();
+  if (v === 'home') heroGlow();
   if (entering) {
     window.scrollTo(0, 0);
     if (!calm() && !quiet) {
