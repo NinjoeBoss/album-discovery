@@ -1167,7 +1167,7 @@ function openAlbum(row) {
   var soon = a.date && a.date > D.today;
   var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
   var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero"><div class="disc"><div class="vinyl"><div class="rec"></div></div>' + img(a, 'cover') + '</div>' +
-    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · #' + a.number + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
+    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
     '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
     '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div>' +
