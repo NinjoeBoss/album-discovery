@@ -8,7 +8,12 @@ jobs:
     steps:
       - run: |
           set +e
-          sudo apt-get install -y -qq whois >/dev/null 2>&1
-          for d in club-music.net clubmusic.net; do
-            echo "::notice::$d => $(whois $d | grep -iE '^ *(Registrar:|Registrar URL:|Name Server:)' | sort -u | tr -s ' ' | tr '\n' ' ')"
+          for q in "club-music.net A" "club-music.net AAAA" "www.club-music.net CNAME" "www.club-music.net A"; do
+            set -- $q
+            echo "::notice::DNS $1 $2 => $(dig +short @8.8.8.8 $1 $2 | sort | tr '\n' ' ')"
+          done
+          for u in https://club-music.net/ http://club-music.net/ https://www.club-music.net/ http://www.club-music.net/ http://clubmusic.net/ https://clubmusic.net/; do
+            r=$(curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}' --max-time 20 "$u" 2>&1 || echo "FAIL $?")
+            f=$(curl -sL -o /dev/null -w '%{url_effective} %{http_code}' --max-time 25 "$u" 2>&1)
+            echo "::notice::$u => $r | final: $f"
           done
