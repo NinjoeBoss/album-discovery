@@ -14,6 +14,37 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Club Music">
 <script>
+/* Moving to clubmusic.net: the app's saved sign in, platform and theme belong to one web address,
+   so the old address (club-music.net) hands them over in the link when it sends you to the new one.
+   The old copy only moves you once clubmusic.net is really serving the app (its icon loads),
+   so nothing breaks before the switch. The hand over is in the # part of the link, which never
+   leaves the phone, and it's wiped from the address bar straight away. */
+(function () {
+  var MAIN = 'clubmusic.net', OLD = ['club-music.net', 'www.club-music.net'];
+  var KEYS = ['ad.session', 'ad.platform', 'ad.platformSync', 'ad.theme', 'ad.season', 'ad.installHidden'];
+  var host = location.hostname;
+  try {
+    if (host === MAIN || host === 'www.' + MAIN) {
+      var m = /[#&]handoff=([^&]+)/.exec(location.hash);
+      if (!m) return;
+      var got = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
+      // Anything this address already has wins (someone who already signed in here stays as they are).
+      KEYS.forEach(function (k) { if (got[k] != null && localStorage.getItem(k) == null) localStorage.setItem(k, got[k]); });
+      history.replaceState(null, '', location.pathname + location.search);
+      return;
+    }
+    if (OLD.indexOf(host) < 0) return;
+    var probe = new Image();
+    probe.onload = function () {
+      var out = {};
+      KEYS.forEach(function (k) { var v = localStorage.getItem(k); if (v != null) out[k] = v; });
+      location.replace('https://' + MAIN + '/#handoff=' + encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(out))))));
+    };
+    probe.src = 'https://' + MAIN + '/icons/icon-192.png?v=' + Date.now();
+  } catch (e) {}
+})();
+</script>
+<script>
 /* Light / dark mode: 'auto' follows the phone's setting. Set before the page draws so there's no flash. */
 (function () {
   var t = 'auto'; try { t = localStorage.getItem('ad.theme') || 'auto'; } catch (e) {}
