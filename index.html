@@ -492,6 +492,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 
   /* swipe between tabs: the next tab rides in beside the current one while you drag (like a phone carousel) */
   body { overflow-x: hidden; overflow-x: clip; }
+  /* the browser only handles up and down scrolling (and pinch zoom) on the page; sideways drags are left to the swipe,
+     so the two never both move at once. Sideways scrolling strips set their own touch-action and still scroll. */
+  #app { touch-action: pan-y pinch-zoom; }
   main.dragging, .peek > main { will-change: transform; backface-visibility: hidden; }
   main.dragging *, .peek * { transition: none !important; }
   main.dragging :active { transform: none !important; }
@@ -1857,7 +1860,9 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
   var app = document.getElementById('app'), nav = document.getElementById('nav'), ink = document.getElementById('ink');
   var VIEWS = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats };
   var EASE = 'cubic-bezier(.22,.61,.36,1)';
-  var t = null, busy = false, peek = null, peekV = null, raf = 0;
+  var t = null, busy = false, peek = null, peekV = null, raf = 0, scrolledAt = 0;
+  // A touch while the page is still gliding from a flick is meant to stop the scroll, not start a swipe.
+  window.addEventListener('scroll', function () { scrolledAt = Date.now(); }, { passive: true });
   function tabs() { return Array.prototype.map.call(nav.querySelectorAll('button[data-v]'), function (b) { return b.dataset.v; }); }
   function btn(v) { return nav.querySelector('button[data-v="' + v + '"]'); }
   function blocked(el) {
@@ -1906,6 +1911,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
     t = null;
     if (busy || !D || e.touches.length !== 1 || nav.style.display === 'none') return;
     if (document.getElementById('scrim').classList.contains('on') || blocked(e.target)) return;
+    if (Date.now() - scrolledAt < 150) return;
     var p = e.touches[0];
     t = { x0: p.clientX, y0: p.clientY, dx: 0, mode: '?', pts: [{ x: p.clientX, at: e.timeStamp }] };
   }, { passive: true });
@@ -1914,12 +1920,16 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
     var p = e.touches[0], dx = p.clientX - t.x0, dy = p.clientY - t.y0;
     if (e.touches.length !== 1) { cancel(); return; }
     if (t.mode === '?') {
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-      t.mode = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+      // Decide early (before the phone commits to a scroll) and only call it sideways when it clearly is:
+      // within about 34 degrees of flat. Anything steeper is a scroll and the swipe sits out the whole gesture.
+      if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
+      t.mode = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'x' : 'y';
+      // If the browser has already started scrolling, the touch can't be taken over; let the scroll win cleanly.
+      if (t.mode === 'x' && e.cancelable === false) t.mode = 'y';
       if (t.mode === 'y') { t = null; return; }
       app.classList.add('dragging');
     }
-    e.preventDefault(); // no up and down scrolling mid swipe
+    if (e.cancelable) e.preventDefault(); // no up and down scrolling mid swipe
     t.dx = dx;
     t.pts.push({ x: p.clientX, at: e.timeStamp }); if (t.pts.length > 6) t.pts.shift();
     if (!calm() && !raf) raf = requestAnimationFrame(draw);
