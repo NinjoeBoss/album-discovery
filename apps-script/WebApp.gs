@@ -179,7 +179,8 @@ function getData() {
         apple: adLink_(L.apple >= 0 ? formulas[i][L.apple] : '', 'apple', title, artist),
         cover: adCover_(title, artist),
         spotifyArtist: typeof artistLinks_get_ === 'function' ? artistLinks_get_('spotify', artist) : '',
-        appleArtist: typeof artistLinks_get_ === 'function' ? artistLinks_get_('apple', artist) : ''
+        appleArtist: typeof artistLinks_get_ === 'function' ? artistLinks_get_('apple', artist) : '',
+        ratedAt: adRatedTimes_(memberNames, title, artist)
       });
     });
   }
@@ -267,6 +268,7 @@ function submitRating(albumRow, member, score, fav, least, comment) {
     var index = albumRow - L.headerRow - 1;
 
     sh.getRange(albumRow, m.col + 1).setValue(score);
+    adStampRating_(member, title, String(sh.getRange(albumRow, L.artist + 1).getValue() || '').trim());
 
     if (fav != null || least != null) {
       var songs = adSongsLayout_(ss, memberNames);
@@ -786,4 +788,72 @@ function clearSavedCovers() {
 function clearSavedLinks() {
   var props = PropertiesService.getScriptProperties();
   Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('link|') === 0) props.deleteProperty(k); });
+}
+
+/* ---------- rating times (for the Procrastinator stat) ----------
+ * The first time each member scores an album, the time is saved in Script
+ * Properties as rated|member|album|artist = milliseconds. Changing a score later
+ * keeps the first time. The app never shows the raw times, only how many days
+ * after the album's Thursday each rating came in. Ratings from before Nov 10,
+ * 2026 have no time saved, so they're left out of the averages.
+ */
+
+function adRatedKey_(member, album, artist) {
+  return ('rated|' + member + '|' + String(album).trim().toLowerCase() + '|' + String(artist).trim().toLowerCase()).slice(0, 250);
+}
+
+/** Saves now as the member's rating time for this album, unless one is saved already. */
+function adStampRating_(member, album, artist) {
+  if (!member || !album) return;
+  var props = PropertiesService.getScriptProperties();
+  var key = adRatedKey_(member, album, artist);
+  if (!props.getProperty(key)) props.setProperty(key, String(Date.now()));
+}
+
+/** { member: milliseconds or null } for one album (reads the properties loaded by getData). */
+function adRatedTimes_(memberNames, album, artist) {
+  var out = {};
+  memberNames.forEach(function (n) {
+    var v = Number(adSaved_(adRatedKey_(n, album, artist)));
+    out[n] = v > 0 ? v : null;
+  });
+  return out;
+}
+
+/**
+ * Simple trigger: runs when anyone types in the sheet itself, so scores entered
+ * straight into the rating columns get a time too. (Scores saved by the app go
+ * through submitRating, which stamps them there.)
+ */
+function onEdit(e) {
+  try {
+    var range = e && e.range;
+    if (!range || range.getSheet().getName() !== AD_SHEET_NAME) return;
+    var sh = range.getSheet();
+    var L = adLayout_(sh);
+    var r0 = range.getRow(), c0 = range.getColumn();
+    var vals = range.getValues();
+    vals.forEach(function (row, i) {
+      var r = r0 + i;
+      if (r <= L.headerRow) return;
+      var info = null;
+      row.forEach(function (v, j) {
+        if (typeof v !== 'number' || isNaN(v)) return;
+        var m = L.members.filter(function (x) { return x.col + 1 === c0 + j; })[0];
+        if (!m) return;
+        if (!info) info = sh.getRange(r, 1, 1, L.lastCol).getValues()[0];
+        var album = String(info[L.album] || '').trim();
+        if (!album || /^tbd$/i.test(album)) return;
+        adStampRating_(m.name, album, String(info[L.artist] || '').trim());
+      });
+    });
+  } catch (err) { /* never block typing in the sheet */ }
+}
+
+/** Editor helper: logs every saved rating time. */
+function listRatingTimes() {
+  var props = PropertiesService.getScriptProperties().getProperties();
+  Object.keys(props).filter(function (k) { return k.indexOf('rated|') === 0; }).sort().forEach(function (k) {
+    Logger.log(k.slice(6) + '  ' + new Date(Number(props[k])));
+  });
 }

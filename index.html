@@ -446,6 +446,23 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .bars .row { display: grid; grid-template-columns: 110px 1fr 40px; gap: 10px; align-items: center; margin: 8px 0; font-size: 14px; font-weight: 700; }
   .bars .track { background: var(--band); border-radius: 99px; height: 16px; overflow: hidden; }
   .bars .fill { background: var(--plum); height: 100%; border-radius: 99px; }
+  /* the Procrastinator (stats) */
+  .procrast .crown { display: flex; align-items: center; gap: 14px; }
+  .procrast .crown .pwrap { position: relative; flex: none; }
+  .procrast .crown .snail { position: absolute; right: -6px; bottom: -4px; font-size: 24px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+  .procrast .crown h3 { margin: 2px 0 2px; font-size: 22px; }
+  .procrast .roast { font-style: italic; color: var(--muted); font-size: 14px; margin-top: 4px; }
+  .procrast .bars .row { grid-template-columns: 110px 1fr 74px; }
+  .procrast .bars .row span:last-child { text-align: right; white-space: nowrap; }
+  .procrast .bars .fill { background: var(--red); }
+  .procrast .bars .row.fast .fill { background: var(--gold); }
+  .procrast .bars .row .owes { font-size: 10px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; color: var(--red); display: block; line-height: 1.1; }
+  .procrast .lbl { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+  .procrast .shame { list-style: none; margin: 6px 0 0; padding: 0; }
+  .procrast .shame li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--band); font-size: 14px; cursor: pointer; }
+  .procrast .shame li .al { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .procrast .shame li b { color: var(--red); white-space: nowrap; }
+  .procrast .sub { margin: 16px 0 4px; }
 
   /* app: sign in, install tip, refresh */
   .signin { max-width: 460px; margin: 30px auto; text-align: center; padding: 26px 20px; }
@@ -1367,7 +1384,88 @@ function renderStats() {
   }).sort(function (x, y) { return (x.v == null) - (y.v == null) || x.v - y.v; }).forEach(function (r) {
     h += '<div class="row"><span>' + face(r.m, 'tiny') + esc(r.m) + '</span><div class="track"><div class="fill" style="width:' + (r.v == null ? 0 : r.v * 10) + '%"></div></div><span>' + (r.v == null ? '–' : r.v.toFixed(1)) + '</span></div>';
   });
-  return h + '<div class="t2" style="margin-top:8px">Average rating each person gives. Shortest bar is the toughest critic.</div></div>';
+  h += '<div class="t2" style="margin-top:8px">Average rating each person gives. Shortest bar is the toughest critic.</div></div>';
+  return h + procrastinator(list);
+}
+
+/* ---------- the Procrastinator ----------
+ * How many days after an album's Thursday each member's score came in. Albums a
+ * member still hasn't scored count too, and keep growing every day. Rating times
+ * are saved by the server (a.ratedAt) starting Nov 10, 2026; older ratings have
+ * no time and are left out. The times themselves are never shown. */
+var PROCRAST_ROASTS = [
+  'Still buffering.',
+  'Listening at 0.25x speed, apparently.',
+  'Rating albums on geological time.',
+  'Has a "listen later" playlist longer than the club has existed.',
+  'Thinks Thursday is more of a vibe than a day.',
+  'The album dropped. The rating did not.',
+  'Probably waiting for the vinyl to ship.',
+  'Treats deadlines like bonus tracks: optional.',
+  'Currently on track 1. Of the first album.',
+  'Saving the rating for the deluxe edition.',
+  'Would rate it, but the aux cord is in another castle.',
+  'Says they\'re "letting it marinate."'
+];
+function lateDays(a, t) {
+  var p = a.date.split('-');
+  var drop = new Date(+p[0], +p[1] - 1, +p[2]).getTime();
+  return Math.max(0, (t - drop) / 864e5);
+}
+function procrastinator(list) {
+  var now = Date.now();
+  var due = list.filter(function (a) { return a.date && a.date <= D.today; });
+  var rows = D.members.map(function (m) {
+    var waits = [], owed = [];
+    due.forEach(function (a) {
+      var at = a.ratedAt && a.ratedAt[m];
+      if (a.ratings[m] == null) { var d = lateDays(a, now); waits.push(d); owed.push({ a: a, d: d }); }
+      else if (at) waits.push(lateDays(a, at));
+    });
+    return { m: m, v: avgOf(waits), n: waits.length, owed: owed };
+  });
+  var h = '<div class="section-title">The Procrastinator</div><div class="card procrast">';
+  var counted = rows.filter(function (r) { return r.v != null; });
+  if (!counted.length) {
+    return h + '<div class="t1">No slackers on record yet</div><div class="t2">Rating times are tracked from Nov 10 on. Rate late and this is where you\'ll end up.</div></div>';
+  }
+  counted.sort(function (x, y) { return (y.v - x.v) || (y.owed.length - x.owed.length); });
+  var worst = counted[0];
+  var fast = counted.length > 1 ? counted[counted.length - 1] : null;
+  var dayNo = Math.floor(now / 864e5);
+  var roast = PROCRAST_ROASTS[(dayNo + worst.m.length) % PROCRAST_ROASTS.length];
+  var dd = function (v) { return v < 0.95 ? Math.round(v * 24) + 'h' : v.toFixed(1) + 'd'; };
+  var words = function (v) { return v < 0.95 ? Math.round(v * 24) + ' hours' : v.toFixed(1) + ' days'; };
+
+  h += '<div class="crown"><div class="pwrap">' + face(worst.m, 'pbig') + '<span class="snail" aria-hidden="true">🐌</span></div><div>' +
+    '<div class="lbl" style="color:var(--red)">' + (isAll() ? 'Procrastinator of all time' : 'Reigning procrastinator') + '</div>' +
+    '<h3>' + esc(worst.m) + '</h3><div class="t2">Takes ' + words(worst.v) + ' to rate on average' +
+    (worst.owed.length ? ' · still owes ' + worst.owed.length + ' album' + (worst.owed.length > 1 ? 's' : '') : '') + '</div>' +
+    '<div class="roast">' + esc(roast) + '</div></div></div>';
+
+  var max = Math.max.apply(null, counted.map(function (r) { return r.v; })) || 1;
+  h += '<div class="bars">';
+  rows.slice().sort(function (x, y) { return (x.v == null) - (y.v == null) || y.v - x.v; }).forEach(function (r) {
+    var isFast = fast && r.m === fast.m && fast.v < worst.v;
+    h += '<div class="row' + (isFast ? ' fast' : '') + '"><span>' + face(r.m, 'tiny') + esc(r.m) + (isFast ? ' ⚡' : '') + '</span>' +
+      '<div class="track"><div class="fill" style="width:' + (r.v == null ? 0 : Math.max(3, r.v / max * 100)) + '%"></div></div>' +
+      '<span>' + (r.v == null ? '–' : dd(r.v)) + (r.owed.length ? '<span class="owes">owes ' + r.owed.length + '</span>' : '') + '</span></div>';
+  });
+  h += '</div>';
+  if (fast && fast.v < worst.v) h += '<div class="t2">⚡ Speed demon: ' + esc(fast.m) + ', usually in within ' + words(fast.v) + '.</div>';
+
+  var shame = [];
+  rows.forEach(function (r) { r.owed.forEach(function (o) { shame.push({ m: r.m, a: o.a, d: o.d }); }); });
+  shame.sort(function (x, y) { return y.d - x.d; });
+  if (shame.length) {
+    h += '<div class="lbl sub" style="color:var(--red)">Wall of shame</div><ul class="shame">';
+    shame.slice(0, 5).forEach(function (s) {
+      h += '<li onclick="openAlbum(' + s.a.row + ')">' + face(s.m, 'tiny') + '<span class="al"><b style="color:var(--ink)">' + esc(s.m) + '</b> has sat on ' + esc(s.a.album) + '</span><b>' + Math.floor(s.d) + ' days</b></li>';
+    });
+    h += '</ul>';
+    if (shame.length > 5) h += '<div class="t2" style="margin-top:4px">…and ' + (shame.length - 5) + ' more overdue.</div>';
+  }
+  return h + '<div class="t2" style="margin-top:10px">Days from each album\'s Thursday until the score came in. Albums still waiting on you keep counting up. Times are tracked from Nov 10, so earlier ratings don\'t count.</div></div>';
 }
 
 /* ---------- album detail ---------- */
