@@ -107,6 +107,8 @@
     -webkit-mask-image: linear-gradient(90deg, transparent 30%, #000 80%); mask-image: linear-gradient(90deg, transparent 30%, #000 80%);
   }
   .brand { display: flex; align-items: center; gap: 10px; }
+  /* signed out: no tab row under the title, so give the bar its own bottom space (else the title and theme button touch the edge) */
+  header.bare { padding-bottom: 14px; }
   .brand h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: .3px; }
   .avatar { margin-left: 0; align-self: center; width: 38px; height: 38px; border-radius: 99px; border: 2px solid rgba(255,255,255,.85); font-weight: 900; font-size: 16px; color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: none; }
   .avatar:hover { box-shadow: 0 0 0 3px var(--plum2); }
@@ -1951,6 +1953,7 @@ var signState = { members: null, name: null, hint: '', busy: false, err: '' };
 function chrome(on) {
   document.getElementById('nav').style.display = on ? '' : 'none';
   document.getElementById('season').style.display = on ? '' : 'none';
+  document.querySelector('header').classList.toggle('bare', !on);
   if (!on) document.getElementById('avatar').style.display = 'none';
 }
 
