@@ -39,5 +39,7 @@ Repo **Settings > Pages**: Source **Deploy from a branch**, Branch **main**, fol
 - **Deploy to Apps Script** (`.github/workflows/deploy-apps-script.yml`) runs on every push to `main` that changes `apps-script/`. It uploads the files with clasp and publishes a new version of the **Github** deployment, so the `/exec` URL in `config.js` never changes.
 - **Pull from Apps Script** (`.github/workflows/pull-apps-script.yml`) copies the live project back into `apps-script/`. Run it from the Actions tab (or by changing `apps-script/.pull`) after editing anything by hand in the script editor; otherwise the next deploy stops rather than overwrite it.
 
+**Face points:** the deploy job also runs MediaPipe Face Landmarker on the club photos and uploads `FacePoints.gs` (eye and mouth spots on each photo, 0 to 100; no images). The app uses them to draw face filters, like the Procrastinator's tears. It's rebuilt on every deploy, so after changing `AVATARS_HTML`, run **Deploy to Apps Script** from the Actions tab. If detection fails, the deploy still goes ahead and the app uses default spots. Script: `.github/scripts/face_points.py`.
+
 Repo secrets they use: `CLASPRC_JSON` (the `.clasprc.json` from `clasp login`), `MEMBERS_GS` (the private Members.gs) and `AVATARS_HTML` (the private Avatars file). Members.gs and Avatars are never committed here. If the deploy ever fails with a login error, run `clasp login` again on a computer and replace `CLASPRC_JSON`.
 
