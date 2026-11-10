@@ -30,9 +30,14 @@ function GET_APPLE_MUSIC_LINK(album, artist) {
   if (res.getResponseCode() !== 200) throw new Error('Apple Music lookup failed');
 
   var results = JSON.parse(res.getContentText()).results || [];
-  var pick = albumLinks_bestMatch_(results, album, artist,
-    function (r) { return r.collectionName; },
-    function (r) { return r.artistName; });
+  var nameOf = function (r) { return r.collectionName; }, artistOf = function (r) { return r.artistName; };
+  var pick;
+  try { pick = albumLinks_bestMatch_(results, album, artist, nameOf, artistOf); }
+  catch (e) {
+    // Search can miss albums that are in the catalog; try the artist's own album list.
+    if (typeof itunesArtistAlbums_ !== 'function') throw e;
+    pick = albumLinks_bestMatch_(itunesArtistAlbums_(artist), album, artist, nameOf, artistOf);
+  }
 
   var link = String(pick.collectionViewUrl).split('?')[0];
   cache.put(key, link, 21600);

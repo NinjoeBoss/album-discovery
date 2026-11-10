@@ -730,6 +730,7 @@ function adCover_(album, artist) {
     if (res.getResponseCode() === 200) {
       var results = JSON.parse(res.getContentText()).results || [];
       var pick = adBestMatch_(results, album, artist);
+      if (!pick && typeof itunesArtistAlbums_ === 'function') pick = adBestMatch_(itunesArtistAlbums_(artist), album, artist);
       if (pick && pick.artworkUrl100) url = pick.artworkUrl100.replace('100x100bb', '600x600bb');
     }
   } catch (e) { /* leave blank */ }

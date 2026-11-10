@@ -29,7 +29,10 @@ function GET_ALBUM_COVER(albumName, artistName) {
   if (res.getResponseCode() !== 200) throw new Error('iTunes is busy, try again in a minute');
 
   var results = JSON.parse(res.getContentText()).results || [];
-  var pick = coverArt_bestMatch_(results, album, artist) || results[0];
+  var pick = coverArt_bestMatch_(results, album, artist);
+  // Apple's search sometimes hides an album that is in the catalog (e.g. Midnight Marauders),
+  // so look through the artist's own album list before settling for the top result.
+  if (!pick) pick = coverArt_bestMatch_(itunesArtistAlbums_(artist), album, artist) || results[0];
   if (!pick || !pick.artworkUrl100) return '';
 
   var big = pick.artworkUrl100.replace('100x100bb', '600x600bb');
@@ -57,4 +60,25 @@ function coverArt_bestMatch_(items, album, artist) {
     if (s > bestScore) { best = it; bestScore = s; }
   });
   return bestScore >= 5 ? best : null;
+}
+/**
+ * Every album Apple lists for an artist (artist search, then the artist's album list).
+ * Used when the plain album search misses an album that is really in the catalog.
+ */
+function itunesArtistAlbums_(artist) {
+  artist = String(artist || '').trim();
+  if (!artist) return [];
+  try {
+    var res = UrlFetchApp.fetch('https://itunes.apple.com/search?entity=musicArtist&limit=5&country=us&term=' +
+      encodeURIComponent(artist), { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return [];
+    var norm = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+    var people = JSON.parse(res.getContentText()).results || [];
+    var who = people.filter(function (p) { return norm(p.artistName) === norm(artist); })[0] || people[0];
+    if (!who || !who.artistId) return [];
+    var list = UrlFetchApp.fetch('https://itunes.apple.com/lookup?entity=album&limit=200&country=us&id=' + who.artistId,
+      { muteHttpExceptions: true });
+    if (list.getResponseCode() !== 200) return [];
+    return (JSON.parse(list.getContentText()).results || []).filter(function (r) { return r.wrapperType === 'collection'; });
+  } catch (e) { return []; }
 }
