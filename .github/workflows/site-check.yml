@@ -1,0 +1,15 @@
+name: Site check clubmusic.net
+on:
+  push:
+    branches: [site-check-clubmusic]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in http://clubmusic.net/ https://clubmusic.net/ https://www.clubmusic.net/ https://clubmusic.net/sw.js https://club-music.net/ https://ninjoeboss.github.io/album-discovery/; do
+            r=$(curl -s -o /tmp/b -w '%{http_code} -> %{redirect_url}' --max-time 20 "$u" 2>&1 || echo "FAIL $?")
+            t=$(grep -o '<title>[^<]*' /tmp/b 2>/dev/null | head -1; grep -o "VERSION = '[^']*'" /tmp/b 2>/dev/null)
+            echo "::notice::$u => $r $t"
+          done
+          echo "::notice::cert clubmusic.net => $(echo | openssl s_client -connect clubmusic.net:443 -servername clubmusic.net 2>/dev/null | openssl x509 -noout -subject -issuer 2>&1 | tr '\n' ' ')"
