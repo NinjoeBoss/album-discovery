@@ -1,0 +1,17 @@
+name: DNS check clubmusic.net
+on:
+  push:
+    branches: [dns-check-clubmusic]
+jobs:
+  dig:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for r in 8.8.8.8 1.1.1.1; do
+            for q in "clubmusic.net A" "clubmusic.net AAAA" "www.clubmusic.net CNAME" "club-music.net A"; do
+              set -- $q
+              ans=$(dig +short @$r $1 $2 | sort | tr '\n' ' ')
+              echo "::notice::$r $1 $2 => ${ans:-NONE}"
+            done
+          done
+          echo "::notice::http clubmusic.net => $(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://clubmusic.net/)"
