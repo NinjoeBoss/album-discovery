@@ -169,6 +169,11 @@
   /* artist names open the artist page on the member's streaming platform */
   .artlink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; }
   .artlink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
+  /* album names open the album on the member's streaming platform (replaces the old Listen buttons) */
+  .alblink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; }
+  .alblink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
+  .alblink .plat { display: inline-block; width: 9px; height: 9px; border-radius: 99px; margin-left: 8px; vertical-align: .18em; background: var(--gold); }
+  .alblink .plat.spotify { background: #1db954; } .alblink .plat.apple { background: #fa2d48; }
   /* song names that play the song on the member's platform */
   .songlink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; }
   .songlink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
@@ -479,8 +484,8 @@
     .board .score .stars { font-size: 11px; }
     .board .rank { width: 24px; height: 24px; font-size: 13px; }
     .bigavg b { font-size: 28px; }
-    /* buttons: Rate it full width, the two listen links side by side under it */
-    .hero .listen { display: grid; grid-template-columns: 1fr 1fr; }
+    /* Rate it button full width (album name is the listen link now) */
+    .hero .listen { display: grid; grid-template-columns: 1fr; }
     .hero .listen .btn { justify-content: center; text-align: center; padding: 11px 12px; }
     .thumb { width: 46px; height: 46px; }
     .two, .songs { grid-template-columns: 1fr; }
@@ -619,7 +624,7 @@ if (window.matchMedia) {
 /* ---------- preferred streaming platform ---------- */
 
 /* Each member picks Spotify or Apple Music under their profile (saved on this phone).
-   Listen buttons and artist names then open there. Before they pick, the first tap asks. */
+   Album names, artist names and songs then open there. Before they pick, the first tap asks. */
 var PLATFORMS = { spotify: 'Spotify', apple: 'Apple Music' };
 function platformPref() {
   var p = storeGet('ad.platform');
@@ -651,11 +656,11 @@ function refreshPlatformNote() {
 }
 function platformNote() {
   var p = platformPref();
-  if (!p) return 'Not picked yet. Choose where Listen buttons and artist names should open.';
+  if (!p) return 'Not picked yet. Choose where album names, artist names and songs should open.';
   if (platformStatus === 'saving') return 'Saving ' + PLATFORMS[p] + ' to your account…';
   if (platformStatus === 'saved') return 'Saved to your account: ' + PLATFORMS[p] + '.';
   if (platformStatus) return platformStatus;
-  return 'Listen buttons and artist names open in ' + PLATFORMS[p] + '.';
+  return 'Album names, artist names and songs open in ' + PLATFORMS[p] + '.';
 }
 /* On each data load: the account's choice wins, unless this phone has a change the server hasn't got yet. */
 function syncPlatform(data) {
@@ -678,11 +683,16 @@ function artistUrl(a, p) {
   var q = encodeURIComponent(a.artist || '');
   return p === 'apple' ? 'https://music.apple.com/us/search?term=' + q : 'https://open.spotify.com/search/' + q + '/artists';
 }
-/* One listen button. style 'out' = outline (home), otherwise filled (album popup). */
-function listenBtn(a, style) {
-  var p = platformPref(), cls = 'btn ' + (style === 'out' ? 'out ' : '');
-  if (!p) return '<button class="' + cls + 'pick" onclick="askPlatform(\'album\',' + a.row + ')">Listen</button>';
-  return '<a class="' + cls + p + '" href="' + esc(albumUrl(a, p)) + '" target="_blank" rel="noopener"><span class="lo">Listen on </span>' + PLATFORMS[p] + '</a>';
+/* Album name that opens the album on the member's platform (stops the tap from also opening the popup).
+   A small dot in the platform's color sits after the name so it reads as a link. */
+function albumLink(a, cls) {
+  if (!a.album) return '';
+  var p = platformPref(), c = 'alblink' + (cls ? ' ' + cls : '');
+  var dot = '<span class="plat ' + (p || 'none') + '" aria-hidden="true"></span>';
+  if (!p) return '<a class="' + c + '" href="#" onclick="event.stopPropagation();askPlatform(\'album\',' + a.row + ');return false" title="Listen">' + esc(a.album) + dot + '</a>';
+  var u = albumUrl(a, p);
+  if (!u) return esc(a.album);
+  return '<a class="' + c + '" href="' + esc(u) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + esc('Listen on ' + PLATFORMS[p]) + '">' + esc(a.album) + dot + '</a>';
 }
 /* Artist name that opens the artist's page (stops the tap from also opening the album popup). */
 function artistLink(a, cls) {
@@ -697,7 +707,7 @@ function askPlatform(kind, row, song) {
   askFor = { kind: kind, row: row, song: song, back: fromAlbum };
   document.getElementById('modal').innerHTML = '<button class="close" onclick="closeAlbum()">×</button>' +
     '<div style="padding-right:40px"><div class="eyebrow">Listen on</div><h2 style="margin:4px 0 6px">Where do you listen?</h2>' +
-    '<div class="t2">Pick once and every Listen button, artist name and song opens there. You can change it anytime under your profile.</div></div>' +
+    '<div class="t2">Pick once and every album name, artist name and song opens there. You can change it anytime under your profile.</div></div>' +
     '<div class="pickplat"><button class="btn spotify" onclick="choosePlatform(\'spotify\')">Spotify</button>' +
     '<button class="btn apple" onclick="choosePlatform(\'apple\')">Apple Music</button></div>';
   openScrim();
@@ -955,7 +965,7 @@ function renderHome() {
   var h = installCard() + '<div class="card hero" data-row="' + a.row + '" style="--glow:' + glow + '"><div class="hart">' +
     (a.cover ? '<img class="amb" src="' + esc(a.cover) + '" alt="" aria-hidden="true">' : '') + img(a, 'cover') + '</div><div>' +
     '<div class="htop"><div><div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
-    '<h2>' + esc(a.album) + '</h2><div class="by">' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div></div>' +
+    '<h2>' + albumLink(a) + '</h2><div class="by">' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div></div>' +
     (a.avg == null ? '' : '<div class="bigavg"><b>' + cnt(a.avg) + '</b><span class="stars">' + stars(a.avg) + '</span><small>group avg</small></div>') +
     '<div class="meta">' + face(a.pickedBy, 'mini') + '<span><b>' + esc(a.pickedBy) + '\'s pick</b> · ' + esc(a.season) + ', #' + a.number + '</span></div>' +
     // Everyone's photo: full color once they've rated, faded until they do.
@@ -964,8 +974,7 @@ function renderHome() {
       return '<span title="' + esc(m + (done ? ' has rated it' : ' hasn\'t rated yet')) + '">' + face(m, 'mini' + (done ? '' : ' off')) + '</span>';
     }).join('') + '</div><span class="t2">' + (a.count === D.members.length ? 'Everyone has rated this one' : a.count + ' of ' + D.members.length + ' rated') + '</span></div>' +
     '<div class="listen"><button class="btn primary' + (mine != null ? ' mine' : '') + '" onclick="goRate(' + a.row + ')">' +
-      (mine != null ? 'Your score: ' + num(mine) + '<span class="yours">· Edit</span>' : 'Rate it') + '</button>' +
-    listenBtn(a, 'out') + '</div>' +
+      (mine != null ? 'Your score: ' + num(mine) + '<span class="yours">· Edit</span>' : 'Rate it') + '</button></div>' +
     '</div></div>';
 
   h += nextCard();
@@ -1054,7 +1063,7 @@ function renderRate() {
   // Cover on the left; title, artist, picker and your score beside it (keeps the page short).
   var score = '<div class="slider"><div class="big" id="scoreBig">' + num(rateState.score) + '</div><span class="stars" id="scoreStars">' + stars(rateState.score) + '</span></div>';
   if (a) h += '<div class="ratehead">' + img(a, 'cover') + '<div class="rh-info">' +
-    '<div class="rc-t">' + esc(a.album) + '</div><div class="rc-a">' + artistLink(a, 'rc-art') + '' +
+    '<div class="rc-t">' + albumLink(a) + '</div><div class="rc-a">' + artistLink(a, 'rc-art') + '' +
     (a.pickedBy ? '<span class="rc-by">' + face(a.pickedBy, 'tiny') + esc(a.pickedBy) + '</span>' : '') + '</div>' +
     score + '</div></div>';
   else h += score;
@@ -1281,11 +1290,10 @@ function openAlbum(row) {
   var soon = a.date && a.date > D.today;
   var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
   var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero"><div class="disc"><div class="vinyl"><div class="rec"></div></div>' + img(a, 'cover') + '</div>' +
-    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + esc(a.album) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
+    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + albumLink(a) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
     '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
-    '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div>' +
-    '<div class="listen">' + listenBtn(a) + '</div></div></div>';
+    '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div></div></div>';
 
   if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
     h += '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupFav, a.groupFav)) + '</div>' +
