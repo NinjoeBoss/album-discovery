@@ -7,17 +7,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for t in "Midnight Marauders A Tribe Called Quest" "Midnight Marauders"; do
-            q=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "$t")
-            code=$(curl -s -o r.json -w '%{http_code}' "https://itunes.apple.com/search?entity=album&limit=10&country=us&term=$q")
-            echo "::notice::term=[$t] http=$code"
-            python3 - <<'PY'
-          import json
-          try:
-              d=json.load(open('r.json'))
-              for r in d.get('results',[]):
-                  print("::notice::"+r.get('collectionName','')+" | "+r.get('artistName','')+" | "+r.get('artworkUrl100',''))
-          except Exception as e:
-              print("::warning::parse "+str(e))
+          curl -s "https://itunes.apple.com/search?entity=musicArtist&limit=3&country=us&term=A%20Tribe%20Called%20Quest" > a.json
+          python3 - <<'PY'
+          import json,urllib.request,urllib.parse
+          a=json.load(open('a.json'))['results']
+          for r in a: print("::notice::ARTIST "+r['artistName']+" id="+str(r['artistId']))
+          aid=a[0]['artistId']
+          d=json.load(urllib.request.urlopen("https://itunes.apple.com/lookup?id=%s&entity=album&limit=200&country=us"%aid))
+          names=[r.get('collectionName','')+" | "+r.get('artworkUrl100','')[-60:] for r in d['results'][1:]]
+          print("::notice::ALBUMS "+str(len(names)))
+          for n in names:
+              if 'arauder' in n.lower(): print("::notice::MATCH "+n)
+          print("::notice::LIST "+" ;; ".join(x.split(' | ')[0] for x in names)[:3000])
+          for t in ["Midnight Marauders Tribe", "Midnight Marauders ATCQ"]:
+              d=json.load(urllib.request.urlopen("https://itunes.apple.com/search?entity=album&limit=10&country=us&term="+urllib.parse.quote(t)))
+              print("::notice::TERM "+t+" -> "+" ;; ".join(r['collectionName']+"/"+r['artistName'] for r in d['results']))
           PY
-          done
