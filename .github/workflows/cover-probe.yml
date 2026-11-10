@@ -1,0 +1,23 @@
+name: cover-probe
+on:
+  push:
+    branches: [cover-probe]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for t in "Midnight Marauders A Tribe Called Quest" "Midnight Marauders"; do
+            q=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "$t")
+            code=$(curl -s -o r.json -w '%{http_code}' "https://itunes.apple.com/search?entity=album&limit=10&country=us&term=$q")
+            echo "::notice::term=[$t] http=$code"
+            python3 - <<'PY'
+          import json
+          try:
+              d=json.load(open('r.json'))
+              for r in d.get('results',[]):
+                  print("::notice::"+r.get('collectionName','')+" | "+r.get('artistName','')+" | "+r.get('artworkUrl100',''))
+          except Exception as e:
+              print("::warning::parse "+str(e))
+          PY
+          done
