@@ -116,6 +116,7 @@ function getData() {
   if (!sh) throw new Error('Could not find a tab named "' + AD_SHEET_NAME + '"');
   var tz = ss.getSpreadsheetTimeZone();
   var today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
+  adFixRatingTimes_();
   var L = adLayout_(sh);
   var memberNames = L.members.map(function (m) { return m.name; });
 
@@ -245,6 +246,7 @@ function setPlatform(p) {
 }
 
 function submitRating(albumRow, member, score, fav, least, comment) {
+  adFixRatingTimes_(); // before stamping, so the first new rating after the fix keeps its time
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -267,8 +269,13 @@ function submitRating(albumRow, member, score, fav, least, comment) {
     if (!title) throw new Error('That album could not be found.');
     var index = albumRow - L.headerRow - 1;
 
-    sh.getRange(albumRow, m.col + 1).setValue(score);
-    adStampRating_(member, title, String(sh.getRange(albumRow, L.artist + 1).getValue() || '').trim());
+    // Only a brand new score gets a rating time. Saving a comment or songs later
+    // re-sends the score, and that must not count as rating it late.
+    var cell = sh.getRange(albumRow, m.col + 1);
+    var before = cell.getValue();
+    var hadScore = typeof before === 'number' && !isNaN(before);
+    cell.setValue(score);
+    if (!hadScore) adStampRating_(member, title, String(sh.getRange(albumRow, L.artist + 1).getValue() || '').trim());
 
     if (fav != null || least != null) {
       var songs = adSongsLayout_(ss, memberNames);
@@ -810,6 +817,30 @@ function adStampRating_(member, album, artist) {
   if (!props.getProperty(key)) props.setProperty(key, String(Date.now()));
 }
 
+/**
+ * One time fix (Nov 10, 2026): before rating times only went to brand new scores,
+ * saving a comment or songs on an album rated long ago stamped it with that
+ * moment. Drops every time saved between the first rating time build going live
+ * and this fix going live (the first request after it), then never runs again.
+ */
+function adFixRatingTimes_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('fix|ratedAt1')) return;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    if (props.getProperty('fix|ratedAt1')) return;
+    var from = 1794336300000, to = Date.now(), all = props.getProperties(), n = 0;
+    Object.keys(all).forEach(function (k) {
+      var v = Number(all[k]);
+      if (k.indexOf('rated|') === 0 && v >= from && v <= to) { props.deleteProperty(k); n++; }
+    });
+    props.setProperty('fix|ratedAt1', JSON.stringify({ at: to, dropped: n }));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /** { member: milliseconds or null } for one album (reads the properties loaded by getData). */
 function adRatedTimes_(memberNames, album, artist) {
   var out = {};
@@ -829,6 +860,10 @@ function onEdit(e) {
   try {
     var range = e && e.range;
     if (!range || range.getSheet().getName() !== AD_SHEET_NAME) return;
+    // Only a score typed into an empty cell counts as a new rating (changing an
+    // old score keeps whatever time it had, or none).
+    if (range.getNumRows() !== 1 || range.getNumColumns() !== 1) return;
+    if (e.oldValue != null && String(e.oldValue).trim() !== '') return;
     var sh = range.getSheet();
     var L = adLayout_(sh);
     var r0 = range.getRow(), c0 = range.getColumn();
