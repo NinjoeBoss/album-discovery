@@ -172,8 +172,6 @@
   /* album names open the album on the member's streaming platform (replaces the old Listen buttons) */
   .alblink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 2px; text-underline-offset: 4px; cursor: pointer; }
   .alblink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
-  .alblink .plat { display: inline-block; width: 9px; height: 9px; border-radius: 99px; margin-left: 8px; vertical-align: .18em; background: var(--gold); }
-  .alblink .plat.spotify { background: #1db954; } .alblink .plat.apple { background: #fa2d48; }
   /* song names that play the song on the member's platform */
   .songlink { color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-decoration-thickness: 1.5px; text-underline-offset: 3px; cursor: pointer; }
   .songlink:hover { color: var(--plum-text); text-decoration-color: currentColor; }
@@ -683,16 +681,14 @@ function artistUrl(a, p) {
   var q = encodeURIComponent(a.artist || '');
   return p === 'apple' ? 'https://music.apple.com/us/search?term=' + q : 'https://open.spotify.com/search/' + q + '/artists';
 }
-/* Album name that opens the album on the member's platform (stops the tap from also opening the popup).
-   A small dot in the platform's color sits after the name so it reads as a link. */
+/* Album name that opens the album on the member's platform (stops the tap from also opening the popup). */
 function albumLink(a, cls) {
   if (!a.album) return '';
   var p = platformPref(), c = 'alblink' + (cls ? ' ' + cls : '');
-  var dot = '<span class="plat ' + (p || 'none') + '" aria-hidden="true"></span>';
-  if (!p) return '<a class="' + c + '" href="#" onclick="event.stopPropagation();askPlatform(\'album\',' + a.row + ');return false" title="Listen">' + esc(a.album) + dot + '</a>';
+  if (!p) return '<a class="' + c + '" href="#" onclick="event.stopPropagation();askPlatform(\'album\',' + a.row + ');return false" title="Listen">' + esc(a.album) + '</a>';
   var u = albumUrl(a, p);
   if (!u) return esc(a.album);
-  return '<a class="' + c + '" href="' + esc(u) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + esc('Listen on ' + PLATFORMS[p]) + '">' + esc(a.album) + dot + '</a>';
+  return '<a class="' + c + '" href="' + esc(u) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="' + esc('Listen on ' + PLATFORMS[p]) + '">' + esc(a.album) + '</a>';
 }
 /* Artist name that opens the artist's page (stops the tap from also opening the album popup). */
 function artistLink(a, cls) {
