@@ -63,7 +63,7 @@ jobs:
           for f in apps-script/*; do
             [ -f "$f" ] || continue
             case "$(basename "$f")" in
-              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*) ;;
+              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*|facepoints*|FacePoints*) ;;
               *) cp "$f" /tmp/push/ ;;
             esac
           done
@@ -80,6 +80,29 @@ jobs:
           grep -q 'AD_MEMBER_EMAILS' /tmp/push/Members.gs || { echo "MEMBERS_GS doesn't look like Members.gs (no AD_MEMBER_EMAILS)."; exit 1; }
           grep -q 'AVATARS' /tmp/push/Avatars.html || { echo "AVATARS_HTML doesn't look like the Avatars file (no AVATARS)."; exit 1; }
           echo "Uploading:"; ls -1 /tmp/push
+
+      # Face points: finds each member's eyes and mouth on their club photo so the
+      # app can draw filters (the Procrastinator's tears) in the right spot. Only the
+      # positions go into FacePoints.gs; the photos stay private. If anything here
+      # fails, an empty FacePoints.gs is uploaded and the app uses its default spots.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Find faces in the club photos
+        run: |
+          set +e
+          ok=0
+          pip install -q mediapipe==1.2.2 pillow numpy \
+            && curl -sSfL --max-time 120 -o /tmp/face_landmarker.task \
+              https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task \
+            && python .github/scripts/face_points.py /tmp/push/Avatars.html /tmp/face_landmarker.task /tmp/push/FacePoints.gs \
+            && ok=1
+          if [ "$ok" != 1 ] || ! grep -q 'AD_FACE_POINTS' /tmp/push/FacePoints.gs; then
+            echo "::warning title=Face points::Face detection didn't run; uploading empty face points (app uses default spots)."
+            printf '/** Written by the deploy job. Face detection did not run this time. */\nvar AD_FACE_POINTS = {};\n' > /tmp/push/FacePoints.gs
+          fi
+          cat /tmp/push/FacePoints.gs | tail -1 | cut -c1-400
 
       - name: Check nothing in the live project would be lost
         run: |

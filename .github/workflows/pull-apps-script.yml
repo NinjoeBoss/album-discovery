@@ -55,6 +55,7 @@ jobs:
           for f in *; do
             case "$(echo "$f" | tr 'A-Z' 'a-z')" in
               members*|avatars*|spotifykeys*) echo "Skipping private file: $f" ;;
+              facepoints*) echo "Skipping generated file: $f (rebuilt by every deploy)" ;;
               *) cp "$f" "$GITHUB_WORKSPACE/apps-script/" ;;
             esac
           done
