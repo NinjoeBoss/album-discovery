@@ -451,7 +451,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .procrast .crown .pwrap { position: relative; flex: none; }
   .procrast .crown .snail { position: absolute; right: -6px; bottom: -4px; font-size: 24px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
   .procrast .crown h3 { margin: 2px 0 2px; font-size: 22px; }
-  .procrast .roast { font-style: italic; color: var(--muted); font-size: 14px; margin-top: 4px; }
   .procrast .bars .row { grid-template-columns: 110px 1fr 74px; }
   .procrast .bars .row span:last-child { text-align: right; white-space: nowrap; }
   .procrast .bars .fill { background: var(--red); }
@@ -1393,20 +1392,6 @@ function renderStats() {
  * member still hasn't scored count too, and keep growing every day. Rating times
  * are saved by the server (a.ratedAt) starting Nov 10, 2026; older ratings have
  * no time and are left out. The times themselves are never shown. */
-var PROCRAST_ROASTS = [
-  'Still buffering.',
-  'Listening at 0.25x speed, apparently.',
-  'Rating albums on geological time.',
-  'Has a "listen later" playlist longer than the club has existed.',
-  'Thinks Thursday is more of a vibe than a day.',
-  'The album dropped. The rating did not.',
-  'Probably waiting for the vinyl to ship.',
-  'Treats deadlines like bonus tracks: optional.',
-  'Currently on track 1. Of the first album.',
-  'Saving the rating for the deluxe edition.',
-  'Would rate it, but the aux cord is in another castle.',
-  'Says they\'re "letting it marinate."'
-];
 function lateDays(a, t) {
   var p = a.date.split('-');
   var drop = new Date(+p[0], +p[1] - 1, +p[2]).getTime();
@@ -1432,16 +1417,13 @@ function procrastinator(list) {
   counted.sort(function (x, y) { return (y.v - x.v) || (y.owed.length - x.owed.length); });
   var worst = counted[0];
   var fast = counted.length > 1 ? counted[counted.length - 1] : null;
-  var dayNo = Math.floor(now / 864e5);
-  var roast = PROCRAST_ROASTS[(dayNo + worst.m.length) % PROCRAST_ROASTS.length];
   var dd = function (v) { return v < 0.95 ? Math.round(v * 24) + 'h' : v.toFixed(1) + 'd'; };
   var words = function (v) { return v < 0.95 ? Math.round(v * 24) + ' hours' : v.toFixed(1) + ' days'; };
 
   h += '<div class="crown"><div class="pwrap">' + face(worst.m, 'pbig') + '<span class="snail" aria-hidden="true">🐌</span></div><div>' +
     '<div class="lbl" style="color:var(--red)">' + (isAll() ? 'Procrastinator of all time' : 'Reigning procrastinator') + '</div>' +
     '<h3>' + esc(worst.m) + '</h3><div class="t2">Takes ' + words(worst.v) + ' to rate on average' +
-    (worst.owed.length ? ' · still owes ' + worst.owed.length + ' album' + (worst.owed.length > 1 ? 's' : '') : '') + '</div>' +
-    '<div class="roast">' + esc(roast) + '</div></div></div>';
+    (worst.owed.length ? ' · still owes ' + worst.owed.length + ' album' + (worst.owed.length > 1 ? 's' : '') : '') + '</div></div></div>';
 
   var max = Math.max.apply(null, counted.map(function (r) { return r.v; })) || 1;
   h += '<div class="bars">';
@@ -1465,7 +1447,7 @@ function procrastinator(list) {
     h += '</ul>';
     if (shame.length > 5) h += '<div class="t2" style="margin-top:4px">…and ' + (shame.length - 5) + ' more overdue.</div>';
   }
-  return h + '<div class="t2" style="margin-top:10px">Days from each album\'s Thursday until the score came in. Albums still waiting on you keep counting up. Times are tracked from Nov 10, so earlier ratings don\'t count.</div></div>';
+  return h + '</div>';
 }
 
 /* ---------- album detail ---------- */
