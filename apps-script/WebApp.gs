@@ -75,7 +75,7 @@ var AD_ROTATION = ['Brennan', 'Jonathan', 'William', 'Luke', 'Nathan'];
 var AD_ADMINS = ['Jonathan'];
 
 /** Where the club's app lives. Opening this script's /exec link in a browser sends people there. */
-var AD_APP_URL = 'https://club-music.net/';
+var AD_APP_URL = 'https://clubmusic.net/';
 
 /**
  * The old Apps Script site was retired on Nov 5, 2026 (everyone uses the app now).
