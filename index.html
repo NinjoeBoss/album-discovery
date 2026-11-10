@@ -1437,7 +1437,8 @@ function procrastinator(list) {
   if (fast && fast.v < worst.v) h += '<div class="t2">⚡ Speed demon: ' + esc(fast.m) + ', usually in within ' + words(fast.v) + '.</div>';
 
   var shame = [];
-  rows.forEach(function (r) { r.owed.forEach(function (o) { shame.push({ m: r.m, a: o.a, d: o.d }); }); });
+  // Only once the Tuesday after the album's Thursday has come (5 days) and it's still unrated.
+  rows.forEach(function (r) { r.owed.forEach(function (o) { if (o.d >= 5) shame.push({ m: r.m, a: o.a, d: o.d }); }); });
   shame.sort(function (x, y) { return y.d - x.d; });
   if (shame.length) {
     h += '<div class="lbl sub" style="color:var(--red)">Wall of shame</div><ul class="shame">';
