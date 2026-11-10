@@ -23,6 +23,7 @@ var AD_APP_SESSION_DAYS = 365;
 var AD_CODE_MINUTES = 10;
 var AD_CODE_TRIES = 5;
 var AD_CODES_PER_10_MIN = 3;
+var AD_APP_KEY_DAYS = 30;
 
 function doPost(e) {
   var out;
@@ -43,6 +44,7 @@ function adApiDispatch_(req) {
   if (action === 'members') return adApiMembers_();
   if (action === 'requestCode') return adRequestCode_(args[0]);
   if (action === 'verifyCode') return adVerifyCode_(args[0], args[1]);
+  if (action === 'useAppKey') return adUseAppKey_(args[0]);
 
   var s = adSession_(req.session);
   if (!s) throw new Error('SIGNED_OUT');
@@ -57,7 +59,9 @@ function adApiDispatch_(req) {
     case 'avatars': return adAvatars_();
     case 'setPlatform': return setPlatform(args[0]);
     case 'songLinks': return songLinks(args[0], args[1], args[2]);
+    case 'appKey': return adAppKey_(req.session, s);
     case 'signOut':
+      adDropAppKey_(req.session);
       PropertiesService.getScriptProperties().deleteProperty('sess|' + req.session);
       return true;
   }
@@ -117,10 +121,58 @@ function adVerifyCode_(name, code) {
     throw new Error('That code isn\'t right. Check the email and try again.');
   }
   cache.remove(key);
+  return adNewSession_(email, name);
+}
+
+function adNewSession_(email, name) {
   var token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').toLowerCase();
   PropertiesService.getScriptProperties().setProperty('sess|' + token,
     JSON.stringify({ email: email, name: name, created: Date.now() }));
   return { session: token, name: name };
+}
+
+/* ---------- carrying a sign in into the home screen app ----------
+ * On iPhone, an app added to the home screen keeps its own storage, apart from
+ * Safari, so it can't see the sign in done in Safari. While signed in on the
+ * website, the page asks for an app key and puts it in the home screen link.
+ * The first time the installed app opens, it trades the key for its own
+ * session. A key works once, only for that member, for AD_APP_KEY_DAYS. Each
+ * Safari sign in holds at most one key (a new one replaces the old one). */
+
+function adAppKey_(sessionToken, s) {
+  var props = PropertiesService.getScriptProperties();
+  adDropAppKey_(sessionToken);
+  var k = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').toLowerCase();
+  props.setProperty('appkey|' + k, JSON.stringify({ email: s.email, name: s.name, created: Date.now() }));
+  props.setProperty('appkeyof|' + sessionToken, k);
+  return { key: k, days: AD_APP_KEY_DAYS };
+}
+
+function adDropAppKey_(sessionToken) {
+  var props = PropertiesService.getScriptProperties();
+  var old = props.getProperty('appkeyof|' + sessionToken);
+  if (old) props.deleteProperty('appkey|' + old);
+  props.deleteProperty('appkeyof|' + sessionToken);
+}
+
+/** Trades an app key for a new session. Returns { session, name }. */
+function adUseAppKey_(k) {
+  k = String(k || '');
+  var bad = 'That home screen link has already been used or expired. Sign in below.';
+  if (!/^[a-f0-9]{64}$/.test(k)) throw new Error(bad);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var raw = props.getProperty('appkey|' + k);
+    if (!raw) throw new Error(bad);
+    props.deleteProperty('appkey|' + k); // works once
+    var a = JSON.parse(raw);
+    if (Date.now() - a.created > AD_APP_KEY_DAYS * 864e5 || !AD_MEMBER_EMAILS[a.email]) throw new Error(bad);
+    return adNewSession_(a.email, a.name);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /** The session behind a token, or null if it's missing, expired or the member was removed. */
@@ -171,7 +223,10 @@ function setupApp() {
 function signOutEveryone() {
   var props = PropertiesService.getScriptProperties();
   var n = 0;
-  Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('sess|') === 0) { props.deleteProperty(k); n++; } });
+  Object.keys(props.getProperties()).forEach(function (k) {
+    if (k.indexOf('appkey') === 0) props.deleteProperty(k);
+    if (k.indexOf('sess|') === 0) { props.deleteProperty(k); n++; }
+  });
   Logger.log('Signed out ' + n + ' sessions.');
 }
 

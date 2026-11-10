@@ -45,6 +45,52 @@
 })();
 </script>
 <script>
+/* Staying signed in when you add the app to your iPhone home screen.
+   iPhone gives a home screen app its own storage, apart from Safari, so it can't see the sign in you
+   did in Safari. While you're signed in here in Safari, the page holds a one time app key (from the
+   sheet) and puts it in the home screen link: the start address in the app's manifest, and the
+   address bar too, in case the phone ignores the manifest. The first time the installed app opens it
+   trades the key for its own sign in. Only the installed app uses a key; Safari strips it. */
+var AD_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function adStandalone() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
+var AD_START_KEY = (function () {
+  var m = /[?&]k=([a-f0-9]{64})(?:&|$)/.exec(location.search);
+  return m ? m[1] : '';
+})();
+function adCleanUrl(key) {
+  var q = location.search.replace(/([?&])k=[^&]*(&|$)/, function (x, a, b) { return b ? a : ''; }).replace(/^&/, '?');
+  if (q === '?') q = '';
+  if (key) q += (q ? '&' : '?') + 'k=' + key;
+  try { history.replaceState(history.state, '', location.pathname + q + location.hash); } catch (e) {}
+}
+function adApplyAppKey() {
+  if (!AD_IOS || adStandalone()) return;
+  var key = '';
+  try {
+    var saved = JSON.parse(localStorage.getItem('ad.appKey') || 'null');
+    if (localStorage.getItem('ad.session') && saved && Date.now() - saved.at < 25 * 864e5) key = saved.k;
+  } catch (e) {}
+  var base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+  var link = document.querySelector('link[rel=manifest]');
+  if (link) {
+    if (!key) { link.setAttribute('href', 'manifest.webmanifest'); }
+    else {
+      var icon = function (f, size, purpose) { return { src: base + 'icons/' + f, sizes: size, type: 'image/png', purpose: purpose }; };
+      var man = {
+        name: 'Club Music', short_name: 'Club Music',
+        description: 'Our weekly album club: rate this week\'s pick, add yours, see the leaderboard.',
+        id: base, start_url: base + '?k=' + key, scope: base,
+        display: 'standalone', orientation: 'portrait', background_color: '#1e1b2e', theme_color: '#1e1b2e',
+        icons: [icon('icon-192.png', '192x192', 'any'), icon('icon-512.png', '512x512', 'any'), icon('maskable-512.png', '512x512', 'maskable')]
+      };
+      link.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(man)));
+    }
+  }
+  adCleanUrl(key);
+}
+try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } catch (e) {}
+</script>
+<script>
 /* Light / dark mode: 'auto' follows the phone's setting. Set before the page draws so there's no flash. */
 (function () {
   var t = 'auto'; try { t = localStorage.getItem('ad.theme') || 'auto'; } catch (e) {}
@@ -1982,8 +2028,8 @@ function renderSignIn() {
 }
 
 function loadMembers() {
-  signState.err = ''; renderSignIn();
-  api('members').then(function (list) { signState.members = list; renderSignIn(); },
+  var note = signState.err; signState.err = ''; renderSignIn();
+  api('members').then(function (list) { signState.members = list; signState.err = note; renderSignIn(); },
     function (e) { signState.err = e.message; renderSignIn(); });
 }
 function sendCode(name) {
@@ -2005,7 +2051,33 @@ function checkCode() {
     start();
   }, function (e) { signState.busy = false; signState.code = ''; signState.err = e.message; renderSignIn(); });
 }
+/* First open of the home screen app: trade the key from the link for a sign in (see the top of the page). */
+function useAppKey() {
+  var key = AD_START_KEY; AD_START_KEY = '';
+  chrome(false);
+  document.getElementById('app').innerHTML = '<div class="card signin"><img class="logo" src="icons/icon-192.png" alt=""><div class="eyebrow">Club Music</div><h2>Signing you in…</h2><div class="muted">Using your sign in from Safari.</div></div>';
+  api('useAppKey', [key]).then(function (r) {
+    storeSet('ad.session', r.session);
+    adCleanUrl('');
+    start();
+  }, function (e) {
+    adCleanUrl('');
+    signState.err = /home screen link/.test(e.message) ? e.message : '';
+    loadMembers();
+  });
+}
+/* In Safari on an iPhone: keep a fresh app key ready so adding to the home screen keeps you signed in. */
+function ensureAppKey() {
+  if (!AD_IOS || adStandalone()) return;
+  var saved = null; try { saved = JSON.parse(storeGet('ad.appKey') || 'null'); } catch (e) {}
+  if (saved && Date.now() - saved.at < 7 * 864e5) { adApplyAppKey(); return; }
+  api('appKey').then(function (r) {
+    storeSet('ad.appKey', JSON.stringify({ k: r.key, at: Date.now() }));
+    adApplyAppKey();
+  }, function () {});
+}
 function signedOut() {
+  storeDel('ad.appKey'); adApplyAppKey();
   storeDel('ad.session'); storeDel('ad.data'); storeDel('ad.platform'); storeDel('ad.platformSync');
   D = null; closeAlbum(); syncBack();
   signState = { members: null, name: null, hint: '', busy: false, err: '' };
@@ -2019,13 +2091,13 @@ function signOut() {
 
 var deferredInstall = null;
 window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredInstall = e; if (D && view === 'home') show('home'); });
-function standalone() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
+function standalone() { return adStandalone(); }
 function installCard() {
   if (standalone() || storeGet('ad.installHidden')) return '';
-  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var ios = AD_IOS;
   if (!ios && !deferredInstall) return '';
   return '<div class="card install"><img src="icons/icon-192.png" alt=""><div><div class="t1">Put Club Music on your home screen</div>' +
-    '<div class="t2">' + (ios ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>.' : 'Opens full screen like any other app.') + '</div>' +
+    '<div class="t2">' + (ios ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>. You\'ll stay signed in, no new code.' : 'Opens full screen like any other app. You\'ll stay signed in.') + '</div>' +
     (ios ? '' : '<button class="btn gold" style="margin-top:8px" onclick="installApp()">Install</button>') +
     '</div><button class="x" onclick="hideInstall()" aria-label="Hide">×</button></div>';
 }
@@ -2070,8 +2142,10 @@ function start() {
     chrome(false);
     return;
   }
+  if (!storeGet('ad.session') && AD_START_KEY && adStandalone()) { useAppKey(); return; }
   if (!storeGet('ad.session')) { loadMembers(); return; }
   chrome(true);
+  ensureAppKey();
   loadAvatars();
   var cached = null;
   try { cached = JSON.parse(storeGet('ad.data') || 'null'); } catch (e) {}
