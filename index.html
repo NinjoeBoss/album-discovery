@@ -133,7 +133,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   button { font-family: inherit; }
   html { background: var(--bar); }
   body { min-height: 100vh; -webkit-tap-highlight-color: transparent; }
-  header { background-color: var(--bar); color: #fff; padding: calc(18px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left)); position: sticky; top: 0; z-index: 5; }
+  header { background-color: var(--bar); color: #fff; padding: calc(18px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left)); position: -webkit-sticky; position: sticky; top: 0; z-index: 5;
+    /* own drawing layer, so iPhone Safari keeps showing it while the page below is swapped or slid */
+    -webkit-transform: translateZ(0); transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
   /* header texture: fine film grain on the bar itself, a soft purple and gold glow, and faint record grooves
      fading in from the right. The two pseudo layers sit at z-index -1 inside the header's own stacking context,
      so they paint over the bar color but under everything in it. */
@@ -1557,6 +1559,8 @@ function backWanted() { return (D && view !== 'home' ? 1 : 0) + (popupOpen ? 1 :
 function backHave() { var st = history.state; return st && st.adLvl ? st.adLvl : 0; }
 /* Called after anything that changes the tab or opens/closes a popup. Batched, so
  * "close popup then switch tab" in one tap settles to one history change. */
+// The app sets its own scroll spot on every tab change; don't let back/forward put an old one back afterwards.
+try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
 function syncBack() {
   if (!window.history || !history.pushState) return;
   clearTimeout(backTimer);
@@ -1732,12 +1736,17 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
   document.getElementById('season').style.visibility = v === 'members' ? 'hidden' : ''; // Members ignores seasons
   var app = document.getElementById('app');
   app.classList.remove('enter');
+  // Go to the top before the new tab goes in. Swapping a long page for a short one while scrolled down makes the
+  // page shrink under the scroll, and iPhone Safari can then lose the sticky header (title, tabs, profile picture)
+  // until the next touch.
+  if (entering) window.scrollTo(0, 0);
   app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats }[v]();
   moveInk();
   syncBack();
   if (v === 'home') heroGlow();
   if (entering) {
     window.scrollTo(0, 0);
+    repaintHeader();
     if (!calm() && !quiet) {
       Array.prototype.forEach.call(app.querySelectorAll('.board li, .grid .gcard, .mgrid > .card, .bars .row, .queue li'), function (el, i) {
         el.style.setProperty('--i', Math.min(i, 14)); el.classList.add('stagger');
@@ -1746,6 +1755,12 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
       runCounts(app);
     }
   }
+}
+/* iPhone Safari sometimes stops drawing the sticky header after the page under it changes size. Nudging a style on
+   the next frame makes it draw the header again where it belongs. */
+function repaintHeader() {
+  var h = document.querySelector('header'); if (!h) return;
+  requestAnimationFrame(function () { h.style.outline = '1px solid transparent'; requestAnimationFrame(function () { h.style.outline = ''; }); });
 }
 function goRate(row) { rateState.row = Number(row); loadMine(); show('rate'); }
 function pickAlbum(row) { rateState.row = Number(row); loadMine(); show('rate'); }
