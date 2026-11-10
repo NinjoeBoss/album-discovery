@@ -1,0 +1,14 @@
+name: Whois check
+on:
+  push:
+    branches: [whois-check]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          set +e
+          sudo apt-get install -y -qq whois >/dev/null 2>&1
+          for d in club-music.net clubmusic.net; do
+            echo "::notice::$d => $(whois $d | grep -iE '^ *(Registrar:|Registrar URL:|Name Server:)' | sort -u | tr -s ' ' | tr '\n' ' ')"
+          done
