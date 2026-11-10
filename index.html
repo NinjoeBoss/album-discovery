@@ -285,6 +285,14 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 
   /* up next strip */
   .next { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; }
+  .pending { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+  .pending .thumb { width: 72px; height: 72px; border-radius: 8px; flex: none; }
+  .pending .pinfo { min-width: 0; }
+  .pending .t1 { font-size: 18px; line-height: 1.25; }
+  .pending .t2 { font-size: 14px; margin-top: 3px; }
+  .pactions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .pactions .btn { padding: 11px 12px; font-size: 14px; text-align: center; }
+  .phint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
   .next .thumb { width: 64px; height: 64px; }
   .next.empty { grid-template-columns: 1fr auto; background: var(--wait); border-color: var(--wait-edge); }
   .next .t1 { font-size: 17px; margin: 3px 0 2px; }
@@ -1186,11 +1194,11 @@ function renderAdd() {
   }
 
   if (lockedOut) {
-    h += '<div class="eyebrow">You\'re lined up for ' + esc(fmtDate(pending.date, true)) + seasonTag(pending.date) + '</div>' +
-      '<div class="next" style="margin-top:10px">' + img(pending, 'thumb') + '<div><div class="t1">' + esc(pending.album) + '</div><div class="t2">' + esc(pending.artist) + (pending.year ? ' · ' + esc(pending.year) : '') + '</div></div>' +
-      '<div style="display:grid;gap:6px"><button class="btn ghost" onclick="startChange(' + pending.row + ')">Change it</button>' +
-      '<button class="btn danger" onclick="confirmRemove(' + pending.row + ')">Remove</button></div></div>' +
-      '<div class="note">You can swap or remove it any time before anyone rates it.</div></div>';
+    h += '<div class="eyebrow">Your pick for ' + esc(fmtDate(pending.date, true)) + seasonTag(pending.date) + '</div>' +
+      '<div class="pending">' + img(pending, 'thumb') + '<div class="pinfo"><div class="t1">' + esc(pending.album) + '</div><div class="t2">' + esc(pending.artist) + (pending.year ? ' · ' + esc(pending.year) : '') + '</div></div></div>' +
+      '<div class="pactions"><button class="btn ghost" onclick="startChange(' + pending.row + ')">Change album</button>' +
+      '<button class="btn danger" onclick="confirmRemove(' + pending.row + ')">Remove</button></div>' +
+      '<div class="phint">You can change or remove it until someone rates it.</div></div>';
     return h + queueCard();
   }
   if (!slot) return h + '<div class="note warn">' + (D.slots.length ? 'You don\'t have another turn coming up in the open weeks on the sheet yet.' : 'Every row on the sheet is filled. Ask Jonathan to add more rows.') + '</div></div>' + queueCard();
