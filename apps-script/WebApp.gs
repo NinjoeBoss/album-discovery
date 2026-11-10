@@ -89,6 +89,7 @@ function doGet(e) {
     if (e.parameter.album) st += ' || ' + albumLinks_spotifyProbe_(e.parameter.album, e.parameter.artist || '');
     return ContentService.createTextOutput(st);
   }
+  if (e && e.parameter && e.parameter.check === 'covers') return ContentService.createTextOutput(adCoverReport_());
   var url = AD_APP_URL;
   var html = '<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">' +
     '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1e1b2e;font-family:Roboto,Arial,sans-serif;color:#fff;text-align:center}' +
@@ -715,6 +716,26 @@ function adLink_(formula, service, album, artist) {
   return service === 'apple'
     ? 'https://music.apple.com/us/search?term=' + q
     : 'https://open.spotify.com/search/' + q;
+}
+
+/** Deploy check: one line per album, "album | artist | saved cover | cover now". No emails. */
+function adCoverReport_() {
+  var props = PropertiesService.getScriptProperties().getProperties();
+  adProps_ = props;
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(AD_SHEET_NAME);
+  var L = adLayout_(sh);
+  var n = sh.getLastRow() - L.headerRow;
+  var vals = n > 0 ? sh.getRange(L.headerRow + 1, 1, n, L.lastCol).getValues() : [];
+  var out = [];
+  vals.forEach(function (r) {
+    var album = String(r[L.album] || '').trim(), artist = String(r[L.artist] || '').trim();
+    if (!album || /^tbd$/i.test(album)) return;
+    var key = ('cover|' + album + '|' + artist).slice(0, 250);
+    var saved = props[key] || '';
+    var now = saved ? '(saved)' : adCover_(album, artist);
+    out.push(album + ' | ' + artist + ' | ' + (saved || '-') + ' | ' + (now || 'NONE'));
+  });
+  return out.join('\n');
 }
 
 /** Album art: saved once found, so the site stays fast. */

@@ -128,3 +128,11 @@ jobs:
             "Spotify: keys not set"*) echo "::warning title=Spotify check::$status" ;;
             *) echo "::error title=Spotify check::$status"; exit 1 ;;
           esac
+          # Cover check: one annotation per album, then test that each cover URL really loads.
+          curl -sSL --max-time 120 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=covers" > covers.txt || true
+          while IFS= read -r line; do
+            url=$(echo "$line" | awk -F' [|] ' '{ if ($3 != "-") print $3; else print $4 }')
+            code="-"
+            case "$url" in https://*) code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url") ;; esac
+            echo "::notice title=Cover::$line | http $code"
+          done < covers.txt
