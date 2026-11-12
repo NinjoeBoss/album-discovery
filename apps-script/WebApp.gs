@@ -97,6 +97,10 @@ function doGet(e) {
     return ContentService.createTextOutput(st);
   }
   if (e && e.parameter && e.parameter.check === 'covers') return ContentService.createTextOutput(adCoverReport_());
+  if (e && e.parameter && e.parameter.check === 'explicit') {
+    adFixExplicitLinks_();
+    return ContentService.createTextOutput(albumLinks_explicitReport_());
+  }
   var url = AD_APP_URL;
   var html = '<!DOCTYPE html><html><head><base target="_top"><meta charset="utf-8">' +
     '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1e1b2e;font-family:Roboto,Arial,sans-serif;color:#fff;text-align:center}' +
@@ -124,6 +128,7 @@ function getData() {
   var tz = ss.getSpreadsheetTimeZone();
   var today = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   adFixRatingTimes_();
+  adFixExplicitLinks_();
   var L = adLayout_(sh);
   var memberNames = L.members.map(function (m) { return m.name; });
 
@@ -805,6 +810,7 @@ function adBestMatch_(items, album, artist) {
     if (n === a) s += 10; else if (n.indexOf(a) === 0) s += 5; else if (n.indexOf(a) >= 0) s += 2;
     if (ar && who.indexOf(ar) >= 0) s += 6;
     if (extras.test(n) && !extras.test(a)) s -= 3;
+    if (typeof albumLinks_explicitBonus_ === 'function') s += albumLinks_explicitBonus_(it);
     if (s > bestScore) { best = it; bestScore = s; }
   });
   return bestScore >= 5 ? best : null;
@@ -860,6 +866,33 @@ function adFixRatingTimes_() {
       if (k.indexOf('rated|') === 0 && v >= from && v <= to) { props.deleteProperty(k); n++; }
     });
     props.setProperty('fix|ratedAt1', JSON.stringify({ at: to, dropped: n }));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * One time fix (Nov 12, 2026): album and song links were saved for good, and the
+ * lookup used to take whichever copy came first, often the clean (censored) one.
+ * Drops every saved album and song link once so they're found again with the
+ * explicit version preferred. Links typed into the sheet aren't touched, and
+ * saved covers are kept (some are the exact edition a member picked).
+ */
+function adFixExplicitLinks_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('fix|explicitLinks1')) return;
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    if (props.getProperty('fix|explicitLinks1')) return;
+    var n = 0;
+    Object.keys(props.getProperties()).forEach(function (k) {
+      if (k.indexOf('link|') === 0 || k.indexOf('song|') === 0) { props.deleteProperty(k); n++; }
+    });
+    props.setProperty('fix|explicitLinks1', JSON.stringify({ at: Date.now(), dropped: n }));
+    if (adProps_) Object.keys(adProps_).forEach(function (k) {
+      if (k.indexOf('link|') === 0 || k.indexOf('song|') === 0) delete adProps_[k];
+    });
   } finally {
     lock.releaseLock();
   }

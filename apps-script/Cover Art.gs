@@ -57,6 +57,7 @@ function coverArt_bestMatch_(items, album, artist) {
     if (n === a) s += 10; else if (n.indexOf(a) === 0) s += 5; else if (n.indexOf(a) >= 0) s += 2;
     if (ar && who.indexOf(ar) >= 0) s += 6;
     if (extras.test(n) && !extras.test(a)) s -= 3;
+    if (typeof albumLinks_explicitBonus_ === 'function') s += albumLinks_explicitBonus_(it);
     if (s > bestScore) { best = it; bestScore = s; }
   });
   return bestScore >= 5 ? best : null;

@@ -64,11 +64,10 @@ function GET_SPOTIFY_LINK(album, artist) {
   var queries = albumLinks_spotifyQueries_(album, artist);
   for (var i = 0; i < queries.length && !pick; i++) {
     var items = albumLinks_spotifySearch_(queries[i]);
-    try {
-      pick = albumLinks_bestMatch_(items, album, artist,
-        function (a) { return a.name; },
-        function (a) { return (a.artists || []).map(function (x) { return x.name; }).join(', '); });
-    } catch (e) { /* try the next, looser search */ }
+    var tied = albumLinks_topMatches_(items, album, artist,
+      function (a) { return a.name; },
+      function (a) { return (a.artists || []).map(function (x) { return x.name; }).join(', '); });
+    pick = albumLinks_preferExplicitSpotify_(tied); // null: try the next, looser search
   }
   if (!pick) throw new Error('No close match found on Spotify');
 
@@ -289,32 +288,147 @@ function albumLinks_spotifyStatus_() {
   }
 }
 
-/** Picks the result whose title and artist best match, preferring the standard edition. */
+/**
+ * Picks the result whose title and artist best match, preferring the standard
+ * edition and the explicit (uncensored) version over a clean one.
+ */
 function albumLinks_bestMatch_(items, album, artist, nameOf, artistOf) {
-  var norm = function (s) {
-    return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  };
-  var extras = /\b(deluxe|remaster(ed)?|edition|version|live|anniversary|expanded)\b/;
-  var a = norm(album), ar = norm(artist);
-  var best = null, bestScore = -1;
+  var top = albumLinks_topMatches_(items, album, artist, nameOf, artistOf);
+  if (!top.length) throw new Error('No close match found');
+  return top[0];
+}
 
+/**
+ * Every result tied for the best score (at least 5), best first. Clean and
+ * explicit copies of an album have the same title, so they tie here unless the
+ * result says which it is (Apple's collectionExplicitness does; Spotify's album
+ * search doesn't, see albumLinks_preferExplicitSpotify_).
+ */
+function albumLinks_topMatches_(items, album, artist, nameOf, artistOf) {
+  var a = albumLinks_norm_(album), ar = albumLinks_norm_(artist);
+  var scored = [], bestScore = -1;
   items.forEach(function (it) {
-    var n = norm(nameOf(it)), who = norm(artistOf(it));
-    var s = 0;
-    if (n === a) s += 10;
-    else if (n.indexOf(a) === 0) s += 5;
-    else if (n.indexOf(a) >= 0) s += 2;
-    if (ar && who.indexOf(ar) >= 0) s += 6;
-    if (extras.test(n) && !extras.test(a)) s -= 3;
-    if (s > bestScore) { best = it; bestScore = s; }
+    var s = albumLinks_score_(albumLinks_norm_(nameOf(it)), albumLinks_norm_(artistOf(it)), a, ar) + albumLinks_explicitBonus_(it);
+    scored.push({ it: it, s: s });
+    if (s > bestScore) bestScore = s;
   });
+  if (bestScore < 5) return [];
+  return scored.filter(function (x) { return x.s === bestScore; }).map(function (x) { return x.it; });
+}
 
-  if (!best || bestScore < 5) throw new Error('No close match found');
-  return best;
+function albumLinks_norm_(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/** Title and artist score (n, who = the result's; a, ar = what we looked for, all normalized). */
+function albumLinks_score_(n, who, a, ar) {
+  var extras = /\b(deluxe|remaster(ed)?|edition|version|live|anniversary|expanded)\b/;
+  var s = 0;
+  if (n === a) s += 10;
+  else if (n.indexOf(a) === 0) s += 5;
+  else if (n.indexOf(a) >= 0) s += 2;
+  if (ar && who.indexOf(ar) >= 0) s += 6;
+  if (extras.test(n) && !extras.test(a)) s -= 3;
+  return s;
+}
+
+/**
+ * Apple results say "explicit", "cleaned" or "notExplicit". Small enough that it
+ * only breaks ties between copies of the same album, never beats a better title.
+ */
+function albumLinks_explicitBonus_(it) {
+  var e = String((it && (it.collectionExplicitness || it.trackExplicitness)) || '').toLowerCase();
+  if (e === 'explicit') return 1;
+  if (e === 'cleaned') return -2;
+  return 0;
+}
+
+/**
+ * Spotify's album search doesn't say which copy is explicit, but each track
+ * does. When several albums tie, opens up to three and takes the first with an
+ * explicit track; if none has one (an album with no swearing), keeps the first.
+ */
+function albumLinks_preferExplicitSpotify_(tied) {
+  if (tied.length < 2) return tied[0] || null;
+  for (var i = 0; i < tied.length && i < 3; i++) {
+    if (albumLinks_spotifyHasExplicit_(tied[i].id) === true) return tied[i];
+  }
+  return tied[0];
+}
+
+/** true / false, or null if Spotify couldn't be asked. */
+function albumLinks_spotifyHasExplicit_(albumId) {
+  if (!albumId) return null;
+  try {
+    var res = UrlFetchApp.fetch('https://api.spotify.com/v1/albums/' + albumId + '/tracks?limit=50&market=US',
+      { headers: { Authorization: 'Bearer ' + albumLinks_spotifyToken_() }, muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return null;
+    return (JSON.parse(res.getContentText()).items || []).some(function (t) { return t.explicit; });
+  } catch (e) { return null; }
+}
+
+/** Apple: "explicit", "cleaned", "notExplicit", or '' if it couldn't be looked up. */
+function albumLinks_appleExplicitness_(albumUrl) {
+  var m = String(albumUrl || '').match(/music\.apple\.com\/.*\/album\/(?:[^\/?]+\/)?(\d+)/);
+  if (!m) return '';
+  try {
+    var res = UrlFetchApp.fetch('https://itunes.apple.com/lookup?country=us&id=' + m[1], { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) return '';
+    var r = (JSON.parse(res.getContentText()).results || [])[0];
+    return r ? String(r.collectionExplicitness || '') : '';
+  } catch (e) { return ''; }
+}
+
+/**
+ * Deploy check (?check=explicit): one line per album,
+ * "album | artist | apple: <kind> <link> | spotify: <kind> <link>", where kind is
+ * explicit / clean / no-swearing / ?. A link typed into the sheet is marked
+ * (sheet), and if it's the clean copy the line adds what the lookup picks now.
+ */
+function albumLinks_explicitReport_() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(AD_SHEET_NAME);
+  var L = adLayout_(sh);
+  var n = sh.getLastRow() - L.headerRow;
+  if (n <= 0) return '';
+  var range = sh.getRange(L.headerRow + 1, 1, n, L.lastCol);
+  var vals = range.getValues(), formulas = range.getFormulas();
+  var lit = function (f) { var m = String(f || '').match(/HYPERLINK\(\s*"(https?:\/\/[^"]+)"/i); return m ? m[1] : ''; };
+  var out = [];
+  vals.forEach(function (r, i) {
+    var album = String(r[L.album] || '').trim(), artist = String(r[L.artist] || '').trim();
+    if (!album || /^tbd$/i.test(album)) return;
+    var parts = [album, artist];
+    ['apple', 'spotify'].forEach(function (p) {
+      var col = p === 'apple' ? L.apple : L.spotify;
+      var f = col >= 0 ? formulas[i][col] : '';
+      var typed = lit(f);
+      var url = typed || adLink_(f, p, album, artist);
+      var kind = '?';
+      if (p === 'apple') {
+        var e = albumLinks_appleExplicitness_(url);
+        kind = e === 'explicit' ? 'explicit' : e === 'cleaned' ? 'clean' : e === 'notExplicit' ? 'no-swearing' : '?';
+      } else {
+        var m = String(url).match(/open\.spotify\.com\/album\/([A-Za-z0-9]+)/);
+        var h = m ? albumLinks_spotifyHasExplicit_(m[1]) : null;
+        kind = h === true ? 'explicit' : h === false ? 'clean-or-none' : '?';
+      }
+      var line = p + ': ' + kind + ' ' + url + (typed ? ' (sheet)' : '');
+      if (typed && (kind === 'clean' || kind === 'clean-or-none')) {
+        try {
+          var now = p === 'apple' ? GET_APPLE_MUSIC_LINK(album, artist) : GET_SPOTIFY_LINK(album, artist);
+          if (now && now !== typed) line += ' -> lookup now picks ' + now;
+        } catch (err) { line += ' -> lookup: ' + err.message; }
+      }
+      parts.push(line);
+    });
+    out.push(parts.join(' | '));
+  });
+  return out.join('\n');
 }
 
 function albumLinks_cacheKey_(prefix, album, artist) {
-  return (prefix + '|' + album + '|' + (artist || '')).slice(0, 240);
+  // "x2": Nov 12, 2026 explicit version fix, so links cached before it aren't reused.
+  return (prefix + 'x2|' + album + '|' + (artist || '')).slice(0, 240);
 }
 
 /*
@@ -437,7 +551,8 @@ function songLinks_appleSearch_(song, artist) {
   var ar = artistLinks_norm_(artist);
   var items = (JSON.parse(res.getContentText()).results || []).filter(function (r) {
     return r.trackViewUrl && (!ar || artistLinks_norm_(r.artistName).indexOf(ar) >= 0);
-  }).map(function (r) { return { name: String(r.trackName || '').trim(), url: songLinks_appleUrl_(r.trackViewUrl) }; });
+  });
+  items = songLinks_explicitFirst_(items, function (r) { return r.trackExplicitness === 'explicit'; }).map(function (r) { return { name: String(r.trackName || '').trim(), url: songLinks_appleUrl_(r.trackViewUrl) }; });
   return songLinks_match_(items, song);
 }
 
@@ -471,11 +586,19 @@ function songLinks_spotifySearch_(song, artist) {
     items = items.filter(function (t) {
       return t.external_urls && t.external_urls.spotify &&
         (!ar || (t.artists || []).some(function (x) { return artistLinks_norm_(x.name).indexOf(ar) >= 0 || ar.indexOf(artistLinks_norm_(x.name)) >= 0; }));
-    }).map(function (t) { return { name: String(t.name || '').trim(), url: t.external_urls.spotify }; });
+    });
+    items = songLinks_explicitFirst_(items, function (t) { return t.explicit; })
+      .map(function (t) { return { name: String(t.name || '').trim(), url: t.external_urls.spotify }; });
     var hit = songLinks_match_(items, song);
     if (hit) return hit;
   }
   return '';
+}
+
+/** Explicit copies first, otherwise keeping the search's order (so the first match is the uncensored song). */
+function songLinks_explicitFirst_(items, isExplicit) {
+  return items.filter(function (x) { return isExplicit(x); })
+    .concat(items.filter(function (x) { return !isExplicit(x); }));
 }
 
 /** Run from the editor if a song opens the wrong version; clears saved song links so they're looked up again. */

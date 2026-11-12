@@ -857,10 +857,10 @@ function choosePlatform(p) {
 /* ---------- songs that play on tap ---------- */
 
 /* Direct song links, looked up by the server once and remembered on this phone
-   (ad.songLinks, keyed "platform|row|album|song"). Until one is known, a tap searches for the song. */
+   (ad.songLinks2, keyed "platform|row|album|song"; was ad.songLinks until the Nov 12, 2026 explicit version fix, which drops the old store). Until one is known, a tap searches for the song. */
 var songMemo = null, songLoading = {};
 function songMemoGet() {
-  if (!songMemo) { try { songMemo = JSON.parse(storeGet('ad.songLinks') || '{}') || {}; } catch (e) { songMemo = {}; } }
+  if (!songMemo) { storeDel('ad.songLinks'); try { songMemo = JSON.parse(storeGet('ad.songLinks2') || '{}') || {}; } catch (e) { songMemo = {}; } }
   return songMemo;
 }
 function songKey(p, a, song) { return p + '|' + a.row + '|' + a.album + '|' + song; }
@@ -903,7 +903,7 @@ function loadSongLinks(a, p, songs) {
       if (/\/search/.test(res[song])) return;
       memo[songKey(p, a, song)] = res[song];
     });
-    storeSet('ad.songLinks', JSON.stringify(memo));
+    storeSet('ad.songLinks2', JSON.stringify(memo));
     Array.prototype.forEach.call(document.querySelectorAll('a.songlink[data-row="' + a.row + '"]'), function (el) {
       var u = memo[songKey(p, a, el.dataset.song)];
       if (u) { el.href = u; el.dataset.ok = '1'; }

@@ -161,3 +161,15 @@ jobs:
             case "$url" in https://*) code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url") ;; esac
             echo "::notice title=Cover::$line | http $code"
           done < covers.txt
+
+      # Explicit check: which album links are the clean (censored) copy. Lines marked
+      # (sheet) are links typed into the sheet; those have to be changed there.
+      - name: Check album links are the explicit versions
+        run: |
+          curl -sSL --max-time 300 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=explicit" > explicit.txt || true
+          while IFS= read -r line; do
+            case "$line" in
+              *"clean"*"(sheet)"*) echo "::warning title=Clean link in sheet::$line" ;;
+              *) echo "::notice title=Explicit::$line" ;;
+            esac
+          done < explicit.txt
