@@ -379,6 +379,20 @@ function albumLinks_appleExplicitness_(albumUrl) {
   } catch (e) { return ''; }
 }
 
+/** Debug for the explicit check: the albums Apple offers for a title, with their explicitness and id. */
+function albumLinks_appleCandidates_(album, artist) {
+  var show = function (r) { return r.collectionName + ' / ' + r.artistName + ' / ' + r.collectionExplicitness + ' / ' + r.collectionId; };
+  try {
+    var res = UrlFetchApp.fetch('https://itunes.apple.com/search?entity=album&limit=10&country=us&term=' +
+      encodeURIComponent(album + ' ' + (artist || '')), { muteHttpExceptions: true });
+    var found = res.getResponseCode() === 200 ? (JSON.parse(res.getContentText()).results || []).map(show) : ['search ' + res.getResponseCode()];
+    var a = albumLinks_norm_(album);
+    var mine = (typeof itunesArtistAlbums_ === 'function' ? itunesArtistAlbums_(artist) : [])
+      .filter(function (r) { return albumLinks_norm_(r.collectionName).indexOf(a) >= 0; }).map(show);
+    return 'search: ' + (found.join('; ') || 'none') + ' || artist list: ' + (mine.join('; ') || 'none');
+  } catch (e) { return e.message; }
+}
+
 /**
  * Deploy check (?check=explicit): one line per album,
  * "album | artist | apple: <kind> <link> | spotify: <kind> <link>", where kind is
@@ -413,6 +427,7 @@ function albumLinks_explicitReport_() {
         kind = h === true ? 'explicit' : h === false ? 'clean-or-none' : '?';
       }
       var line = p + ': ' + kind + ' ' + url + (typed ? ' (sheet)' : '');
+      if (p === 'apple' && kind === 'clean') line += ' [apple has: ' + albumLinks_appleCandidates_(album, artist) + ']';
       if (typed && (kind === 'clean' || kind === 'clean-or-none')) {
         try {
           var now = p === 'apple' ? GET_APPLE_MUSIC_LINK(album, artist) : GET_SPOTIFY_LINK(album, artist);
