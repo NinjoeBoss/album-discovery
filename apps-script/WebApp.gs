@@ -880,16 +880,16 @@ function adFixRatingTimes_() {
  */
 function adFixExplicitLinks_() {
   var props = PropertiesService.getScriptProperties();
-  if (props.getProperty('fix|explicitLinks2')) return;
+  if (props.getProperty('fix|explicitLinks3')) return;
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) return;
   try {
-    if (props.getProperty('fix|explicitLinks2')) return;
+    if (props.getProperty('fix|explicitLinks3')) return;
     var n = 0;
     Object.keys(props.getProperties()).forEach(function (k) {
       if (k.indexOf('link|') === 0 || k.indexOf('song|') === 0) { props.deleteProperty(k); n++; }
     });
-    props.setProperty('fix|explicitLinks2', JSON.stringify({ at: Date.now(), dropped: n }));
+    props.setProperty('fix|explicitLinks3', JSON.stringify({ at: Date.now(), dropped: n }));
     if (adProps_) Object.keys(adProps_).forEach(function (k) {
       if (k.indexOf('link|') === 0 || k.indexOf('song|') === 0) delete adProps_[k];
     });

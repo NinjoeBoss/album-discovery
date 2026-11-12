@@ -452,7 +452,7 @@ function albumLinks_explicitReport_() {
 
 function albumLinks_cacheKey_(prefix, album, artist) {
   // "x2": Nov 12, 2026 explicit version fix, so links cached before it aren't reused.
-  return (prefix + 'x2|' + album + '|' + (artist || '')).slice(0, 240);
+  return (prefix + 'x3|' + album + '|' + (artist || '')).slice(0, 240);
 }
 
 /*
