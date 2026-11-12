@@ -229,6 +229,10 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .wface { width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
     font-size: 72px; font-weight: 900; color: #fff; box-shadow: 0 0 0 4px var(--card), 0 0 0 7px rgb(var(--glow) / .45); }
   .wface img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .wwait { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; margin-top: 18px; padding: 12px; border-radius: 12px;
+    background: rgb(var(--glow) / .10); text-align: left; }
+  .wwait .thumb { width: 64px; height: 64px; }
+  .wwait .t1 { font-size: 17px; font-weight: 800; margin: 3px 0 2px; }
   .waiting .wkick { margin-top: 4px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
   @media (prefers-reduced-motion: no-preference) { .wface { animation: waitPulse 2.6s ease-in-out infinite; } }
   @keyframes waitPulse { 0%, 100% { box-shadow: 0 0 0 4px var(--card), 0 0 0 7px rgb(var(--glow) / .45); } 50% { box-shadow: 0 0 0 4px var(--card), 0 0 0 12px rgb(var(--glow) / .15); } }
@@ -1104,7 +1108,16 @@ function waitingHero(s) {
     '<h2>' + (me ? 'You\'re up!' : who ? 'Waiting on ' + esc(who) : 'No album picked yet') + '</h2>' +
     '<div class="by">' + sub + '</div>' +
     (me ? '<div class="listen"><button class="btn primary" onclick="show(\'add\')">Pick your album</button></div>' : '') +
-    '</div></div>';
+    waitAlbumBox() + '</div></div>';
+}
+/* "While you wait" stand in album from the sheet's script (AD_WAIT_ALBUM). Listen only. */
+function waitAlbumBox() {
+  var w = D.waitAlbum; if (!w || !w.album) return '';
+  var p = platformPref() || 'spotify', u = albumUrl(w, p);
+  var name = u ? '<a class="alblink" href="' + esc(u) + '" target="_blank" rel="noopener" title="' + esc('Listen on ' + PLATFORMS[p]) + '">' + esc(w.album) + '</a>' : esc(w.album);
+  var by = w.artist ? '<a class="artlink" href="' + esc(artistUrl(w, p)) + '" target="_blank" rel="noopener">' + esc(w.artist) + '</a>' : '';
+  return '<div class="wwait">' + img(w, 'thumb') + '<div><div class="eyebrow">While you wait</div><div class="t1">' + name + '</div>' +
+    '<div class="t2">' + by + (w.year ? ' · ' + esc(w.year) : '') + '</div></div></div>';
 }
 /* Small card for last week's album while this week's is still open, so people can finish rating it. */
 function lastWeekCard(a) {

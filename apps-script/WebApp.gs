@@ -54,6 +54,13 @@ var AD_SEASONS = [
   { name: 'Season 2', start: '2026-11-12' }
 ];
 
+/**
+ * A stand in album shown on the home page while this week's pick is still open
+ * (listen only, not rated). It disappears on its own once the album is added.
+ * Set to null to turn it off.
+ */
+var AD_WAIT_ALBUM = { album: 'Graduation', artist: 'Kanye West', year: '2007' };
+
 /*
  * Each member's Google account lives in a separate Apps Script file named
  * Members.gs (AD_MEMBER_EMAILS = { 'email@gmail.com': 'Name', ... }). It is kept
@@ -220,8 +227,25 @@ function getData() {
     turn: turn,
     rotation: adRotation_(memberNames),
     commentMax: AD_COMMENT_MAX,
+    waitAlbum: adWaitAlbum_(),
     today: today
   };
+}
+
+/** AD_WAIT_ALBUM with its cover and listen links, or null. */
+function adWaitAlbum_() {
+  var w = AD_WAIT_ALBUM;
+  if (!w || !w.album) return null;
+  try {
+    return {
+      album: w.album, artist: w.artist || '', year: w.year || '',
+      cover: adCover_(w.album, w.artist),
+      spotify: adLink_('', 'spotify', w.album, w.artist),
+      apple: adLink_('', 'apple', w.album, w.artist),
+      spotifyArtist: typeof artistLinks_get_ === 'function' ? artistLinks_get_('spotify', w.artist) : '',
+      appleArtist: typeof artistLinks_get_ === 'function' ? artistLinks_get_('apple', w.artist) : ''
+    };
+  } catch (e) { return { album: w.album, artist: w.artist || '', year: w.year || '', cover: '', spotify: '', apple: '' }; }
 }
 
 /**
