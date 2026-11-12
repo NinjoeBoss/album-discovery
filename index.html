@@ -1096,7 +1096,7 @@ function waitingSlot() {
 function waitingHero(s) {
   var who = s.reserved || s.turn, me = !!who && who === rateState.member, kick = isKickoff(s.date);
   var sub = me ? 'Your pick ' + (kick ? 'starts ' + esc(s.season) + '.' : 'is this week\'s album.')
-    : 'No album picked yet.' + (who ? ' It\'s ' + esc(who) + '\'s turn' + (kick ? ' to start ' + esc(s.season) : '') + '.' : '');
+    : 'No album picked yet.';
   return '<div class="card hero waiting" style="--glow:' + (who ? hexRgb(color(who, true)) : '108 92 157') + '"><div class="hart">' +
     (who ? face(who, 'wface') : '<div class="cover"></div>') + '</div><div>' +
     '<div class="eyebrow">This week\'s pick · ' + esc(fmtDate(s.date, true)) + '</div>' +
