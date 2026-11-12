@@ -225,6 +225,13 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   }
   @keyframes ambBreathe { 0%, 100% { transform: scale(1) rotate(0deg); opacity: .4; } 50% { transform: scale(1.03) rotate(3deg); opacity: .6; } }
   .hero .by { font-size: 16px; color: var(--muted); }
+  /* waiting on this week's picker: their photo in place of the cover */
+  .wface { width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    font-size: 72px; font-weight: 900; color: #fff; box-shadow: 0 0 0 4px var(--card), 0 0 0 7px rgb(var(--glow) / .45); }
+  .wface img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .waiting .wkick { margin-top: 4px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+  @media (prefers-reduced-motion: no-preference) { .wface { animation: waitPulse 2.6s ease-in-out infinite; } }
+  @keyframes waitPulse { 0%, 100% { box-shadow: 0 0 0 4px var(--card), 0 0 0 7px rgb(var(--glow) / .45); } 50% { box-shadow: 0 0 0 4px var(--card), 0 0 0 12px rgb(var(--glow) / .15); } }
   .htop { display: flex; gap: 16px; align-items: flex-start; }
   .htop > div:first-child { flex: 1; min-width: 0; }
   .bigavg { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
@@ -598,6 +605,8 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   @media (max-width: 600px) {
     .hero { grid-template-columns: 1fr; }
     .hart { max-width: 300px; width: 100%; margin: 6px auto 4px; }
+    .waiting .hart { max-width: 160px; margin-top: 10px; }
+    .waiting > div:last-child { text-align: center; }
     .card.hero, html[data-theme="dark"] .card.hero { background: radial-gradient(110% 70% at 50% 0%, rgb(var(--glow) / .12), transparent 55%), var(--card); }
     .hero h2 { font-size: 26px; }
     .board li { grid-template-columns: 24px 46px minmax(0, 1fr) 72px; gap: 10px; height: 64px; padding: 0 8px; }
@@ -669,7 +678,7 @@ var COLORS = { Brennan: '#dbe8fa', Jonathan: '#e6ddf6', William: '#fae3d1', Luke
 var FALLBACK = ['#e3f2fd', '#fff3e0', '#e8f5e9', '#fce4ec', '#ede7f6', '#e0f7fa'];
 var COLORS_DARK = { Brennan: '#2a3b57', Jonathan: '#3b3159', William: '#523a28', Luke: '#22463a', Nathan: '#55293f' };
 var FALLBACK_DARK = ['#22384f', '#4d3a22', '#24432c', '#4f2737', '#362d55', '#1f4448'];
-var D = null, ranked = [], seasonRanks = {}, seasonSel = null, view = 'home';
+var D = null, ranked = [], seasonRanks = {}, seasonSel = null, seasonPicked = false, view = 'home';
 var rateState = { member: null, row: null, score: 7, fav: '', least: '', comment: '' };
 var addState = { query: '', results: null, searching: false, picked: null, changeRow: null, flash: null };
 
@@ -976,7 +985,7 @@ function renderSeasonSelect() {
 }
 function pickSeason(v) {
   seasonSel = v;
-  storeSet('ad.season', v);
+  seasonPicked = true;
   buildRanks();
   renderSeasonSelect();
   show(view);
@@ -1006,12 +1015,11 @@ function prep(data) {
   D.slots = D.slots || [];
   if (!D.seasons || !D.seasons.length) D.seasons = [{ name: D.season || 'Season 1', start: '', count: D.albums.length }];
   D.albums.forEach(function (a) { if (!a.season) a.season = D.seasons[D.seasons.length - 1].name; });
-  if (!D.currentSeason) D.currentSeason = D.seasons[D.seasons.length - 1].name;
-  if (!seasonSel) {
-    var saved = storeGet('ad.season');
-    seasonSel = (saved === 'all' || seasonNames().indexOf(saved) >= 0) ? saved : D.currentSeason;
-  }
-  if (!isAll() && seasonNames().indexOf(seasonSel) < 0) seasonSel = D.currentSeason;
+  // A saved copy can be from last week: never let "today" go backwards from the phone's own date.
+  if (!D.today || localToday() > D.today) D.today = localToday();
+  D.currentSeason = seasonOfDate(D.today) || D.currentSeason || D.seasons[D.seasons.length - 1].name;
+  // The app always opens on the active season. A season picked in the dropdown sticks until the app is closed.
+  if (!seasonPicked || (!isAll() && seasonNames().indexOf(seasonSel) < 0)) seasonSel = D.currentSeason;
   buildRanks();
   renderSeasonSelect();
   D.me = D.me || { email: '', name: '' };
@@ -1077,7 +1085,41 @@ function missingFor(a, m) {
 
 var BOARD_TOP = 10, boardAll = false;
 
+/* This week's open Thursday: on or before today, later than the newest album, and nobody has picked for it yet. */
+function waitingSlot() {
+  var past = D.albums.filter(function (a) { return a.date && a.date <= D.today; }).map(function (a) { return a.date; }).sort();
+  var last = past[past.length - 1] || '';
+  return D.slots.filter(function (s) { return s.date && s.date <= D.today && s.date > last; })
+    .sort(function (x, y) { return x.date < y.date ? 1 : -1; })[0] || null;
+}
+/* Home hero while this week's album hasn't been picked. */
+function waitingHero(s) {
+  var who = s.reserved || s.turn, me = !!who && who === rateState.member, kick = isKickoff(s.date);
+  var sub = me ? 'Your pick ' + (kick ? 'starts ' + esc(s.season) + '.' : 'is this week\'s album.')
+    : 'No album picked yet.' + (who ? ' It\'s ' + esc(who) + '\'s turn' + (kick ? ' to start ' + esc(s.season) : '') + '.' : '');
+  return '<div class="card hero waiting" style="--glow:' + (who ? hexRgb(color(who, true)) : '108 92 157') + '"><div class="hart">' +
+    (who ? face(who, 'wface') : '<div class="cover"></div>') + '</div><div>' +
+    '<div class="eyebrow">This week\'s pick · ' + esc(fmtDate(s.date, true)) + '</div>' +
+    (kick ? '<div class="wkick"><span class="kickoff">' + esc(s.season) + ' kicks off</span></div>' : '') +
+    '<h2>' + (me ? 'You\'re up!' : who ? 'Waiting on ' + esc(who) : 'No album picked yet') + '</h2>' +
+    '<div class="by">' + sub + '</div>' +
+    (me ? '<div class="listen"><button class="btn primary" onclick="show(\'add\')">Pick your album</button></div>' : '') +
+    '</div></div>';
+}
+/* Small card for last week's album while this week's is still open, so people can finish rating it. */
+function lastWeekCard(a) {
+  var m = rateState.member, owe = m && a.ratings[m] == null;
+  return '<div class="card next tap" onclick="openAlbum(' + a.row + ')">' + img(a, 'thumb') + '<div><div class="eyebrow">Last week · ' + esc(fmtDate(a.date, true)) + '</div>' +
+    '<div class="t1">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + ' · ' +
+    (owe ? 'you haven\'t rated it yet' : a.count + ' of ' + D.members.length + ' rated') + '</div></div><span class="chev">›</span></div>';
+}
+
 function renderHome() {
+  var wait = waitingSlot();
+  if (wait) {
+    var prev = thisWeek();
+    return installCard() + waitingHero(wait) + nextCard() + (prev && prev.date && prev.date <= D.today ? lastWeekCard(prev) : '') + homeBoard();
+  }
   var a = thisWeek();
   if (!a) return '<div class="card">No albums yet.</div>' + nextCard();
   var mine = rateState.member ? a.ratings[rateState.member] : null;
@@ -1097,9 +1139,12 @@ function renderHome() {
       (mine != null ? 'Your score: ' + num(mine) + '<span class="yours">· Edit</span>' : 'Rate it') + '</button></div>' +
     '</div></div>';
 
-  h += nextCard();
+  return h + nextCard() + homeBoard();
+}
 
-  h += '<div class="section-title">' + esc(seasonLabel()) + ' leaderboard</div>';
+/* Home leaderboard for the season picked in the header. */
+function homeBoard() {
+  var h = '<div class="section-title">' + esc(seasonLabel()) + ' leaderboard</div>';
   if (!ranked.length) {
     var prev = !isAll() && prevSeason(seasonSel), champ = prev && (seasonRanks[prev] || [])[0];
     h += '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div>' +
