@@ -38,6 +38,15 @@ function GET_APPLE_MUSIC_LINK(album, artist) {
     if (typeof itunesArtistAlbums_ !== 'function') throw e;
     pick = albumLinks_bestMatch_(itunesArtistAlbums_(artist), album, artist, nameOf, artistOf);
   }
+  // Apple's search sometimes only returns the clean copy (e.g. ALL-AMERIKKKAN BADA$$);
+  // the artist's own album list has the explicit one too.
+  if (pick.collectionExplicitness === 'cleaned' && typeof itunesArtistAlbums_ === 'function') {
+    var n = albumLinks_norm_(pick.collectionName);
+    var exp = itunesArtistAlbums_(artist).filter(function (r) {
+      return r.collectionExplicitness === 'explicit' && albumLinks_norm_(r.collectionName) === n;
+    })[0];
+    if (exp && exp.collectionViewUrl) pick = exp;
+  }
 
   var link = String(pick.collectionViewUrl).split('?')[0];
   cache.put(key, link, 21600);
