@@ -186,6 +186,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .shead { display: flex; align-items: baseline; gap: 10px; margin: 22px 4px 10px; }
   .shead .section-title { margin: 0; }
   .shead .t2 { font-size: 12px; }
+  .shead.upnext { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .gcard.now { box-shadow: 0 0 0 2px var(--gold); }
+  .gcard .nowtag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--gold); border-radius: 99px; padding: 2px 8px; margin-bottom: 4px; }
   .empty-season { text-align: center; padding: 28px 16px; }
   .empty-season .t1 { font-size: 18px; margin-bottom: 4px; }
 
@@ -1386,25 +1389,41 @@ function alreadyPicked(album, artist) {
   return D.albums.filter(function (a) { return a.row !== addState.changeRow && n(a.album) === n(album) && n(a.artist) === n(artist); })[0] || null;
 }
 
+/* Cards in the order given. The current week's album gets a "This week" tag. */
 function albumCards(list) {
-  var h = '<div class="grid">';
-  list.slice().reverse().forEach(function (a) {
+  var h = '<div class="grid">', cur = thisWeek();
+  list.forEach(function (a) {
     var soon = a.date && a.date > D.today;
-    h += '<div class="gcard ' + medalClass(a) + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
-      '<div class="info"><div class="t1">' + esc(a.album) + '</div><div class="t2">' + artistLink(a) + '</div>' +
-      '<div class="t2" style="margin-top:4px">' + (soon ? 'Coming ' + esc(fmtDate(a.date)) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
+    var now = !soon && a === cur;
+    h += '<div class="gcard ' + medalClass(a) + (now ? ' now' : '') + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
+      '<div class="info">' + (now ? '<div class="nowtag">This week</div>' : '') + '<div class="t1">' + esc(a.album) + '</div><div class="t2">' + artistLink(a) + '</div>' +
+      '<div class="t2" style="margin-top:4px">' + (soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
   });
   return h + '</div>';
 }
+function isSoon(a) { return !!(a.date && a.date > D.today); }
 
 function renderAlbums() {
   var h = seasonBar();
   var names = isAll() ? seasonNames().slice().reverse() : [seasonSel];
+  /* Top: albums we're on now or have listened to, newest first (this week's leads).
+     Bottom: albums lined up for future Thursdays, soonest first. */
+  var later = upcoming().filter(function (a) { return isAll() || a.season === seasonSel; });
+  var any = false;
   names.forEach(function (n) {
-    var list = D.albums.filter(function (a) { return a.season === n; });
-    if (isAll()) h += '<div class="shead"><div class="section-title">' + esc(n) + '</div><div class="t2">' + esc(seasonRange(n)) + ' · ' + list.length + (list.length === 1 ? ' album' : ' albums') + '</div></div>';
-    h += list.length ? albumCards(list) : emptySeason(n);
+    var all = D.albums.filter(function (a) { return a.season === n; });
+    var heard = all.filter(function (a) { return !isSoon(a); }).reverse();
+    if (!heard.length) { if (!all.length) h += emptySeason(n); return; }
+    any = true;
+    h += '<div class="shead"><div class="section-title">' + (isAll() ? esc(n) : 'Listened') + '</div><div class="t2">' +
+      (isAll() ? esc(seasonRange(n)) + ' · ' : '') + heard.length + (heard.length === 1 ? ' album' : ' albums') + '</div></div>';
+    h += albumCards(heard);
   });
+  if (!any && later.length) h += '<div class="card empty-season"><div class="t1">Nothing listened to yet</div><div class="t2">The first album is below.</div></div>';
+  if (later.length) {
+    h += '<div class="shead upnext"><div class="section-title">Upcoming</div><div class="t2">' + later.length + (later.length === 1 ? ' album' : ' albums') + ' lined up</div></div>';
+    h += albumCards(later);
+  }
   return h;
 }
 
