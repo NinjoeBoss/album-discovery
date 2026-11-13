@@ -1288,6 +1288,18 @@ function renderAdd() {
     addState.flash = null;
   }
 
+  // Today's own pick, still unrated: it can still be swapped or removed on the day
+  // (say everyone has already heard it). Shown above the form for the next turn.
+  var todays = !changing && D.albums.filter(function (a) { return a.pickedBy === m && a.count === 0 && a.date === D.today; })[0];
+  if (todays) {
+    h += '<div class="eyebrow">Today\'s album' + seasonTag(todays.date) + '</div>' +
+      '<div class="pending">' + img(todays, 'thumb') + '<div class="pinfo"><div class="t1">' + esc(todays.album) + '</div><div class="t2">' + esc(todays.artist) + (todays.year ? ' · ' + esc(todays.year) : '') + '</div></div></div>' +
+      '<div class="pactions"><button class="btn ghost" onclick="startChange(' + todays.row + ')">Change album</button>' +
+      '<button class="btn danger" onclick="confirmRemove(' + todays.row + ')">Remove</button></div>' +
+      '<div class="phint">Everyone already heard it? Swap it out. You can change or remove it until someone rates it.</div></div>';
+    return h + queueCard();
+  }
+
   if (lockedOut) {
     h += '<div class="eyebrow">Your pick for ' + esc(fmtDate(pending.date, true)) + seasonTag(pending.date) + '</div>' +
       '<div class="pending">' + img(pending, 'thumb') + '<div class="pinfo"><div class="t1">' + esc(pending.album) + '</div><div class="t2">' + esc(pending.artist) + (pending.year ? ' · ' + esc(pending.year) : '') + '</div></div></div>' +
