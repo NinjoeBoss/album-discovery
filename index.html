@@ -481,17 +481,31 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .pwrap.duo .cry .pbig { box-shadow: 0 0 0 3px var(--card); }
   .pwrap.trio .cry .pbig { width: 52px; height: 52px; font-size: 22px; box-shadow: 0 0 0 3px var(--card); }
   .pwrap.trio .cry + .cry { margin-left: -16px; }
-  .procrast .bars .row { grid-template-columns: 110px 1fr 74px; }
-  .procrast .bars .row span:last-child { text-align: right; white-space: nowrap; }
+  .procrast .crown { padding-bottom: 16px; border-bottom: 1px solid var(--band); margin-bottom: 4px; }
+  .procrast .crown .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .procrast .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 99px; padding: 3px 9px; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; background: var(--band); color: var(--ink); white-space: nowrap; }
+  .procrast .pill.bad { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
+  .procrast .bars .row { grid-template-columns: 96px 1fr auto; gap: 10px; margin: 10px 0; }
+  .procrast .bars .row > span:first-child { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: flex; }
+  .procrast .bars .track { height: 12px; }
   .procrast .bars .fill { background: var(--red); }
   .procrast .bars .row.fast .fill { background: var(--gold); }
-  .procrast .bars .row .owes { font-size: 10px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; color: var(--red); display: block; line-height: 1.1; }
+  .procrast .bars .val { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 112px; white-space: nowrap; }
+  .procrast .bars .owes { font-size: 11px; font-weight: 800; color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); border-radius: 99px; padding: 2px 7px; }
+  .procrast .bars .zap { font-size: 11px; font-weight: 800; color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); border-radius: 99px; padding: 2px 7px; }
   .procrast .lbl { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
-  .procrast .shame { list-style: none; margin: 6px 0 0; padding: 0; }
-  .procrast .shame li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--band); font-size: 14px; cursor: pointer; }
-  .procrast .shame li .al { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .procrast .shame li b { color: var(--red); white-space: nowrap; }
-  .procrast .sub { margin: 16px 0 4px; }
+  .procrast .shame { list-style: none; margin: 4px 0 0; padding: 0; }
+  .procrast .shame li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--band); font-size: 13px; cursor: pointer; }
+  .procrast .shame li:first-child { border-top: 0; }
+  .procrast .shame li .al { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+  .procrast .shame li .al b, .procrast .shame li .al small { display: block; overflow: hidden; text-overflow: ellipsis; }
+  .procrast .shame li .al b { color: var(--ink); }
+  .procrast .shame li .al small { font-size: 12px; }
+  .procrast .shame .faces2 { display: inline-flex; flex: none; }
+  .procrast .shame .faces2 .tiny + .tiny { margin-left: -6px; box-shadow: 0 0 0 2px var(--card); }
+  .procrast .shame li .days { color: var(--red); font-weight: 800; white-space: nowrap; }
+  .procrast .sub { margin: 18px 0 2px; padding-top: 14px; border-top: 1px solid var(--band); }
+  .procrast .sub.first { margin-top: 14px; padding-top: 0; border-top: 0; }
 
   /* app: sign in, install tip, refresh */
   .signin { max-width: 460px; margin: 30px auto; text-align: center; padding: 26px 20px; }
@@ -1563,51 +1577,53 @@ function procrastinator(list) {
   counted.sort(function (x, y) { return (y.v - x.v) || (y.owed.length - x.owed.length); });
   var worst = counted[0];
   var dd = function (v) { return v < 0.95 ? Math.round(v * 24) + 'h' : v.toFixed(1) + 'd'; };
-  var words = function (v) { return v < 0.95 ? Math.round(v * 24) + ' hours' : v.toFixed(1) + ' days'; };
   // A tie is anyone whose average shows the same as the worst one.
   var tied = counted.filter(function (r) { return dd(r.v) === dd(worst.v); });
   var fast = counted.length > tied.length ? counted[counted.length - 1] : null;
-  var owes = function (r) { return r.owed.length + ' album' + (r.owed.length > 1 ? 's' : ''); };
   var names = tied.map(function (r) { return esc(r.m); });
   var nameLine = names.length > 1 ? names.slice(0, -1).join(', ') + ' &amp; ' + names[names.length - 1] : names[0];
-  var line;
-  if (tied.length === 1) {
-    line = 'Takes ' + words(worst.v) + ' to rate on average' + (worst.owed.length ? ' · still owes ' + owes(worst) : '');
-  } else {
-    var owing = tied.filter(function (r) { return r.owed.length; });
-    line = (tied.length === 2 ? 'Both take ' : 'All ' + tied.length + ' take ') + words(worst.v) + ' to rate on average' +
-      (!owing.length ? '' : owing.length === tied.length && owing.every(function (r) { return r.owed.length === owing[0].owed.length; })
-        ? ' · ' + (tied.length === 2 ? 'both' : 'all') + ' owe ' + owes(owing[0])
-        : ' · ' + owing.map(function (r) { return esc(r.m) + ' owes ' + r.owed.length; }).join(', '));
-  }
+  // Short pills under the name instead of a long sentence.
+  var pills = '<span class="pill">' + dd(worst.v) + ' avg wait</span>';
+  var owing = tied.filter(function (r) { return r.owed.length; });
+  if (owing.length === 1 && tied.length === 1) pills += '<span class="pill bad">owes ' + owing[0].owed.length + '</span>';
+  else if (owing.length && owing.every(function (r) { return r.owed.length === owing[0].owed.length; }) && owing.length === tied.length)
+    pills += '<span class="pill bad">' + (tied.length === 2 ? 'both' : 'all') + ' owe ' + owing[0].owed.length + '</span>';
+  else owing.forEach(function (r) { pills += '<span class="pill bad">' + esc(r.m) + ' owes ' + r.owed.length + '</span>'; });
 
   h += '<div class="crown"><div class="pwrap' + (tied.length === 2 ? ' duo' : tied.length > 2 ? ' trio' : '') + '">' +
-    tied.slice(0, 3).map(function (r) { return crying(r.m); }).join('') + '<span class="snail" aria-hidden="true">🐌</span></div><div>' +
-    '<div class="lbl" style="color:var(--red)">' + (tied.length > 1 ? (isAll() ? 'Tied for procrastinator of all time' : 'Tied for procrastinator') : (isAll() ? 'Procrastinator of all time' : 'Reigning procrastinator')) + '</div>' +
-    '<h3>' + nameLine + '</h3><div class="t2">' + line + '</div></div></div>';
+    tied.slice(0, 3).map(function (r) { return crying(r.m); }).join('') + '<span class="snail" aria-hidden="true">🐌</span></div><div style="min-width:0">' +
+    '<div class="lbl" style="color:var(--red)">' + (tied.length > 1 ? (isAll() ? 'Tied of all time' : 'Tied for procrastinator') : (isAll() ? 'Procrastinator of all time' : 'Reigning procrastinator')) + '</div>' +
+    '<h3>' + nameLine + '</h3><div class="meta">' + pills + '</div></div></div>';
 
   var max = Math.max.apply(null, counted.map(function (r) { return r.v; })) || 1;
-  h += '<div class="bars">';
+  h += '<div class="lbl sub first" style="color:var(--muted)">Average wait to rate</div><div class="bars">';
   rows.slice().sort(function (x, y) { return (x.v == null) - (y.v == null) || y.v - x.v; }).forEach(function (r) {
     var isFast = fast && r.m === fast.m;
-    h += '<div class="row' + (isFast ? ' fast' : '') + '"><span>' + face(r.m, 'tiny') + esc(r.m) + (isFast ? ' ⚡' : '') + '</span>' +
+    var tag = r.owed.length ? '<span class="owes">owes ' + r.owed.length + '</span>' : isFast ? '<span class="zap">⚡ fastest</span>' : '';
+    h += '<div class="row' + (isFast ? ' fast' : '') + '"><span>' + face(r.m, 'tiny') + esc(r.m) + '</span>' +
       '<div class="track"><div class="fill" style="width:' + (r.v == null ? 0 : Math.max(3, r.v / max * 100)) + '%"></div></div>' +
-      '<span>' + (r.v == null ? '–' : dd(r.v)) + (r.owed.length ? '<span class="owes">owes ' + r.owed.length + '</span>' : '') + '</span></div>';
+      '<span class="val">' + tag + '<span>' + (r.v == null ? '–' : dd(r.v)) + '</span></span></div>';
   });
   h += '</div>';
-  if (fast) h += '<div class="t2">⚡ Speed demon: ' + esc(fast.m) + ', usually in within ' + words(fast.v) + '.</div>';
 
-  var shame = [];
   // Only once the Tuesday after the album's Thursday has come (5 days) and it's still unrated.
-  rows.forEach(function (r) { r.owed.forEach(function (o) { if (o.d >= 5) shame.push({ m: r.m, a: o.a, d: o.d }); }); });
+  // One line per album, with everyone who still owes it.
+  var byAlbum = {}, shame = [];
+  rows.forEach(function (r) { r.owed.forEach(function (o) {
+    if (o.d < 5) return;
+    var s = byAlbum[o.a.row];
+    if (!s) { s = byAlbum[o.a.row] = { a: o.a, d: o.d, ms: [] }; shame.push(s); }
+    s.ms.push(r.m);
+  }); });
   shame.sort(function (x, y) { return y.d - x.d; });
   if (shame.length) {
     h += '<div class="lbl sub" style="color:var(--red)">Wall of shame</div><ul class="shame">';
     shame.slice(0, 5).forEach(function (s) {
-      h += '<li onclick="openAlbum(' + s.a.row + ')">' + face(s.m, 'tiny') + '<span class="al"><b style="color:var(--ink)">' + esc(s.m) + '</b> has sat on ' + esc(s.a.album) + '</span><b>' + Math.floor(s.d) + ' days</b></li>';
+      h += '<li onclick="openAlbum(' + s.a.row + ')"><span class="faces2">' + s.ms.map(function (m) { return face(m, 'tiny'); }).join('') + '</span>' +
+        '<span class="al"><b>' + esc(s.a.album) + '</b><small>' + s.ms.map(esc).join(', ') + '</small></span><span class="days">' + Math.floor(s.d) + 'd</span></li>';
     });
     h += '</ul>';
-    if (shame.length > 5) h += '<div class="t2" style="margin-top:4px">…and ' + (shame.length - 5) + ' more overdue.</div>';
+    if (shame.length > 5) h += '<div class="t2" style="margin-top:4px">+' + (shame.length - 5) + ' more overdue</div>';
   }
   return h + '</div>';
 }
