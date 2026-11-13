@@ -54,14 +54,14 @@ jobs:
           cd /tmp/live
           for f in *; do
             case "$(echo "$f" | tr 'A-Z' 'a-z')" in
-              members*|avatars*|spotifykeys*) echo "Skipping private file: $f" ;;
+              members*|avatars*|spotifykeys*|checktoken*) echo "Skipping private file: $f" ;;
               facepoints*) echo "Skipping generated file: $f (rebuilt by every deploy)" ;;
               *) cp "$f" "$GITHUB_WORKSPACE/apps-script/" ;;
             esac
           done
           cd "$GITHUB_WORKSPACE"
           { echo "# Every file in the live Apps Script project (pulled $(date -u +%Y-%m-%d))"
-            echo "# Members*, Avatars* and SpotifyKeys* exist in Apps Script but are kept out of this public repo."
+            echo "# Members*, Avatars*, SpotifyKeys* and CheckToken* exist in Apps Script but are kept out of this public repo."
             cat /tmp/all-files.txt; } > apps-script/FILES.txt
           # email@gmail.com is the placeholder in a comment, not a real address.
           found=$(for f in apps-script/*; do [ -f "$f" ] || continue; sed 's/email@gmail\.com//Ig' "$f" | grep -qEi '[A-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail|icloud)\.com' && echo "$f"; done | grep -v -e FILES.txt -e '\.example\.gs' || true)

@@ -71,6 +71,35 @@ var AD_WAIT_ALBUM = { album: 'Graduation', artist: 'Kanye West', year: '2007' };
 /** Set by Api.gs for requests from the installable app ('' = not signed in). */
 var AD_REQUEST_EMAIL = null;
 
+/*
+ * Who may run what. Any page this script serves lets a visitor call any server
+ * function whose name doesn't end in _ straight from the browser console, and
+ * the app's data link runs as the owner for everyone. So:
+ *   app functions (getData, submitRating, ...) need a signed in app request
+ *     (Api.gs sets AD_REQUEST_EMAIL from the session) or the owner;
+ *   editor tools (signOutEveryone, clearSaved..., checks) need the owner.
+ * "Owner" = the person running it is the account the script runs as, and that
+ * account is a club admin. That's true in the script editor and false for anyone
+ * else opening the /exec link.
+ */
+function adIsOwner_() {
+  try {
+    var active = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
+    var effective = String(Session.getEffectiveUser().getEmail() || '').trim().toLowerCase();
+    return !!active && active === effective && AD_ADMINS.indexOf(AD_MEMBER_EMAILS[active]) >= 0;
+  } catch (err) {
+    return false;
+  }
+}
+
+function adOwnerOnly_() {
+  if (!adIsOwner_()) throw new Error('Only the sheet owner can run this, from the script editor.');
+}
+
+function adAppOnly_() {
+  if (!AD_REQUEST_EMAIL && !adIsOwner_()) throw new Error('SIGNED_OUT');
+}
+
 /**
  * Weekly pick order. Each open Thursday belongs to whoever comes next after the
  * week before it. A name typed into Picked By on the sheet overrides this
@@ -91,6 +120,14 @@ var AD_APP_URL = 'https://clubmusic.net/';
  * HtmlService.createTemplateFromFile('Index').evaluate() here instead.
  */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.check) {
+    // Deploy checks only. The deploy job makes a new random token each run and
+    // uploads it as CheckToken.gs (never committed), so nobody else can run them.
+    var token = typeof AD_CHECK_TOKEN === 'string' ? AD_CHECK_TOKEN : '';
+    if (!token || token.length < 32 || String(e.parameter.token || '') !== token) {
+      return ContentService.createTextOutput('Not allowed.');
+    }
+  }
   if (e && e.parameter && e.parameter.check === 'spotify') {
     var st = albumLinks_spotifyStatus_();
     if (e.parameter.album) st += ' || ' + albumLinks_spotifyProbe_(e.parameter.album, e.parameter.artist || '');
@@ -116,12 +153,14 @@ function doGet(e) {
 
 /** Lets Index pull in another HTML file (used for the Avatars file). Missing file = no photos. */
 function include(name) {
+  adOwnerOnly_();
   try { return HtmlService.createHtmlOutputFromFile(name).getContent(); }
   catch (e) { return '<script>var AVATARS = {};</script>'; }
 }
 
 /** Everything the website needs, in one call. */
 function getData() {
+  adAppOnly_();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(AD_SHEET_NAME);
   if (!sh) throw new Error('Could not find a tab named "' + AD_SHEET_NAME + '"');
@@ -266,6 +305,7 @@ function adPlatformOf_(name) {
 
 /** Saves the signed in member's choice: 'spotify' or 'apple'. */
 function setPlatform(p) {
+  adAppOnly_();
   p = String(p || '');
   if (p !== 'spotify' && p !== 'apple') throw new Error('Pick Spotify or Apple Music.');
   var name = AD_MEMBER_EMAILS[adEmail_()] || '';
@@ -275,6 +315,7 @@ function setPlatform(p) {
 }
 
 function submitRating(albumRow, member, score, fav, least, comment) {
+  adAppOnly_();
   adFixRatingTimes_(); // before stamping, so the first new rating after the fix keeps its time
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -333,6 +374,7 @@ function submitRating(albumRow, member, score, fav, least, comment) {
 
 /** Searches Apple Music's catalog for albums. Returns up to 12 matches with art and release year. */
 function searchAlbums(query) {
+  adAppOnly_();
   query = String(query || '').trim();
   if (query.length < 2) return [];
   var res = UrlFetchApp.fetch('https://itunes.apple.com/search?entity=album&limit=25&country=us&term=' +
@@ -372,6 +414,7 @@ function searchAlbums(query) {
  * Returns { data, row, date } so the site can confirm what happened.
  */
 function submitPick(member, album, artist, year, cover, replaceRow) {
+  adAppOnly_();
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -468,6 +511,7 @@ function submitPick(member, album, artist, year, cover, replaceRow) {
  * person's turn (pass freeWeek = true to clear it as well).
  */
 function removePick(row, freeWeek) {
+  adAppOnly_();
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -574,6 +618,7 @@ function adMe_(memberNames) {
 
 /** Run from the editor to check the email list matches the member columns. */
 function checkMemberEmails() {
+  adOwnerOnly_();
   var L = adLayout_(SpreadsheetApp.getActiveSpreadsheet().getSheetByName(AD_SHEET_NAME));
   var names = L.members.map(function (m) { return m.name; });
   var mapped = Object.keys(AD_MEMBER_EMAILS).map(function (k) { return AD_MEMBER_EMAILS[k]; });
@@ -584,6 +629,7 @@ function checkMemberEmails() {
 
 /** Run from the editor to see which season each album lands in. */
 function checkSeasons() {
+  adOwnerOnly_();
   var d = getData();
   d.seasons.forEach(function (s) {
     Logger.log(s.name + ' (from ' + s.start + '): ' + s.count + ' albums');
@@ -818,11 +864,13 @@ function adBestMatch_(items, album, artist) {
 
 /** Run this from the editor if an album's art is wrong; it clears saved art so it's looked up again. */
 function clearSavedCovers() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties();
   Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('cover|') === 0) props.deleteProperty(k); });
 }
 /** Run this from the editor if an album's Spotify or Apple Music link is wrong; it clears saved links so they're looked up again. */
 function clearSavedLinks() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties();
   Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('link|') === 0) props.deleteProperty(k); });
 }
@@ -944,6 +992,7 @@ function onEdit(e) {
 
 /** Editor helper: logs every saved rating time. */
 function listRatingTimes() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties().getProperties();
   Object.keys(props).filter(function (k) { return k.indexOf('rated|') === 0; }).sort().forEach(function (k) {
     Logger.log(k.slice(6) + '  ' + new Date(Number(props[k])));

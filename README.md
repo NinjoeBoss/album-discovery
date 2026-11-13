@@ -30,7 +30,8 @@ Repo **Settings > Pages**: Source **Deploy from a branch**, Branch **main**, fol
 
 - Edit `index.html`, then bump `VERSION` in `sw.js` so phones pick up the new copy.
 - Server changes go in `apps-script/`. Pushing to `main` uploads them automatically (see below); no pasting into the editor.
-- Editor helpers: `listSessions` (who is signed in), `signOutEveryone`, `checkSeasons`, `checkMemberEmails`.
+- Editor helpers: `listSessions` (who is signed in), `signOutEveryone`, `checkSeasons`, `checkMemberEmails`, `resetSignInLimits` (unlocks sign in if someone hit today's code limit).
+- Security: editor helpers only run for the owner in the script editor; app functions need a signed in session. Sign in codes are capped per day (30 for the club, 8 per member, 15 wrong guesses per member, after which Jonathan gets an email). The `?check=` links need a token the deploy job makes fresh each run (`CheckToken.gs`, never committed).
 
 ## Automatic Apps Script updates
 

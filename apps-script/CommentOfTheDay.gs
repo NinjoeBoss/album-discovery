@@ -15,6 +15,7 @@ var COTD_STORE_RANGE = 'K2:K5';   // date, name, album, comment
 
 /** Run once. Creates the hourly check and makes today's pick if needed. */
 function setupCommentOfTheDay() {
+  adOwnerOnly_();
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'pickCommentOfTheDay') ScriptApp.deleteTrigger(t);
   });
@@ -64,6 +65,7 @@ function pickCommentOfTheDay() {
 
 /** Optional: run this to force a new pick right now. */
 function rerollCommentOfTheDay() {
+  adOwnerOnly_();
   var store = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(COTD_STORE_SHEET).getRange(COTD_STORE_RANGE);
   store.setValues([[''], [''], [''], ['']]);
   pickCommentOfTheDay();

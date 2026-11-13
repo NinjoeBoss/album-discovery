@@ -67,6 +67,7 @@ function GET_TRACKLIST(album, artist) {
  * (for example a deluxe edition). It clears saved lists so they're looked up again.
  */
 function clearSavedTracklists() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties();
   Object.keys(props.getProperties()).forEach(function (k) {
     if (k.indexOf('tracks|') === 0) props.deleteProperty(k);
@@ -79,6 +80,7 @@ function clearSavedTracklists() {
  * top of the editor and click Run. Results show in the Execution log.
  */
 function refreshTracklists() {
+  adOwnerOnly_();
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Tracklists');
   if (!sh) throw new Error('No tab named Tracklists');
   var lastCol = sh.getLastColumn();

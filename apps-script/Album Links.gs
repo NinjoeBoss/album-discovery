@@ -133,6 +133,7 @@ function albumLinks_spotifyProbe_(album, artist) {
  * Apps Script editor and click Run. The result shows in the Execution log.
  */
 function testSpotify() {
+  adOwnerOnly_();
   try {
     var keys = albumLinks_spotifyKeys_();
     Logger.log('Client ID set: ' + !!keys.id);
@@ -235,6 +236,7 @@ function artistLinks_apple_(artist) {
 
 /** Editor helper: run to see the artist links for every album in the Logs. */
 function checkArtistLinks() {
+  adOwnerOnly_();
   artistLinks_start_();
   getData().albums.forEach(function (a) {
     Logger.log(a.artist + '  |  ' + (a.spotifyArtist || '(search)') + '  |  ' + (a.appleArtist || '(search)'));
@@ -478,6 +480,7 @@ function albumLinks_cacheKey_(prefix, album, artist) {
  * opens, then a song search. Found links are saved for good; misses get a search link.
  */
 function songLinks(row, p, songs) {
+  adAppOnly_();
   p = p === 'apple' ? 'apple' : 'spotify';
   songs = (Array.isArray(songs) ? songs : []).map(function (s) { return String(s || '').trim(); })
     .filter(function (s, i, all) { return s && all.indexOf(s) === i; }).slice(0, 12);
@@ -627,6 +630,7 @@ function songLinks_explicitFirst_(items, isExplicit) {
 
 /** Run from the editor if a song opens the wrong version; clears saved song links so they're looked up again. */
 function clearSavedSongLinks() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties();
   Object.keys(props.getProperties()).forEach(function (k) { if (k.indexOf('song|') === 0) props.deleteProperty(k); });
 }

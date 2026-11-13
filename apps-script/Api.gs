@@ -25,6 +25,15 @@ var AD_CODE_TRIES = 5;
 var AD_CODES_PER_10_MIN = 3;
 var AD_APP_KEY_DAYS = 30;
 
+/*
+ * Daily sign in limits (reset at midnight, sheet time zone). They keep a stranger
+ * from using up Google's ~100 emails a day (which would stop everyone getting
+ * codes) and from guessing codes day after day.
+ */
+var AD_CODES_PER_DAY_TOTAL = 30;   // codes emailed to the whole club
+var AD_CODES_PER_DAY_NAME = 8;     // codes emailed to one member
+var AD_WRONG_CODES_PER_DAY = 15;   // wrong guesses for one member before their sign in locks until tomorrow
+
 function doPost(e) {
   var out;
   try {
@@ -86,6 +95,7 @@ function adRequestCode_(name) {
   var sentKey = 'sent|' + name;
   var sent = Number(cache.get(sentKey) || 0);
   if (sent >= AD_CODES_PER_10_MIN) throw new Error('Too many codes sent. Wait 10 minutes and try again.');
+  adCountCode_(name); // daily caps; throws when one is reached
 
   var code = String(parseInt(Utilities.getUuid().replace(/-/g, '').slice(0, 8), 16) % 900000 + 100000);
   cache.put('code|' + name, JSON.stringify({ code: code, tries: 0 }), AD_CODE_MINUTES * 60);
@@ -110,12 +120,14 @@ function adVerifyCode_(name, code) {
   code = String(code || '').replace(/\D/g, '');
   var email = adEmailFor_(name);
   if (!email) throw new Error('That name isn\'t on the club list.');
+  if (adLockedToday_(name)) throw new Error(adLockedMessage_());
   var cache = CacheService.getScriptCache();
   var key = 'code|' + name;
   var saved = cache.get(key);
   if (!saved) throw new Error('That code expired. Send a new one.');
   saved = JSON.parse(saved);
   if (saved.code !== code) {
+    if (adCountWrongCode_(name)) { cache.remove(key); throw new Error(adLockedMessage_()); }
     saved.tries++;
     if (saved.tries >= AD_CODE_TRIES) { cache.remove(key); throw new Error('Too many wrong tries. Send a new code.'); }
     cache.put(key, JSON.stringify(saved), AD_CODE_MINUTES * 60);
@@ -123,6 +135,86 @@ function adVerifyCode_(name, code) {
   }
   cache.remove(key);
   return adNewSession_(email, name);
+}
+
+/* ---------- daily sign in limits ----------
+ * One script property holds today's counts:
+ *   { day: 'yyyy-MM-dd', total: n, sent: { Name: n }, wrong: { Name: n }, alerted: { Name: true } }
+ * A new day starts fresh. */
+
+function adLimitsToday_(props) {
+  var day = Utilities.formatDate(new Date(), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd');
+  var t = null;
+  try { t = JSON.parse(props.getProperty('signin|limits') || 'null'); } catch (e) {}
+  if (!t || t.day !== day) t = { day: day, total: 0, sent: {}, wrong: {}, alerted: {} };
+  return t;
+}
+
+/** Counts a code about to be emailed, or throws if a daily cap is reached. */
+function adCountCode_(name) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var t = adLimitsToday_(props);
+    if ((t.wrong[name] || 0) >= AD_WRONG_CODES_PER_DAY) throw new Error(adLockedMessage_());
+    if (t.total >= AD_CODES_PER_DAY_TOTAL || (t.sent[name] || 0) >= AD_CODES_PER_DAY_NAME) {
+      throw new Error('Too many sign in codes today. Try again tomorrow, or ask Jonathan.');
+    }
+    t.total++;
+    t.sent[name] = (t.sent[name] || 0) + 1;
+    props.setProperty('signin|limits', JSON.stringify(t));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** Counts a wrong code. Returns true once the member is locked out for the day (and tells the admins once). */
+function adCountWrongCode_(name) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  var alert = false, locked;
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var t = adLimitsToday_(props);
+    t.wrong[name] = (t.wrong[name] || 0) + 1;
+    locked = t.wrong[name] >= AD_WRONG_CODES_PER_DAY;
+    if (locked && !t.alerted[name]) { t.alerted[name] = true; alert = true; }
+    props.setProperty('signin|limits', JSON.stringify(t));
+  } finally {
+    lock.releaseLock();
+  }
+  if (alert) {
+    try {
+      AD_ADMINS.map(adEmailFor_).filter(Boolean).forEach(function (to) {
+        MailApp.sendEmail({
+          to: to,
+          name: 'Club Music',
+          subject: 'Club Music: sign in locked for ' + name + ' today',
+          body: 'Someone typed ' + AD_WRONG_CODES_PER_DAY + ' wrong sign in codes for ' + name + ' today, so sign in for ' + name +
+            ' is paused until tomorrow. If that wasn\'t ' + name + ' fumbling the code, someone may be trying to guess it.\n\n' +
+            'Phones already signed in keep working. To sign everyone out, run signOutEveryone in the script editor.'
+        });
+      });
+    } catch (e) { /* the lock still holds without the email */ }
+  }
+  return locked;
+}
+
+function adLockedToday_(name) {
+  var t = adLimitsToday_(PropertiesService.getScriptProperties());
+  return (t.wrong[name] || 0) >= AD_WRONG_CODES_PER_DAY;
+}
+
+function adLockedMessage_() {
+  return 'Too many wrong codes today, so sign in is paused until tomorrow. Ask Jonathan if you need in sooner.';
+}
+
+/** Editor helper: clears today's sign in counts (unlocks everyone). */
+function resetSignInLimits() {
+  adOwnerOnly_();
+  PropertiesService.getScriptProperties().deleteProperty('signin|limits');
+  Logger.log('Sign in limits cleared.');
 }
 
 function adNewSession_(email, name) {
@@ -216,12 +308,14 @@ function adAvatars_() {
 
 /** Run once after pasting: approves sending email and checks the member list. */
 function setupApp() {
+  adOwnerOnly_();
   Logger.log('Emails left today: ' + MailApp.getRemainingDailyQuota());
   Logger.log('Members who can sign in: ' + adApiMembers_().join(', '));
 }
 
 /** Signs every phone out (everyone will need a new code). */
 function signOutEveryone() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties();
   var n = 0;
   Object.keys(props.getProperties()).forEach(function (k) {
@@ -233,6 +327,7 @@ function signOutEveryone() {
 
 /** Lists who is signed in and since when. */
 function listSessions() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties().getProperties();
   Object.keys(props).forEach(function (k) {
     if (k.indexOf('sess|') !== 0) return;

@@ -42,6 +42,7 @@ function GET_ALBUM_COVER(albumName, artistName) {
 
 /** Run this from the editor if a cover is wrong; it clears saved covers so they're looked up again. */
 function clearSavedCoverArt() {
+  adOwnerOnly_();
   var props = PropertiesService.getScriptProperties();
   Object.keys(props.getProperties()).forEach(function (k) {
     if (k.indexOf('cover|') === 0) props.deleteProperty(k);

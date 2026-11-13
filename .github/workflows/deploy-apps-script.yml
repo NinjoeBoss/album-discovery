@@ -63,7 +63,7 @@ jobs:
           for f in apps-script/*; do
             [ -f "$f" ] || continue
             case "$(basename "$f")" in
-              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*|facepoints*|FacePoints*) ;;
+              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*|facepoints*|FacePoints*|checktoken*|CheckToken*) ;;
               *) cp "$f" /tmp/push/ ;;
             esac
           done
@@ -77,6 +77,12 @@ jobs:
           else
             echo "Spotify keys: no SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET secrets, skipping"
           fi
+          # Deploy check token: new and random every run, uploaded only to Apps Script
+          # (never committed, never printed). The ?check= links refuse anything else.
+          token=$(openssl rand -hex 24)
+          echo "::add-mask::$token"
+          echo "CHECK_TOKEN=$token" >> "$GITHUB_ENV"
+          printf '// Private: written by the deploy job each run. Not in the repo.\nvar AD_CHECK_TOKEN = "%s";\n' "$token" > /tmp/push/CheckToken.gs
           grep -q 'AD_MEMBER_EMAILS' /tmp/push/Members.gs || { echo "MEMBERS_GS doesn't look like Members.gs (no AD_MEMBER_EMAILS)."; exit 1; }
           grep -q 'AVATARS' /tmp/push/Avatars.html || { echo "AVATARS_HTML doesn't look like the Avatars file (no AVATARS)."; exit 1; }
           echo "Uploading:"; ls -1 /tmp/push
@@ -113,7 +119,7 @@ jobs:
           clasp pull > /dev/null
           missing=""
           for f in *; do
-            case "$f" in SpotifyKeys*) continue ;; esac
+            case "$f" in SpotifyKeys*|CheckToken*) continue ;; esac
             [ -e "/tmp/push/$f" ] || missing="$missing\n  $f"
           done
           if [ -n "$missing" ]; then
@@ -142,9 +148,9 @@ jobs:
       - name: Check the Spotify link lookup
         run: |
           sleep 5
-          probe=""
+          probe="&token=$CHECK_TOKEN"
           if [ -s apps-script/.spotify-probe ]; then
-            probe="&$(head -1 apps-script/.spotify-probe)"
+            probe="$probe&$(head -1 apps-script/.spotify-probe)"
           fi
           status=$(curl -sSL --max-time 90 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=spotify$probe" | head -c 3000 | tr '\n\r' '  ')
           echo "$status"
@@ -154,7 +160,7 @@ jobs:
             *) echo "::error title=Spotify check::$status"; exit 1 ;;
           esac
           # Cover check: one annotation per album, then test that each cover URL really loads.
-          curl -sSL --max-time 120 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=covers" > covers.txt || true
+          curl -sSL --max-time 120 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=covers&token=$CHECK_TOKEN" > covers.txt || true
           while IFS= read -r line; do
             url=$(echo "$line" | awk -F' [|] ' '{ if ($3 != "-") print $3; else print $4 }')
             code="-"
@@ -166,7 +172,7 @@ jobs:
       # (sheet) are links typed into the sheet; those have to be changed there.
       - name: Check album links are the explicit versions
         run: |
-          curl -sSL --max-time 300 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=explicit" > explicit.txt || true
+          curl -sSL --max-time 300 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=explicit&token=$CHECK_TOKEN" > explicit.txt || true
           while IFS= read -r line; do
             case "$line" in
               *"apple: clean"*|*"spotify: explicit"*"(sheet) -> "*) echo "::warning title=Clean link in sheet::$line" ;;
