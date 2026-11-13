@@ -187,8 +187,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .shead .section-title { margin: 0; }
   .shead .t2 { font-size: 12px; }
   .shead.upnext { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
-  .gcard.now { box-shadow: 0 0 0 2px var(--gold); }
-  .gcard .nowtag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--gold); border-radius: 99px; padding: 2px 8px; margin-bottom: 4px; }
+  .gcard .nowtag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--plum); border-radius: 99px; padding: 2px 8px; margin-bottom: 4px; }
   .empty-season { text-align: center; padding: 28px 16px; }
   .empty-season .t1 { font-size: 18px; margin-bottom: 4px; }
 
@@ -1395,7 +1394,7 @@ function albumCards(list) {
   list.forEach(function (a) {
     var soon = a.date && a.date > D.today;
     var now = !soon && a === cur;
-    h += '<div class="gcard ' + medalClass(a) + (now ? ' now' : '') + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
+    h += '<div class="gcard ' + medalClass(a) + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
       '<div class="info">' + (now ? '<div class="nowtag">This week</div>' : '') + '<div class="t1">' + esc(a.album) + '</div><div class="t2">' + artistLink(a) + '</div>' +
       '<div class="t2" style="margin-top:4px">' + (soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
   });
