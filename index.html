@@ -1432,7 +1432,10 @@ function renderMembers() {
   var due = list.filter(function (a) { return !a.date || a.date <= D.today; });
   var pairs = pairStats(list);
   var h = '<div class="mgrid">';
-  D.members.forEach(function (m) {
+  /* The signed in member's card comes first; everyone else keeps the usual order. */
+  var me = rateState.member;
+  var order = me ? [me].concat(D.members.filter(function (m) { return m !== me; })) : D.members;
+  order.forEach(function (m) {
     var picks = list.filter(function (a) { return a.pickedBy === m; });
     var pickAvg = avgOf(picks.map(function (a) { return a.avg; }));
     var given = list.map(function (a) { return a.ratings[m]; }).filter(function (v) { return v != null; });
