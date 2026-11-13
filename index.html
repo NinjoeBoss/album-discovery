@@ -1516,14 +1516,17 @@ function renderStats() {
 }
 
 /* ---------- the Procrastinator ----------
- * How many days after an album's Thursday each member's score came in. Albums a
- * member still hasn't scored count too, and keep growing every day. Rating times
+ * How late each member's score came in. Albums drop Thursday and everyone has
+ * until the Monday after (GRACE_DAYS) before the clock starts; a score in by then
+ * counts as on time (0). Albums a member still hasn't scored count once that
+ * Monday has come, and keep growing every day. Rating times
  * are saved by the server (a.ratedAt) starting Nov 10, 2026; older ratings have
  * no time and are left out. The times themselves are never shown. */
+var GRACE_DAYS = 4; // Thursday -> Monday
 function lateDays(a, t) {
   var p = a.date.split('-');
-  var drop = new Date(+p[0], +p[1] - 1, +p[2]).getTime();
-  return Math.max(0, (t - drop) / 864e5);
+  var start = new Date(+p[0], +p[1] - 1, +p[2] + GRACE_DAYS).getTime(); // local midnight Monday
+  return Math.max(0, (t - start) / 864e5);
 }
 /* A member's big photo wearing the crying filter. The tears start under that
    member's lower eyelids (FACES, found on their photo by the deploy job); members
@@ -1564,7 +1567,7 @@ function procrastinator(list) {
     var waits = [], owed = [];
     due.forEach(function (a) {
       var at = a.ratedAt && a.ratedAt[m];
-      if (a.ratings[m] == null) { var d = lateDays(a, now); waits.push(d); owed.push({ a: a, d: d }); }
+      if (a.ratings[m] == null) { var d = lateDays(a, now); if (d > 0) { waits.push(d); owed.push({ a: a, d: d }); } }
       else if (at) waits.push(lateDays(a, at));
     });
     return { m: m, v: avgOf(waits), n: waits.length, owed: owed };
@@ -1579,38 +1582,45 @@ function procrastinator(list) {
   var dd = function (v) { return v < 0.95 ? Math.round(v * 24) + 'h' : v.toFixed(1) + 'd'; };
   // A tie is anyone whose average shows the same as the worst one.
   var tied = counted.filter(function (r) { return dd(r.v) === dd(worst.v); });
-  var fast = counted.length > tied.length ? counted[counted.length - 1] : null;
+  var onTime = function (r) { return r.v != null && dd(r.v) === '0h'; };
+  // Nobody is a procrastinator until someone is actually late.
+  var anyLate = !onTime(worst);
+  var fast = anyLate && counted.length > tied.length && !counted.some(onTime) ? counted[counted.length - 1] : null;
   var names = tied.map(function (r) { return esc(r.m); });
   var nameLine = names.length > 1 ? names.slice(0, -1).join(', ') + ' &amp; ' + names[names.length - 1] : names[0];
   // Short pills under the name instead of a long sentence.
-  var pills = '<span class="pill">' + dd(worst.v) + ' avg wait</span>';
+  var pills = '<span class="pill">' + dd(worst.v) + ' late on avg</span>';
   var owing = tied.filter(function (r) { return r.owed.length; });
   if (owing.length === 1 && tied.length === 1) pills += '<span class="pill bad">owes ' + owing[0].owed.length + '</span>';
   else if (owing.length && owing.every(function (r) { return r.owed.length === owing[0].owed.length; }) && owing.length === tied.length)
     pills += '<span class="pill bad">' + (tied.length === 2 ? 'both' : 'all') + ' owe ' + owing[0].owed.length + '</span>';
   else owing.forEach(function (r) { pills += '<span class="pill bad">' + esc(r.m) + ' owes ' + r.owed.length + '</span>'; });
 
+  if (anyLate) {
   h += '<div class="crown"><div class="pwrap' + (tied.length === 2 ? ' duo' : tied.length > 2 ? ' trio' : '') + '">' +
     tied.slice(0, 3).map(function (r) { return crying(r.m); }).join('') + '<span class="snail" aria-hidden="true">🐌</span></div><div style="min-width:0">' +
     '<div class="lbl" style="color:var(--red)">' + (tied.length > 1 ? (isAll() ? 'Tied of all time' : 'Tied for procrastinator') : (isAll() ? 'Procrastinator of all time' : 'Reigning procrastinator')) + '</div>' +
     '<h3>' + nameLine + '</h3><div class="meta">' + pills + '</div></div></div>';
 
+  } else {
+    h += '<div class="crown"><div class="pwrap" style="font-size:44px;line-height:1">🎧</div><div><div class="lbl" style="color:var(--gold)">No procrastinator</div><h3>Everyone\'s on time</h3><div class="t2">Everyone rated by the Monday after each album.</div></div></div>';
+  }
   var max = Math.max.apply(null, counted.map(function (r) { return r.v; })) || 1;
-  h += '<div class="lbl sub first" style="color:var(--muted)">Average wait to rate</div><div class="bars">';
+  h += '<div class="lbl sub first" style="color:var(--muted)">Days late (clock starts Monday)</div><div class="bars">';
   rows.slice().sort(function (x, y) { return (x.v == null) - (y.v == null) || y.v - x.v; }).forEach(function (r) {
     var isFast = fast && r.m === fast.m;
-    var tag = r.owed.length ? '<span class="owes">owes ' + r.owed.length + '</span>' : isFast ? '<span class="zap">⚡ fastest</span>' : '';
+    var tag = r.owed.length ? '<span class="owes">owes ' + r.owed.length + '</span>' : isFast ? '<span class="zap">⚡ fastest</span>' : onTime(r) ? '<span class="zap">on time</span>' : '';
     h += '<div class="row' + (isFast ? ' fast' : '') + '"><span>' + face(r.m, 'tiny') + esc(r.m) + '</span>' +
-      '<div class="track"><div class="fill" style="width:' + (r.v == null ? 0 : Math.max(3, r.v / max * 100)) + '%"></div></div>' +
-      '<span class="val">' + tag + '<span>' + (r.v == null ? '–' : dd(r.v)) + '</span></span></div>';
+      '<div class="track"><div class="fill" style="width:' + (r.v == null || onTime(r) ? 0 : Math.max(3, r.v / max * 100)) + '%"></div></div>' +
+      '<span class="val">' + tag + (onTime(r) ? '' : '<span>' + (r.v == null ? '–' : dd(r.v)) + '</span>') + '</span></div>';
   });
   h += '</div>';
 
-  // Only once the Tuesday after the album's Thursday has come (5 days) and it's still unrated.
+  // Only once the Tuesday after the album's Thursday has come (a day past the grace Monday) and it's still unrated.
   // One line per album, with everyone who still owes it.
   var byAlbum = {}, shame = [];
   rows.forEach(function (r) { r.owed.forEach(function (o) {
-    if (o.d < 5) return;
+    if (o.d < 1) return;
     var s = byAlbum[o.a.row];
     if (!s) { s = byAlbum[o.a.row] = { a: o.a, d: o.d, ms: [] }; shame.push(s); }
     s.ms.push(r.m);
@@ -1620,7 +1630,7 @@ function procrastinator(list) {
     h += '<div class="lbl sub" style="color:var(--red)">Wall of shame</div><ul class="shame">';
     shame.slice(0, 5).forEach(function (s) {
       h += '<li onclick="openAlbum(' + s.a.row + ')"><span class="faces2">' + s.ms.map(function (m) { return face(m, 'tiny'); }).join('') + '</span>' +
-        '<span class="al"><b>' + esc(s.a.album) + '</b><small>' + s.ms.map(esc).join(', ') + '</small></span><span class="days">' + Math.floor(s.d) + 'd</span></li>';
+        '<span class="al"><b>' + esc(s.a.album) + '</b><small>' + s.ms.map(esc).join(', ') + '</small></span><span class="days">' + Math.floor(s.d) + 'd late</span></li>';
     });
     h += '</ul>';
     if (shame.length > 5) h += '<div class="t2" style="margin-top:4px">+' + (shame.length - 5) + ' more overdue</div>';
