@@ -1603,7 +1603,7 @@ function procrastinator(list) {
     '<h3>' + nameLine + '</h3><div class="meta">' + pills + '</div></div></div>';
 
   } else {
-    h += '<div class="crown"><div class="pwrap" style="font-size:44px;line-height:1">🎧</div><div><div class="lbl" style="color:var(--gold)">No procrastinator</div><h3>Everyone\'s on time</h3><div class="t2">Everyone rated by the Monday after each album.</div></div></div>';
+    h += '<div class="crown"><div class="pwrap" style="font-size:44px;line-height:1">🎧</div><div><div class="lbl" style="color:var(--gold)">No procrastinator</div><h3>Everyone\'s on time</h3></div></div>';
   }
   var max = Math.max.apply(null, counted.map(function (r) { return r.v; })) || 1;
   h += '<div class="lbl sub first" style="color:var(--muted)">Days late (clock starts Monday)</div><div class="bars">';
