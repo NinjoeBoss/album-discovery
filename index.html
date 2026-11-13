@@ -325,6 +325,8 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .board li.m3 .rank { background: var(--medal-bronze); box-shadow: inset 0 0 0 1.5px #e7b88f; }
   .board .pname { display: none; } /* the photo shows who picked it */
   .board-more { text-align: center; padding-top: 10px; }
+  .board-wait { text-align: center; padding: 2px 0 10px; }
+  .board.unranked .rank { color: var(--muted); font-weight: 600; }
   .board .binfo { min-width: 0; }
   .board .t1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .board .bline { display: flex; align-items: center; gap: 5px; white-space: nowrap; margin-top: 3px; min-width: 0; }
@@ -715,7 +717,10 @@ function canRemove(a) {
 }
 function chip(name) { return '<span class="chip" style="background:' + color(name) + '">' + face(name, 'tiny') + esc(name) + '</span>'; }
 /* Rank inside the album's own season (each season has its own medals). */
-function rankOf(a) { var list = seasonRanks[a.season] || []; var i = list.indexOf(a); return i < 0 ? null : i + 1; }
+/* Ranks and medals only start once a board has at least MIN_RANKED rated albums (one album alone isn't "#1"). */
+var MIN_RANKED = 2;
+function isRanking(list) { return list.length >= MIN_RANKED; }
+function rankOf(a) { var list = seasonRanks[a.season] || []; var i = list.indexOf(a); return i < 0 || !isRanking(list) ? null : i + 1; }
 function medalClass(a) { var r = rankOf(a); return r && r <= 3 ? 'm' + r : ''; }
 function storeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function storeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -1168,11 +1173,12 @@ function homeBoard() {
     }
     return h;
   }
+  var live = isRanking(ranked);
   var shown = boardAll || ranked.length <= BOARD_TOP ? ranked : ranked.slice(0, BOARD_TOP);
-  h += '<div class="card"><ol class="board">';
+  h += '<div class="card">' + (live ? '' : '<div class="t2 board-wait">Rankings start once ' + MIN_RANKED + ' albums are rated.</div>') + '<ol class="board' + (live ? '' : ' unranked') + '">';
   shown.forEach(function (x, i) {
     // One line each for album and artist; long names end in "…" (full name in the popup).
-    h += '<li class="' + (i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')" title="' + esc(x.album + ' · ' + x.artist) + '"><div class="rank">' + (i + 1) + '</div>' + img(x, 'thumb') +
+    h += '<li class="' + (live && i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')" title="' + esc(x.album + ' · ' + x.artist) + '"><div class="rank">' + (live ? i + 1 : '–') + '</div>' + img(x, 'thumb') +
       '<div class="binfo"><div class="t1">' + esc(x.album) + '</div><div class="t2 bline">' + artistLink(x, 'art') + '<span class="bw dot">·</span>' + face(x.pickedBy, 'tiny') + '<span class="bw pname">' + esc(x.pickedBy) + '</span>' +
       (isAll() ? '<span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
       '<div class="score"><b>' + cnt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
@@ -1436,9 +1442,10 @@ function renderStats() {
   var h = seasonBar();
   if (!ranked.length) return h + (list.length ? '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div><div class="t2">Stats show up once albums get rated.</div></div>' : emptySeason(seasonSel));
   h += '<div class="mgrid">';
-  h += statCard(isAll() ? 'Top rated ever' : live ? 'Top rated so far' : 'Album of the season', 'var(--plum-text)', ranked[0], fmt(ranked[0].avg) + ' <span class="stars">' + stars(ranked[0].avg) + '</span> · picked by ' + esc(ranked[0].pickedBy) + (isAll() ? ' · ' + esc(ranked[0].season) : ''));
-  var worst = ranked.slice().sort(function (x, y) { return (x.avg - y.avg) || (y.count - x.count) || (x.row - y.row); })[0];
-  h += statCard(isAll() ? 'Most hated ever' : live ? 'Most hated so far' : 'Biggest flop', 'var(--red)', worst, fmt(worst.avg) + ' <span class="stars">' + stars(worst.avg) + '</span> · picked by ' + esc(worst.pickedBy) + (isAll() ? ' · ' + esc(worst.season) : ''));
+  if (!isRanking(ranked)) h += '<div class="card empty-season"><div class="t1">Top rated and most hated show up once ' + MIN_RANKED + ' albums are rated</div><div class="t2">' + ranked.length + ' rated in ' + esc(seasonLabel()) + ' so far.</div></div>';
+  else h += statCard(isAll() ? 'Top rated ever' : live ? 'Top rated so far' : 'Album of the season', 'var(--plum-text)', ranked[0], fmt(ranked[0].avg) + ' <span class="stars">' + stars(ranked[0].avg) + '</span> · picked by ' + esc(ranked[0].pickedBy) + (isAll() ? ' · ' + esc(ranked[0].season) : ''));
+  var worst = isRanking(ranked) && ranked.slice().sort(function (x, y) { return (x.avg - y.avg) || (y.count - x.count) || (x.row - y.row); })[0];
+  if (worst) h += statCard(isAll() ? 'Most hated ever' : live ? 'Most hated so far' : 'Biggest flop', 'var(--red)', worst, fmt(worst.avg) + ' <span class="stars">' + stars(worst.avg) + '</span> · picked by ' + esc(worst.pickedBy) + (isAll() ? ' · ' + esc(worst.season) : ''));
   var div = list.filter(function (a) { return a.count >= 2; }).map(function (a) {
     var v = vals(a); return { a: a, spread: Math.max.apply(null, v) - Math.min.apply(null, v), lo: Math.min.apply(null, v), hi: Math.max.apply(null, v) };
   }).sort(function (x, y) { return (y.spread - x.spread) || (x.a.row - y.a.row); })[0];
@@ -1595,7 +1602,7 @@ function openAlbum(row) {
     '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + albumLink(a) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
     '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
-    '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : 'Not ranked yet') + '</span></div></div></div></div>';
+    '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : a.avg != null ? 'Starts at ' + MIN_RANKED + ' rated' : 'Not ranked yet') + '</span></div></div></div></div>';
 
   if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
     h += '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupFav, a.groupFav)) + '</div>' +
