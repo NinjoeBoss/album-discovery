@@ -226,6 +226,16 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .hart::before { animation: ambBreathe 9s ease-in-out -4.5s infinite; }
   }
   @keyframes ambBreathe { 0%, 100% { transform: scale(1) rotate(0deg); opacity: .4; } 50% { transform: scale(1.03) rotate(3deg); opacity: .6; } }
+  /* tap the home cover or the faces row to open the album popup */
+  .hero .open { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .hero .open:focus-visible { outline: 3px solid rgb(var(--glow) / .7); outline-offset: 4px; border-radius: 12px; }
+  .hart .hint { position: absolute; right: 8px; bottom: 8px; z-index: 2; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700;
+    color: #fff; background: rgba(20,18,32,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); pointer-events: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .hart.open .cover, .faces.open { transition: transform .15s ease, box-shadow .8s ease; }
+    .hart.open:active .cover, .faces.open:active { transform: scale(.97); }
+  }
+  @media (hover: hover) { .hart .hint { opacity: 0; transition: opacity .2s ease; } .hart:hover .hint, .hart:focus-visible .hint { opacity: 1; } }
   .hero .by { font-size: 16px; color: var(--muted); }
   /* waiting on this week's picker: their photo in place of the cover */
   .wface { width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
@@ -1158,14 +1168,16 @@ function renderHome() {
   if (!a) return '<div class="card">No albums yet.</div>' + nextCard();
   var mine = rateState.member ? a.ratings[rateState.member] : null;
   var glow = (ART && a.cover && ART[a.cover]) || hexRgb(color(a.pickedBy, true));
-  var h = installCard() + '<div class="card hero" data-row="' + a.row + '" style="--glow:' + glow + '"><div class="hart">' +
-    (a.cover ? '<img class="amb" src="' + esc(a.cover) + '" alt="" aria-hidden="true">' : '') + img(a, 'cover') + '</div><div>' +
+  // Tapping the cover (or the row of faces) opens the full album popup: everyone's scores, songs and comments.
+  var open = ' onclick="openAlbum(' + a.row + ')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openAlbum(' + a.row + ')}" role="button" tabindex="0"';
+  var h = installCard() + '<div class="card hero" data-row="' + a.row + '" style="--glow:' + glow + '"><div class="hart open"' + open + ' aria-label="See everyone\'s ratings for ' + esc(a.album) + '">' +
+    (a.cover ? '<img class="amb" src="' + esc(a.cover) + '" alt="" aria-hidden="true">' : '') + img(a, 'cover') + '<span class="hint" aria-hidden="true">See ratings</span></div><div>' +
     '<div class="htop"><div><div class="eyebrow">This week\'s pick · ' + esc(fmtDate(a.date, true)) + '</div>' +
     '<h2>' + albumLink(a) + '</h2><div class="by">' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div></div>' +
     (a.avg == null ? '' : '<div class="bigavg"><b>' + cnt(a.avg) + '</b><span class="stars">' + stars(a.avg) + '</span><small>group avg</small></div>') +
     '<div class="meta">' + face(a.pickedBy, 'mini') + '<span><b>' + esc(a.pickedBy) + '\'s pick</b> · ' + esc(a.season) + ', #' + a.number + '</span></div>' +
     // Everyone's photo: full color once they've rated, faded until they do.
-    '<div class="faces"><div class="row5">' + D.members.map(function (m) {
+    '<div class="faces open"' + open + ' aria-label="See everyone\'s ratings"><div class="row5">' + D.members.map(function (m) {
       var done = a.ratings[m] != null;
       return '<span title="' + esc(m + (done ? ' has rated it' : ' hasn\'t rated yet')) + '">' + face(m, 'mini' + (done ? '' : ' off')) + '</span>';
     }).join('') + '</div><span class="t2">' + (a.count === D.members.length ? 'Everyone has rated this one' : a.count + ' of ' + D.members.length + ' rated') + '</span></div>' +
