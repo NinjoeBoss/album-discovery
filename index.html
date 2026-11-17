@@ -1660,10 +1660,13 @@ function openAlbum(row) {
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
     '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : a.avg != null ? 'Starts at ' + MIN_RANKED + ' rated' : 'Not ranked yet') + '</span></div></div></div></div>';
 
+  var loved = '';
   if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
-    h += '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupFav, a.groupFav)) + '</div>' +
+    loved = '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupFav, a.groupFav)) + '</div>' +
       '<div><b>✕ Most disliked</b>' + (isQuiet(a.groupLeast) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupLeast, a.groupLeast)) + '</div></div>';
   }
+
+  if (soon) h += loved;
 
   if (!soon) {
     h += '<div class="section-title" style="margin-left:0">Ratings</div><table class="rt">';
@@ -1676,7 +1679,7 @@ function openAlbum(row) {
       h += '<tr><td class="n" style="background:' + color(m) + '"><span class="nm">' + face(m, 'tiny') + esc(m) + '</span></td><td><b>' + (v == null ? '<span class="muted">Not rated</span>' : num(v)) + '</b> <span class="stars">' + stars(v) + '</span>' +
         (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
     });
-    h += '</table>' + songPicks(a) + '<div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
+    h += '</table>' + loved + songPicks(a) + '<div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
       (canRemove(a) ? '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button>' : '') + '</div>';
   } else if (canRemove(a)) {
     h += '<div class="actions">' +
