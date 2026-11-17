@@ -315,6 +315,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .pactions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
   .pactions .btn { padding: 11px 12px; font-size: 14px; text-align: center; }
   .phint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
+  .section-title .tag { margin: 0 0 0 6px; vertical-align: 1px; letter-spacing: .6px; }
+  .shareinv { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .shareinv .btn { flex: none; }
   .next .thumb { width: 64px; height: 64px; }
   .next.empty { grid-template-columns: 1fr auto; background: var(--wait); border-color: var(--wait-edge); }
   .next .t1 { font-size: 17px; margin: 3px 0 2px; }
@@ -710,6 +713,7 @@ var FALLBACK_DARK = ['#22384f', '#4d3a22', '#24432c', '#4f2737', '#362d55', '#1f
 var D = null, ranked = [], seasonRanks = {}, seasonSel = null, seasonPicked = false, view = 'home';
 var rateState = { member: null, row: null, score: 7, fav: '', least: '', comment: '' };
 var addState = { query: '', results: null, searching: false, picked: null, changeRow: null, flash: null };
+var shareState = { open: false, query: '', results: null, searching: false, picked: null, changeRow: null, flash: null };
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function jsq(s) { return esc(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
@@ -736,7 +740,7 @@ function toast(text) {
   document.body.appendChild(t); setTimeout(function () { t.remove(); }, 3500);
 }
 function canRemove(a) {
-  return a && rateState.member && a.count === 0 && a.date && a.date >= D.today && (a.pickedBy === rateState.member || (D.me && D.me.admin));
+  return a && !a.shared && rateState.member && a.count === 0 && a.date && a.date >= D.today && (a.pickedBy === rateState.member || (D.me && D.me.admin));
 }
 function chip(name) { return '<span class="chip" style="background:' + color(name) + '">' + face(name, 'tiny') + esc(name) + '</span>'; }
 /* Rank inside the album's own season (each season has its own medals). */
@@ -1045,6 +1049,7 @@ function prep(data) {
   syncPlatform(data);
   storeSet('ad.data', JSON.stringify(data));
   D.slots = D.slots || [];
+  D.shared = D.shared || [];
   if (!D.seasons || !D.seasons.length) D.seasons = [{ name: D.season || 'Season 1', start: '', count: D.albums.length }];
   D.albums.forEach(function (a) { if (!a.season) a.season = D.seasons[D.seasons.length - 1].name; });
   // A saved copy can be from last week: never let "today" go backwards from the phone's own date.
@@ -1182,7 +1187,7 @@ function renderHome() {
       (mine != null ? 'Your score: ' + num(mine) + '<span class="yours">· Edit</span>' : 'Rate it') + '</button></div>' +
     '</div></div>';
 
-  return h + nextCard() + homeBoard();
+  return h + shareStrip(a) + nextCard() + homeBoard();
 }
 
 /* Home leaderboard for the season picked in the header. */
@@ -1267,13 +1272,21 @@ function renderRate() {
     });
     h += '</optgroup>';
   });
+  var bonus = (D.shared || []).filter(function (x) { return shareOut(x) || x.row === rateState.row; }).slice().reverse();
+  if (bonus.length) {
+    h += '<optgroup label="Heard it before (bonus)">';
+    bonus.forEach(function (x) {
+      h += '<option value="' + x.row + '"' + (x.row === rateState.row ? ' selected' : '') + '>' + esc(x.album + ' · ' + x.artist + ' (' + x.pickedBy + ')') + '</option>';
+    });
+    h += '</optgroup>';
+  }
   h += '</select>';
 
   // Cover on the left; title, artist, picker and your score beside it (keeps the page short).
   var score = '<div class="slider"><div class="big" id="scoreBig">' + num(rateState.score) + '</div><span class="stars" id="scoreStars">' + stars(rateState.score) + '</span></div>';
   if (a) h += '<div class="ratehead">' + img(a, 'cover') + '<div class="rh-info">' +
     '<div class="rc-t">' + albumLink(a) + '</div><div class="rc-a">' + artistLink(a, 'rc-art') + '' +
-    (a.pickedBy ? '<span class="rc-by">' + face(a.pickedBy, 'tiny') + esc(a.pickedBy) + '</span>' : '') + '</div>' +
+    (a.pickedBy ? '<span class="rc-by">' + face(a.pickedBy, 'tiny') + esc((a.shared ? 'Shared by ' : '') + a.pickedBy) + '</span>' : '') + '</div>' +
     score + '</div></div>';
   else h += score;
   h +=
@@ -1328,7 +1341,7 @@ function renderAdd() {
       '<div class="pactions"><button class="btn ghost" onclick="startChange(' + todays.row + ')">Change album</button>' +
       '<button class="btn danger" onclick="confirmRemove(' + todays.row + ')">Remove</button></div>' +
       '<div class="phint">Everyone already heard it? Swap it out. You can change or remove it until someone rates it.</div></div>';
-    return h + queueCard();
+    return h + addTail();
   }
 
   if (lockedOut) {
@@ -1337,9 +1350,9 @@ function renderAdd() {
       '<div class="pactions"><button class="btn ghost" onclick="startChange(' + pending.row + ')">Change album</button>' +
       '<button class="btn danger" onclick="confirmRemove(' + pending.row + ')">Remove</button></div>' +
       '<div class="phint">You can change or remove it until someone rates it.</div></div>';
-    return h + queueCard();
+    return h + addTail();
   }
-  if (!slot) return h + '<div class="note warn">' + (D.slots.length ? 'You don\'t have another turn coming up in the open weeks on the sheet yet.' : 'Every row on the sheet is filled. Ask Jonathan to add more rows.') + '</div></div>' + queueCard();
+  if (!slot) return h + '<div class="note warn">' + (D.slots.length ? 'You don\'t have another turn coming up in the open weeks on the sheet yet.' : 'Every row on the sheet is filled. Ask Jonathan to add more rows.') + '</div></div>' + addTail();
 
   h += '<div class="eyebrow">' + (changing ? 'Change your pick for ' : 'Your turn: ') + esc(fmtDate(slot.date, true)) + seasonTag(slot.date) + '</div>';
   if (!changing) {
@@ -1386,7 +1399,177 @@ function renderAdd() {
   }
   if (changing) h += '<div style="margin-top:10px"><button class="linkish" onclick="addState.changeRow=null;addState.picked=null;show(\'add\')">Keep my current pick</button></div>';
   h += '<div class="msg" id="addMsg"></div></div>';
-  return h + queueCard();
+  return h + addTail();
+}
+
+/* ---------- heard it before (optional bonus share) ----------
+   On their turn, after picking an album nobody has heard, a member can also share
+   one they already know. Everyone can rate it, but it's a bonus: no ranks, no
+   "still to rate", no stats. It shows up on its week's Thursday next to their pick. */
+
+function addDays(ymd, n) { var p = ymd.split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n, 12)).toISOString().slice(0, 10); }
+function shareOut(s) { return !!(s.date && s.date <= D.today); }
+function sharesOn(date) { return (D.shared || []).filter(function (s) { return s.date === date; }); }
+function myShareOn(date, m) { return sharesOn(date).filter(function (s) { return s.pickedBy === m; })[0] || null; }
+/* The pick a share would go with: this member's own pick that's upcoming or from the last few days.
+   Prefers one that doesn't have a share yet. */
+function shareTarget(m) {
+  if (!m) return null;
+  var days = D.shareDays || 6;
+  var picks = D.albums.filter(function (a) { return a.pickedBy === m && a.date && addDays(a.date, days) >= D.today; })
+    .sort(function (x, y) { return x.date < y.date ? -1 : 1; });
+  return picks.filter(function (a) { return !myShareOn(a.date, m); })[0] || picks[0] || null;
+}
+/* The club pick a share sits next to. */
+function shareMain(s) { return D.albums.filter(function (a) { return a.date === s.date && a.pickedBy === s.pickedBy; })[0] || null; }
+function canRemoveShare(s) {
+  return !!(s && s.shared && rateState.member && (s.pickedBy === rateState.member || (D.me && D.me.admin)) &&
+    !D.members.some(function (n) { return n !== s.pickedBy && s.ratings[n] != null; }));
+}
+function addTail() { return shareCard(shareTarget(rateState.member)) + queueCard(); }
+
+/* Home: bonus shares under this week's album. */
+function shareStrip(a) {
+  var m = rateState.member;
+  return sharesOn(a.date).filter(shareOut).map(function (s) {
+    var mine = m ? s.ratings[m] : null;
+    return '<div class="card next tap" onclick="openAlbum(' + s.row + ')">' + img(s, 'thumb') + '<div><div class="eyebrow">Heard it before · ' + esc(s.pickedBy) + '\'s bonus</div>' +
+      '<div class="t1">' + esc(s.album) + '</div><div class="t2">' + esc(s.artist) + (s.year ? ' · ' + esc(s.year) : '') + ' · ' +
+      (mine != null ? 'your score ' + num(mine) : s.count ? s.count + ' rated' : 'optional, rate it if you like') + '</div></div><span class="chev">›</span></div>';
+  }).join('');
+}
+
+/* Add tab: the optional second album. */
+function shareCard(pick) {
+  var m = rateState.member;
+  if (!m || !pick) return '';
+  var mine = myShareOn(pick.date, m);
+  var changing = !!(mine && shareState.changeRow === mine.row);
+  var h = '<div class="section-title">Heard it before?<span class="tag">Optional</span></div><div class="card">';
+  if (shareState.flash) { h += '<div class="msg ok" style="margin-top:0;margin-bottom:10px">' + shareState.flash + '</div>'; shareState.flash = null; }
+
+  if (mine && !changing) {
+    h += '<div class="eyebrow">Your bonus share with ' + esc(pick.album) + ' · ' + esc(fmtDate(pick.date)) + '</div>' +
+      '<div class="pending">' + img(mine, 'thumb') + '<div class="pinfo"><div class="t1">' + esc(mine.album) + '</div><div class="t2">' + esc(mine.artist) + (mine.year ? ' · ' + esc(mine.year) : '') + '</div></div></div>';
+    if (canRemoveShare(mine)) {
+      h += '<div class="pactions"><button class="btn ghost" onclick="startShareChange(' + mine.row + ')">Swap it</button>' +
+        '<button class="btn danger" onclick="confirmRemoveShare(' + mine.row + ')">Remove</button></div>' +
+        '<div class="phint">' + (shareOut(mine) ? 'Everyone can rate it now.' : 'Everyone sees it on ' + esc(fmtDate(pick.date)) + ' next to your pick.') + ' You can swap or remove it until someone else rates it.</div>';
+    } else h += '<div class="phint">People are rating it, so it stays.</div>';
+    return h + '</div>';
+  }
+
+  if (!shareState.open && !changing) {
+    h += '<div class="shareinv"><div class="t2" style="flex:1;min-width:200px">Got an album you already love? Share it next to <b>' + esc(pick.album) + '</b> (' + esc(fmtDate(pick.date)) + ') and everyone can rate it too. It\'s a bonus, so it won\'t count toward the leaderboard.</div>' +
+      '<button class="btn ghost" onclick="shareState.open=true;show(\'add\')">Share one</button></div>';
+    return h + '</div>';
+  }
+
+  h += '<div class="eyebrow">' + (changing ? 'Swap your bonus share' : 'Share an album you already know') + ' · with ' + esc(pick.album) + '</div>';
+  if (shareState.picked) {
+    var p = shareState.picked;
+    h += '<div class="chosen" style="margin-top:14px">' + (p.cover ? '<img class="cover" src="' + esc(p.cover) + '" alt="">' : '<div class="cover"></div>') +
+      '<div class="fields">' +
+        '<div class="field"><label>Album</label><input type="text" value="' + esc(p.album) + '" oninput="shareState.picked.album=this.value" maxlength="150"></div>' +
+        '<div class="field"><label>Artist</label><input type="text" value="' + esc(p.artist) + '" oninput="shareState.picked.artist=this.value" maxlength="150"></div>' +
+        '<div class="field"><label>Year</label><input type="number" value="' + esc(p.year) + '" oninput="shareState.picked.year=this.value" min="1900" max="2030" inputmode="numeric"></div>' +
+        (p.kind && p.kind !== 'Album' ? '<div class="note warn">Heads up: Apple lists this as a' + (p.kind === 'EP' ? 'n EP' : ' single') + ', not a full album.</div>' : '') +
+      '</div></div>' +
+      '<div style="margin-top:16px;display:grid;gap:8px">' +
+        '<button class="btn primary" style="width:100%;padding:14px;font-size:16px" id="shareBtn" onclick="saveShare(' + pick.row + ')">' + (changing ? 'Swap in this album' : 'Share it') + '</button>' +
+        '<button class="linkish" style="justify-self:center" onclick="shareState.picked=null;show(\'add\')">Pick a different album</button>' +
+      '</div>';
+  } else {
+    h += '<div class="searchrow" style="margin-top:14px"><input type="search" id="sq" placeholder="Search an album you already love" value="' + esc(shareState.query) + '" onkeydown="if(event.key===\'Enter\')runShareSearch()" autocomplete="off">' +
+      '<button class="btn primary" onclick="runShareSearch()"' + (shareState.searching ? ' disabled' : '') + '>' + (shareState.searching ? 'Searching…' : 'Search') + '</button></div>';
+    if (shareState.results) {
+      if (!shareState.results.length) h += '<div class="note">No matches. Try adding the artist name, or type it in yourself below.</div>';
+      else {
+        h += '<div class="results">';
+        shareState.results.forEach(function (r, i) {
+          var taken = alreadyPicked(r.album, r.artist), shared = alreadyShared(r.album, r.artist);
+          h += '<button class="res" onclick="chooseShare(' + i + ')">' + (r.cover ? '<img class="cover" src="' + esc(r.cover) + '" alt="">' : '<div class="cover"></div>') +
+            '<div class="info"><div class="t1">' + esc(r.album) + '</div><div class="t2">' + esc(r.artist) + (r.year ? ' · ' + esc(r.year) : '') + '</div>' +
+            (taken ? '<span class="tag warn">Picked in ' + esc(taken.season) + '</span>' : shared ? '<span class="tag warn">Shared by ' + esc(shared.pickedBy) + '</span>'
+              : '<span class="tag">' + esc(r.kind) + (r.tracks ? ' · ' + r.tracks + (r.tracks === 1 ? ' song' : ' songs') : '') + '</span>') + '</div></button>';
+        });
+        h += '</div>';
+      }
+    }
+    h += '<div style="margin-top:12px"><button class="linkish" onclick="manualShare()">Can\'t find it? Type it in yourself</button></div>';
+  }
+  h += '<div style="margin-top:10px"><button class="linkish" onclick="cancelShare()">' + (changing ? 'Keep my current share' : 'Never mind, just my pick') + '</button></div>';
+  return h + '<div class="msg" id="shareMsg"></div></div>';
+}
+
+function alreadyShared(album, artist) {
+  var n = function (s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+  return (D.shared || []).filter(function (a) { return a.row !== shareState.changeRow && n(a.album) === n(album) && n(a.artist) === n(artist); })[0] || null;
+}
+function shareError(text) { var el = document.getElementById('shareMsg'); if (el) { el.className = 'msg err'; el.textContent = text; } }
+function cancelShare() { shareState.open = false; shareState.changeRow = null; shareState.picked = null; shareState.results = null; shareState.query = ''; show('add'); }
+function startShareChange(row) { shareState.changeRow = Number(row); shareState.open = true; shareState.picked = null; shareState.results = null; show('add'); }
+function runShareSearch() {
+  var q = (document.getElementById('sq') || {}).value || '';
+  shareState.query = q.trim();
+  if (shareState.query.length < 2) { shareError('Type at least two letters.'); return; }
+  shareState.searching = true; show('add');
+  google.script.run
+    .withSuccessHandler(function (list) { shareState.searching = false; shareState.results = list || []; show('add'); })
+    .withFailureHandler(function (e) { shareState.searching = false; shareState.results = null; show('add'); shareError(e.message || 'Search failed. Try again.'); })
+    .searchAlbums(shareState.query);
+}
+function chooseShare(i) {
+  var r = shareState.results[i];
+  shareState.picked = { album: r.album, artist: r.artist, year: r.year, cover: r.cover, kind: r.kind };
+  show('add');
+}
+function manualShare() { shareState.picked = { album: shareState.query, artist: '', year: '', cover: '', kind: '' }; show('add'); }
+function saveShare(pickRow) {
+  var p = shareState.picked;
+  if (!p.album.trim() || !p.artist.trim()) { shareError('Fill in both the album and the artist.'); return; }
+  var dup = alreadyPicked(p.album, p.artist);
+  if (dup) { shareError('That one was already a club pick (' + dup.pickedBy + ', ' + dup.season + '), so everyone has heard it.'); return; }
+  var sdup = alreadyShared(p.album, p.artist);
+  if (sdup) { shareError(sdup.pickedBy + ' already shared that one.'); return; }
+  var btn = document.getElementById('shareBtn'); btn.disabled = true; btn.textContent = 'Saving…';
+  google.script.run
+    .withSuccessHandler(function (res) {
+      prep(res.data);
+      shareState.flash = 'Shared! ' + esc(p.album) + ' by ' + esc(p.artist) + ' shows up next to your pick on ' + esc(fmtDate(res.date, true)) + '.';
+      shareState.open = false; shareState.picked = null; shareState.results = null; shareState.query = ''; shareState.changeRow = null;
+      show('add');
+      confetti();
+    })
+    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Try again'; shareError(e.message || 'Something went wrong.'); })
+    .submitShare(p.album, p.artist, p.year, p.cover, pickRow, shareState.changeRow);
+}
+function confirmRemoveShare(row) {
+  var a = albumByRow(row); if (!a) return;
+  var h = '<button class="close" onclick="closeAlbum()">×</button>' +
+    '<div class="stat" style="padding-right:40px">' + img(a, 'thumb') + '<div><div class="eyebrow" style="color:var(--red)">Remove bonus share</div>' +
+    '<div class="t1" style="font-size:18px;margin:3px 0">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + ' · shared by ' + esc(a.pickedBy) + '</div></div></div>' +
+    '<div class="note">This takes it off the Shared Albums tab. Your pick for the week stays put.</div>' +
+    '<div class="actions"><button class="btn danger solid" id="rmBtn" onclick="doRemoveShare(' + a.row + ')">Remove it</button>' +
+    '<button class="btn ghost" onclick="closeAlbum()">Keep it</button></div><div class="msg" id="rmMsg"></div>';
+  document.getElementById('modal').innerHTML = h;
+  openScrim();
+}
+function doRemoveShare(row) {
+  var btn = document.getElementById('rmBtn'); btn.disabled = true; btn.textContent = 'Removing…';
+  google.script.run
+    .withSuccessHandler(function (res) {
+      prep(res.data); closeAlbum();
+      shareState.changeRow = null; shareState.picked = null; shareState.open = false;
+      if (rateState.row === Number(row)) rateState.row = null;
+      show(view);
+      toast('Removed ' + res.album + '.');
+    })
+    .withFailureHandler(function (e) {
+      btn.disabled = false; btn.textContent = 'Remove it';
+      var m = document.getElementById('rmMsg'); m.className = 'msg err'; m.textContent = e.message || 'Something went wrong.';
+    })
+    .removeShare(row);
 }
 
 /* Coming up: lined up albums plus the next few open Thursdays, with a marker where a new season starts. */
@@ -1419,7 +1602,7 @@ function albumCards(list) {
     var now = !soon && a === cur;
     h += '<div class="gcard ' + medalClass(a) + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
       '<div class="info">' + (now ? '<div class="nowtag">This week</div>' : '') + '<div class="t1">' + esc(a.album) + '</div><div class="t2">' + artistLink(a) + '</div>' +
-      '<div class="t2" style="margin-top:4px">' + (soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
+      '<div class="t2" style="margin-top:4px">' + (a.shared ? 'Shared by ' + esc(a.pickedBy) + ' · ' + (a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) : soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
   });
   return h + '</div>';
 }
@@ -1442,6 +1625,11 @@ function renderAlbums() {
     h += albumCards(heard);
   });
   if (!any && later.length) h += '<div class="card empty-season"><div class="t1">Nothing listened to yet</div><div class="t2">The first album is below.</div></div>';
+  var bonus = (D.shared || []).filter(function (a) { return shareOut(a) && (isAll() || a.season === seasonSel); }).slice().reverse();
+  if (bonus.length) {
+    h += '<div class="shead"><div class="section-title">Heard it before</div><div class="t2">' + bonus.length + (bonus.length === 1 ? ' bonus album' : ' bonus albums') + ' · not ranked</div></div>';
+    h += albumCards(bonus);
+  }
   if (later.length) {
     h += '<div class="shead upnext"><div class="section-title">Upcoming</div><div class="t2">' + later.length + (later.length === 1 ? ' album' : ' albums') + ' lined up</div></div>';
     h += albumCards(later);
@@ -1468,6 +1656,7 @@ function renderMembers() {
     var fav = list.filter(function (a) { return a.ratings[m] != null; }).sort(function (x, y) { return y.ratings[m] - x.ratings[m]; })[0];
     h += '<div class="card mcard" style="border-top:8px solid ' + color(m) + '"><h3>' + face(m, 'mini') + esc(m) + (m === rateState.member ? '<span class="you">You</span>' : '') + '</h3>' +
       kv('Picks', picks.length) +
+      kv('Heard it before shares', (D.shared || []).filter(function (a) { return a.pickedBy === m; }).length) +
       kv('Avg score of their picks', pickAvg == null ? 'No ratings yet' : fmt(pickAvg) + ' <span class="stars">' + stars(pickAvg) + '</span>') +
       kv('Avg rating they give', given.length ? fmt(avgOf(given)) : 'Hasn\'t rated yet') +
       kv('Albums rated', given.length + ' of ' + due.length) +
@@ -1655,10 +1844,11 @@ function openAlbum(row) {
   var soon = a.date && a.date > D.today;
   var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
   var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero"><div class="disc"><div class="vinyl"><div class="rec"></div></div>' + img(a, 'cover') + '</div>' +
-    '<div class="mhead"><div class="eyebrow">' + esc(a.season) + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true)) + '</div><h2>' + albumLink(a) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
-    '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>Picked by</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
+    '<div class="mhead"><div class="eyebrow">' + (a.shared ? 'Heard it before · shared ' + esc(fmtDate(a.date, true)) : esc(a.season) + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true))) + '</div><h2>' + albumLink(a) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
+    '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>' + (a.shared ? 'Shared by' : 'Picked by') + '</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
-    '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : a.avg != null ? 'Starts at ' + MIN_RANKED + ' rated' : 'Not ranked yet') + '</span></div></div></div></div>';
+    (a.shared ? '<div class="tile"><b>Alongside</b><span>' + esc((shareMain(a) || {}).album || 'That week\'s pick') + '</span></div>'
+      : '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : a.avg != null ? 'Starts at ' + MIN_RANKED + ' rated' : 'Not ranked yet') + '</span></div>') + '</div></div></div>';
 
   var loved = '';
   if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
@@ -1680,7 +1870,9 @@ function openAlbum(row) {
         (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
     });
     h += '</table>' + loved + songPicks(a) + '<div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
-      (canRemove(a) ? '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button>' : '') + '</div>';
+      (canRemove(a) ? '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button>' : '') +
+      (canRemoveShare(a) ? '<button class="btn danger" onclick="confirmRemoveShare(' + a.row + ')">Remove share</button>' : '') + '</div>' +
+      (a.shared ? '<div class="phint">A bonus album ' + esc(a.pickedBy) + ' already knows. Rate it if you like; it doesn\'t count toward the leaderboard.</div>' : '');
   } else if (canRemove(a)) {
     h += '<div class="actions">' +
       (a.pickedBy === rateState.member ? '<button class="btn ghost" onclick="closeAlbum();startChange(' + a.row + ')">Change my pick</button>' : '') +
@@ -1986,7 +2178,7 @@ function confetti(from) {
 
 /* ---------- helpers ---------- */
 
-function albumByRow(row) { row = Number(row); return D.albums.filter(function (a) { return a.row === row; })[0]; }
+function albumByRow(row) { row = Number(row); return D.albums.concat(D.shared || []).filter(function (a) { return a.row === row; })[0]; }
 function vals(a) { return D.members.map(function (m) { return a.ratings[m]; }).filter(function (v) { return v != null; }); }
 function avgOf(arr) { arr = arr.filter(function (v) { return v != null; }); return arr.length ? arr.reduce(function (s, v) { return s + v; }, 0) / arr.length : null; }
 function kv(k, v) { return '<div class="kv"><span class="muted">' + k + '</span><b>' + v + '</b></div>'; }
@@ -2295,7 +2487,7 @@ function runner(ok, fail) {
     withSuccessHandler: function (f) { return runner(f, fail); },
     withFailureHandler: function (f) { return runner(ok, f); }
   };
-  ['getData', 'submitRating', 'searchAlbums', 'submitPick', 'removePick'].forEach(function (name) {
+  ['getData', 'submitRating', 'searchAlbums', 'submitPick', 'removePick', 'submitShare', 'removeShare'].forEach(function (name) {
     r[name] = function () {
       api(name, Array.prototype.slice.call(arguments)).then(ok || function () {}, fail || function (e) { toast(e.message); });
     };

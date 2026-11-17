@@ -255,6 +255,10 @@ function getData() {
   });
   var turn = slots.length ? slots[0].turn : '';
 
+  // "Heard it before" shares (Shares.gs): rated like albums, kept out of rankings.
+  var shared = [];
+  try { shared = adShares_(ss, memberNames, tz); } catch (e) { shared = []; }
+
   var email = adEmail_();
   var meName = AD_MEMBER_EMAILS[email] || '';
   if (memberNames.indexOf(meName) < 0) meName = '';
@@ -267,6 +271,8 @@ function getData() {
     me: { email: email, name: meName, admin: AD_ADMINS.indexOf(meName) >= 0, platform: meName ? adPlatformOf_(meName) : '' },
     members: memberNames,
     albums: albums,
+    shared: shared,
+    shareDays: AD_SHARE_DAYS,
     slots: slots,
     turn: turn,
     rotation: adRotation_(memberNames),
@@ -316,6 +322,7 @@ function setPlatform(p) {
 
 function submitRating(albumRow, member, score, fav, least, comment) {
   adAppOnly_();
+  if (adIsShareRow_(albumRow)) return adRateShare_(albumRow, score, fav, least, comment);
   adFixRatingTimes_(); // before stamping, so the first new rating after the fix keeps its time
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);

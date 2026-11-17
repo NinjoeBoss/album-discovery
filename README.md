@@ -26,6 +26,10 @@ Put the `/exec` URL in `config.js` as `apiUrl`.
 ### 3. Turn on GitHub Pages
 Repo **Settings > Pages**: Source **Deploy from a branch**, Branch **main**, folder **/ (root)**. Custom domain: `clubmusic.net` (the `CNAME` file). The app appears at `https://clubmusic.net/`. Backup domain `club-music.net` forwards there from its registrar (GitHub Pages serves one custom domain per repo), and the old `https://ninjoeboss.github.io/album-discovery/` address redirects there too.
 
+## Heard it before (bonus shares)
+
+On their turn, after locking in an album nobody has heard, a member can also share one album they already know (Add Album tab, "Heard it before?"). It shows up next to their pick on that Thursday, and everyone can rate it, pick songs and comment, but it stays out of the leaderboard, stats and "still to rate" lists. Shares live on their own **Shared Albums** tab (made automatically the first time someone shares), so the season tab and its side tabs keep lining up row for row. Code: `apps-script/Shares.gs`.
+
 ## Making changes
 
 - Edit `index.html`, then bump `VERSION` in `sw.js` so phones pick up the new copy.

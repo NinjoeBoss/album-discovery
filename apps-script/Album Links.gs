@@ -486,14 +486,22 @@ function songLinks(row, p, songs) {
     .filter(function (s, i, all) { return s && all.indexOf(s) === i; }).slice(0, 12);
   if (!songs.length) return {};
 
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(AD_SHEET_NAME);
-  var L = adLayout_(sh);
-  row = Number(row);
-  if (!(row > L.headerRow) || row > sh.getLastRow()) throw new Error('That album could not be found.');
-  var rng = sh.getRange(row, 1, 1, L.lastCol);
-  var v = rng.getValues()[0], f = rng.getFormulas()[0];
-  var album = String(v[L.album] || '').trim(), artist = String(v[L.artist] || '').trim();
-  if (!album) throw new Error('That album could not be found.');
+  var album, artist, linkFormula = { spotify: '', apple: '' };
+  if (typeof adIsShareRow_ === 'function' && adIsShareRow_(row)) {
+    var shared = adShareAlbum_(row); // a "heard it before" share (Shares.gs)
+    album = shared.album; artist = shared.artist;
+  } else {
+    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(AD_SHEET_NAME);
+    var L = adLayout_(sh);
+    row = Number(row);
+    if (!(row > L.headerRow) || row > sh.getLastRow()) throw new Error('That album could not be found.');
+    var rng = sh.getRange(row, 1, 1, L.lastCol);
+    var v = rng.getValues()[0], f = rng.getFormulas()[0];
+    album = String(v[L.album] || '').trim(); artist = String(v[L.artist] || '').trim();
+    if (!album) throw new Error('That album could not be found.');
+    linkFormula.spotify = L.spotify >= 0 ? f[L.spotify] : '';
+    linkFormula.apple = L.apple >= 0 ? f[L.apple] : '';
+  }
 
   var props = PropertiesService.getScriptProperties();
   var cache = CacheService.getScriptCache();
@@ -510,8 +518,7 @@ function songLinks(row, p, songs) {
   // The album's own track list, so a song resolves to this album's version.
   var albumTracks = [];
   try {
-    var col = p === 'apple' ? L.apple : L.spotify;
-    var albumUrl = adLink_(col >= 0 ? f[col] : '', p, album, artist);
+    var albumUrl = adLink_(linkFormula[p], p, album, artist);
     albumTracks = p === 'apple' ? songLinks_appleAlbum_(albumUrl) : songLinks_spotifyAlbum_(albumUrl);
   } catch (e) { /* fall back to searching each song */ }
 
