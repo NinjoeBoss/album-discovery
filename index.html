@@ -1486,14 +1486,14 @@ function renderStats() {
   var h = seasonBar();
   if (!ranked.length) return h + (list.length ? '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div><div class="t2">Stats show up once albums get rated.</div></div>' : emptySeason(seasonSel));
   h += '<div class="mgrid">';
-  if (!isRanking(ranked)) h += '<div class="card empty-season"><div class="t1">Top rated and most hated show up once ' + MIN_RANKED + ' albums are rated</div><div class="t2">' + ranked.length + ' rated in ' + esc(seasonLabel()) + ' so far.</div></div>';
+  if (!isRanking(ranked)) h += '<div class="card empty-season"><div class="t1">Top rated, most hated, most divisive and hottest take show up once ' + MIN_RANKED + ' albums are rated</div><div class="t2">' + ranked.length + ' rated in ' + esc(seasonLabel()) + ' so far.</div></div>';
   else h += statCard(isAll() ? 'Top rated ever' : live ? 'Top rated so far' : 'Album of the season', 'var(--plum-text)', ranked[0], fmt(ranked[0].avg) + ' <span class="stars">' + stars(ranked[0].avg) + '</span> · picked by ' + esc(ranked[0].pickedBy) + (isAll() ? ' · ' + esc(ranked[0].season) : ''));
   var worst = isRanking(ranked) && ranked.slice().sort(function (x, y) { return (x.avg - y.avg) || (y.count - x.count) || (x.row - y.row); })[0];
   if (worst) h += statCard(isAll() ? 'Most hated ever' : live ? 'Most hated so far' : 'Biggest flop', 'var(--red)', worst, fmt(worst.avg) + ' <span class="stars">' + stars(worst.avg) + '</span> · picked by ' + esc(worst.pickedBy) + (isAll() ? ' · ' + esc(worst.season) : ''));
   var div = list.filter(function (a) { return a.count >= 2; }).map(function (a) {
     var v = vals(a); return { a: a, spread: Math.max.apply(null, v) - Math.min.apply(null, v), lo: Math.min.apply(null, v), hi: Math.max.apply(null, v) };
   }).sort(function (x, y) { return (y.spread - x.spread) || (x.a.row - y.a.row); })[0];
-  if (div) h += statCard('Most divisive', 'var(--plum2)', div.a, 'Ratings ranged ' + num(div.lo) + ' to ' + num(div.hi));
+  if (div && isRanking(ranked)) h += statCard('Most divisive', 'var(--plum2)', div.a, 'Ratings ranged ' + num(div.lo) + ' to ' + num(div.hi));
 
   var take = null;
   list.forEach(function (a) {
@@ -1504,7 +1504,7 @@ function renderStats() {
       if (!take || d > take.d) take = { d: d, m: m, a: a, v: v };
     });
   });
-  if (take) h += statCard('Hottest take', 'var(--plum2)', take.a, esc(take.m) + ' rated it ' + num(take.v) + ' (' + (take.v - take.a.avg >= 0 ? '+' : '') + (take.v - take.a.avg).toFixed(1) + ' vs group)');
+  if (take && isRanking(ranked)) h += statCard('Hottest take', 'var(--plum2)', take.a, esc(take.m) + ' rated it ' + num(take.v) + ' (' + (take.v - take.a.avg >= 0 ? '+' : '') + (take.v - take.a.avg).toFixed(1) + ' vs group)');
 
   var pairs = pairStats(list).sort(function (x, y) { return x.gap - y.gap; });
   if (pairs.length) {
