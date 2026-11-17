@@ -1666,7 +1666,6 @@ function openAlbum(row) {
   }
 
   if (!soon) {
-    h += songPicks(a);
     h += '<div class="section-title" style="margin-left:0">Ratings</div><table class="rt">';
     D.members.forEach(function (m) {
       var v = a.ratings[m];
@@ -1677,7 +1676,7 @@ function openAlbum(row) {
       h += '<tr><td class="n" style="background:' + color(m) + '"><span class="nm">' + face(m, 'tiny') + esc(m) + '</span></td><td><b>' + (v == null ? '<span class="muted">Not rated</span>' : num(v)) + '</b> <span class="stars">' + stars(v) + '</span>' +
         (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
     });
-    h += '</table><div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
+    h += '</table>' + songPicks(a) + '<div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
       (canRemove(a) ? '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button>' : '') + '</div>';
   } else if (canRemove(a)) {
     h += '<div class="actions">' +
