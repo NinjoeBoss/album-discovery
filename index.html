@@ -757,6 +757,23 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .composer .btn { height: 42px; padding: 0 18px; flex: none; }
   main.chatting { padding-bottom: 0; display: flex; flex-direction: column; }
   main.chatting .chat { flex: 1; justify-content: flex-end; }
+  /* Chat screen works like a messaging app: the page itself never scrolls. The whole app is pinned to the part of
+     the screen you can actually see (--vvh / --vvt come from visualViewport, so they shrink when the keyboard
+     opens), the header stays on top, only the message list scrolls, and the box sits right on the keyboard. */
+  html.chatmode, html.chatmode body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  html.chatmode body { position: fixed; left: 0; right: 0; top: var(--vvt, 0px); height: var(--vvh, 100%); min-height: 0; display: flex; flex-direction: column; }
+  html.chatmode header { position: relative; flex: none; }
+  html.chatmode main.chatting { flex: 1 1 auto; min-height: 0; width: 100%; box-sizing: border-box; padding-top: 0; }
+  html.chatmode main.chatting .chat { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; justify-content: flex-start; padding-top: 12px; }
+  html.chatmode main.chatting .chat > :first-child { margin-top: auto; } /* few messages: still sit at the bottom */
+  html.chatmode .composer { position: relative; flex: none; }
+  /* keyboard open: no home bar gap under the box, a slimmer header (just the tabs), a shorter GIF grid */
+  html.kb .composer { padding-bottom: 8px; padding-top: 8px; }
+  html.kb header { padding-top: calc(6px + env(safe-area-inset-top)); }
+  html.kb header .brand { display: none; }
+  html.kb header nav { margin-top: 0; }
+  html.kb header nav button { padding-top: 6px; padding-bottom: 8px; }
+  html.kb .gifgrid { height: min(252px, calc(var(--vvh, 600px) * .3)); }
   nav button .dot { display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--gold); margin-left: 5px; vertical-align: 2px; pointer-events: none; }
 </style>
 </head>
@@ -2593,6 +2610,7 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
   if (entering) window.scrollTo(0, 0);
   app.innerHTML = (SUBS[v] ? subBar(v) : '') + { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, stats: renderStats, chat: renderChat }[v]();
   app.classList.toggle('chatting', v === 'chat');
+  chatMode(v === 'chat');
   moveInk();
   syncBack();
   if (v === 'home') heroGlow();
@@ -2731,7 +2749,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
   var EASE = 'cubic-bezier(.22,.61,.36,1)';
   var t = null, busy = false, peek = null, peekV = null, raf = 0, scrolledAt = 0;
   // A touch while the page is still gliding from a flick is meant to stop the scroll, not start a swipe.
-  window.addEventListener('scroll', function () { scrolledAt = Date.now(); }, { passive: true });
+  window.addEventListener('scroll', function () { scrolledAt = Date.now(); }, { passive: true, capture: true }); // capture: the chat list scrolling counts too
   function tabs() { return Array.prototype.map.call(nav.querySelectorAll('button[data-v]'), function (b) { return b.dataset.v; }); }
   function btn(v) { return nav.querySelector('button[data-v="' + v + '"]'); }
   function blocked(el) {
@@ -3228,8 +3246,68 @@ function gifPick(i) {
   chatSendText('[GIF] ' + it.url + (it.w && it.h ? '#' + it.w + 'x' + it.h : ''));
 }
 
-function chatNearBottom() { var el = document.documentElement; return window.innerHeight + window.scrollY >= el.scrollHeight - 160; }
-function chatToBottom() { requestAnimationFrame(function () { window.scrollTo(0, document.documentElement.scrollHeight); }); }
+/* On the chat screen the message list is its own scroller (see chatMode), so these look at the list, not the page. */
+function chatNearBottom() {
+  var l = document.getElementById('chatList');
+  if (l && document.documentElement.classList.contains('chatmode')) return l.scrollHeight - l.scrollTop - l.clientHeight < 160;
+  var el = document.documentElement; return window.innerHeight + window.scrollY >= el.scrollHeight - 160;
+}
+function chatToBottom() {
+  requestAnimationFrame(function () {
+    var l = document.getElementById('chatList');
+    if (l && document.documentElement.classList.contains('chatmode')) l.scrollTop = l.scrollHeight;
+    else window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+}
+
+/* ---------- chat screen fitted to the keyboard ----------
+ * On a phone the keyboard covers the bottom of the page instead of shrinking it, so a normal page leaves the
+ * message box floating with a gap under it and pushes the header off the top. On the Chat tab the app is pinned
+ * to the visible part of the screen (visualViewport), which is exactly the space above the keyboard. While the
+ * keyboard is up (html.kb) the header shrinks to just the tabs and the home bar gap under the box goes away. */
+var VV = window.visualViewport || null, vvTall = 0, vvWide = 0, vvList = { stick: true };
+function chatMode(on) {
+  var root = document.documentElement, was = root.classList.contains('chatmode');
+  root.classList.toggle('chatmode', on);
+  if (!on) {
+    root.classList.remove('kb'); root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt');
+    if (was) { var a = document.activeElement; if (a && a.id === 'chatBox') a.blur(); }
+    return;
+  }
+  vvList.stick = true;
+  var l = document.getElementById('chatList');
+  if (l) l.addEventListener('scroll', function () { vvList.stick = l.scrollHeight - l.scrollTop - l.clientHeight < 80; }, { passive: true });
+  vvFit();
+}
+function vvFit() {
+  var root = document.documentElement; if (!root.classList.contains('chatmode')) return;
+  var h = VV ? VV.height : window.innerHeight, top = VV ? Math.max(0, VV.offsetTop) : 0, w = VV ? VV.width : window.innerWidth;
+  // the tallest the screen has been at this width = keyboard closed (resets when the phone turns)
+  if (Math.abs(w - vvWide) > 2) { vvWide = w; vvTall = 0; }
+  vvTall = Math.max(vvTall, h, document.documentElement.clientHeight || 0);
+  var a = document.activeElement, typing = !!a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT');
+  var stick = vvList.stick;
+  root.style.setProperty('--vvh', h + 'px');
+  root.style.setProperty('--vvt', top + 'px');
+  root.classList.toggle('kb', typing && h < vvTall - 120);
+  // the page itself should never scroll here; if the phone nudged it to show the box, put it back
+  if (window.scrollY) window.scrollTo(0, 0);
+  if (stick) { var l = document.getElementById('chatList'); if (l) l.scrollTop = l.scrollHeight; }
+}
+if (VV) { VV.addEventListener('resize', vvFit); VV.addEventListener('scroll', vvFit); }
+window.addEventListener('resize', vvFit);
+window.addEventListener('orientationchange', function () { setTimeout(vvFit, 300); });
+// the keyboard opens and closes a moment after focus changes; check again once it has settled
+document.addEventListener('focusin', function () { vvFit(); setTimeout(vvFit, 350); });
+document.addEventListener('focusout', function () { setTimeout(vvFit, 50); setTimeout(vvFit, 400); });
+/* Dragging the messages down while typing puts the keyboard away, like Messages does. */
+document.addEventListener('touchstart', function (e) {
+  var l = e.target.closest && e.target.closest('#chatList'); if (!l || !document.documentElement.classList.contains('kb')) return;
+  var y0 = e.touches[0].clientY;
+  function mv(ev) { if (ev.touches[0].clientY - y0 > 40) { var b = document.getElementById('chatBox'); if (b) b.blur(); done(); } }
+  function done() { l.removeEventListener('touchmove', mv); l.removeEventListener('touchend', done); }
+  l.addEventListener('touchmove', mv, { passive: true }); l.addEventListener('touchend', done);
+}, { passive: true });
 function chatRedrawList(forceBottom) {
   var list = view === 'chat' && document.getElementById('chatList'); if (!list) return;
   var stick = forceBottom || chatNearBottom();
