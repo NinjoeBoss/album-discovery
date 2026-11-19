@@ -43,6 +43,11 @@ jobs:
           for v in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_DB_PASSWORD; do
             if [ -z "${!v}" ]; then echo "::error title=Missing secret::Add $v under Settings > Secrets and variables > Actions."; exit 1; fi
           done
+          case "$SUPABASE_ACCESS_TOKEN" in
+            sbp_*) ;;
+            *) echo "::error title=Wrong access token::SUPABASE_ACCESS_TOKEN must be a personal access token starting with sbp_ (supabase.com/dashboard/account/tokens), not a project API key."; exit 1 ;;
+          esac
+          printf '%s' "$SUPABASE_PROJECT_REF" | grep -qE '^[a-z]{20}$' || { echo "::error title=Project ref::SUPABASE_PROJECT_REF should be the 20 letter id from the project URL (after /project/), nothing else."; exit 1; }
 
       - name: Test the API against a throwaway Postgres
         run: |
@@ -56,8 +61,9 @@ jobs:
 
       - name: Database changes
         run: |
-          supabase link --project-ref "$SUPABASE_PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
-          supabase db push -p "$SUPABASE_DB_PASSWORD"
+          # The CLI reads SUPABASE_DB_PASSWORD from the environment.
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          supabase db push
 
       - name: Function settings
         env:
