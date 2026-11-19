@@ -25,6 +25,8 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to point config.js at the api function
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
@@ -105,3 +107,26 @@ jobs:
             echo "club.$t from outside: http $code (closed)"
           done
           echo "::notice title=API::Live at $url"
+
+      # Points the app at this server (config.js) and bumps the service worker so phones
+      # pick it up. Does nothing once config.js already has the right address.
+      - name: Point the app at the api function
+        run: |
+          url="https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api"
+          python3 - "$url" <<'PY'
+          import re, sys
+          url = sys.argv[1]
+          s = open('config.js').read()
+          s2 = re.sub(r"apiUrl:\s*'[^']*'", "apiUrl: '" + url + "'", s)
+          if s2 != s:
+              open('config.js', 'w').write(s2)
+              w = open('sw.js').read()
+              w = re.sub(r"VERSION = 'ad-v(\d+)'", lambda m: "VERSION = 'ad-v%d'" % (int(m.group(1)) + 1), w, count=1)
+              open('sw.js', 'w').write(w)
+          PY
+          if git diff --quiet; then echo "config.js already points at the api function."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git commit -qam "Point the app at the Supabase api function"
+          git push -q origin HEAD:main
+          echo "::notice title=App switched::config.js now points at the Supabase api function."
