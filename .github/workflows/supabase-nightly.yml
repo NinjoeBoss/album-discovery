@@ -29,10 +29,11 @@ jobs:
         if: steps.ready.outputs.go == 'true'
         run: |
           curl -sS --max-time 60 -H 'Content-Type: text/plain' -d '{"action":"ping"}' "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api"; echo
-      - uses: supabase/setup-cli@v1
+      - name: Install the Supabase CLI
         if: steps.ready.outputs.go == 'true'
-        with:
-          version: latest
+        run: |
+          mkdir -p /tmp/sbcli && cd /tmp/sbcli && npm install --silent --no-save supabase@^2 >/dev/null
+          echo /tmp/sbcli/node_modules/.bin >> "$GITHUB_PATH"
       - name: Back up the database
         if: steps.ready.outputs.go == 'true'
         run: |
