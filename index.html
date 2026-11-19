@@ -2148,18 +2148,101 @@ function openScrim(isAlbum) {
   document.body.classList.add('locked');
   popupOpen = true; syncBack();
 }
-/* Popup slides away, then hides. */
-function closeAlbum() {
+/* Popup slides away, then hides. swipedMs: a swipe is already sliding it off, so just hide it after that long. */
+function closeAlbum(swipedMs) {
   var s = document.getElementById('scrim');
   document.body.classList.remove('locked');
   if (popupOpen) { popupOpen = false; syncBack(); }
   if (!s.classList.contains('on')) return;
+  if (typeof swipedMs === 'number') {
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(function () { s.classList.remove('on', 'closing'); }, swipedMs);
+    return;
+  }
   if (calm()) { s.classList.remove('on'); return; }
   s.classList.add('closing');
   clearTimeout(closeTimer);
   closeTimer = setTimeout(function () { s.classList.remove('on', 'closing'); }, 220);
 }
 document.getElementById('scrim').addEventListener('click', function (e) { if (e.target.id === 'scrim') closeAlbum(); });
+
+/* ---------- swipe a popup away ----------
+ * Like an iPhone sheet: when the popup is scrolled to the top, pull it down and it follows your finger
+ * while the dim behind it fades. Let go past about a third of the way (or flick) and it slides off and closes;
+ * otherwise it springs back. Scrolling up, sideways drags, sliders and text boxes work as before. */
+(function () {
+  var s = document.getElementById('scrim'), m = document.getElementById('modal'), t = null, raf = 0;
+  function skip(el) {
+    for (; el && el !== s; el = el.parentElement) {
+      var tag = el.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable) return true;
+    }
+    return false;
+  }
+  function paint() {
+    raf = 0; if (!t) return;
+    var dy = Math.max(0, t.dy), H = window.innerHeight;
+    m.style.transform = 'translateY(' + dy + 'px)';
+    s.style.backgroundColor = 'rgba(30,27,46,' + (0.6 * Math.max(0, 1 - dy / (H * 0.8))).toFixed(3) + ')';
+  }
+  function reset() {
+    m.style.transition = m.style.transform = s.style.transition = s.style.backgroundColor = '';
+    s.classList.remove('dragging');
+  }
+  s.addEventListener('touchstart', function (e) {
+    t = null;
+    if (!s.classList.contains('on') || s.classList.contains('closing') || e.touches.length !== 1) return;
+    if (s.scrollTop > 0 || skip(e.target)) return;
+    var p = e.touches[0];
+    t = { x0: p.clientX, y0: p.clientY, dy: 0, mode: '?', pts: [{ y: p.clientY, at: e.timeStamp }] };
+  }, { passive: true });
+  s.addEventListener('touchmove', function (e) {
+    if (!t) return;
+    if (e.touches.length !== 1) { end(); return; }
+    var p = e.touches[0], dx = p.clientX - t.x0, dy = p.clientY - t.y0;
+    if (t.mode === '?') {
+      if (Math.hypot(dx, dy) < 8) return;
+      // only a downward, mostly vertical pull from the very top grabs the popup
+      if (dy <= 0 || Math.abs(dx) > dy || s.scrollTop > 0 || e.cancelable === false) { t = null; return; }
+      t.mode = 'y'; t.y0 = p.clientY - 8; dy = p.clientY - t.y0;
+      s.classList.add('dragging');
+      m.style.transition = s.style.transition = 'none';
+    }
+    if (e.cancelable) e.preventDefault(); // the popup moves instead of the page rubber-banding
+    t.dy = dy;
+    t.pts.push({ y: p.clientY, at: e.timeStamp }); if (t.pts.length > 6) t.pts.shift();
+    if (!raf) raf = requestAnimationFrame(paint);
+  }, { passive: false });
+  function speed() { // px per ms over the last ~100ms, so a quick flick counts
+    var pts = t.pts, last = pts[pts.length - 1], k = pts.length - 1;
+    while (k > 0 && last.at - pts[k - 1].at < 100) k--;
+    var dt = last.at - pts[k].at; return dt > 0 ? (last.y - pts[k].y) / dt : 0;
+  }
+  function end() {
+    if (!t) return;
+    if (t.mode !== 'y') { t = null; return; }
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    var dy = Math.max(0, t.dy), v = speed(), H = window.innerHeight; t = null;
+    if (dy > Math.min(160, H * 0.3) || (v > 0.5 && dy > 30)) {
+      // off it goes: keep sliding down from where the finger left it, then close for real
+      var ms = calm() ? 0 : Math.round(Math.max(140, Math.min(320, (H - dy) / Math.max(v, 1.6))));
+      m.style.transition = 'transform ' + ms + 'ms cubic-bezier(.3,.6,.4,1)';
+      s.style.transition = 'background-color ' + ms + 'ms ease';
+      m.style.transform = 'translateY(' + (H + 40) + 'px)';
+      s.style.backgroundColor = 'rgba(30,27,46,0)';
+      closeAlbum(ms);
+      setTimeout(reset, ms + 30);
+    } else {
+      // not far enough: spring back up
+      m.style.transition = 'transform .32s cubic-bezier(.2,.9,.3,1.15)';
+      s.style.transition = 'background-color .32s ease';
+      m.style.transform = 'translateY(0)'; s.style.backgroundColor = '';
+      setTimeout(function () { if (!t) reset(); }, 340);
+    }
+  }
+  s.addEventListener('touchend', end);
+  s.addEventListener('touchcancel', end);
+})();
 
 /* ---------- phone back button ----------
  * Android's back button (and back gestures) walks browser history. The app keeps
