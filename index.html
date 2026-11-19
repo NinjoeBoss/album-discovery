@@ -699,7 +699,21 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .chat .msg-row.sel .del { display: inline-block; }
   .chat .msg-row.me .bub { cursor: pointer; }
   .chat-empty { text-align: center; padding: 30px 10px; }
-  .composer { position: sticky; bottom: 0; z-index: 5; display: flex; gap: 8px; align-items: flex-end; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--canvas); }
+  .composer { position: sticky; bottom: 0; z-index: 5; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--canvas); }
+  .composer .crow { display: flex; gap: 8px; align-items: flex-end; }
+  .composer .gifbtn { width: 42px; padding: 0; font-size: 12px; font-weight: 800; letter-spacing: .04em; border-radius: 21px; }
+  .composer .gifbtn.on { background: var(--plum2-bg); color: #fff; border-color: transparent; }
+  .gifpanel { background: var(--card); border-radius: 16px; box-shadow: 0 2px 10px var(--shadow); padding: 10px; margin-bottom: 10px; }
+  .gifpanel input { width: 100%; margin: 0 0 8px; font-size: 16px; border-radius: 12px; }
+  .gifgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; height: 252px; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
+  .gifgrid button { border: 0; padding: 0; margin: 0; background: var(--canvas); border-radius: 8px; overflow: hidden; height: 80px; cursor: pointer; }
+  .gifgrid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gifgrid .gifmsg { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: 14px; padding: 40px 10px; }
+  .gifpanel .giffoot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: var(--muted); }
+  .gifpanel .giffoot button { border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; padding: 2px 4px; }
+  .chat .bub.gif { padding: 0; background: none; box-shadow: none; border-radius: 14px; overflow: hidden; line-height: 0; }
+  .chat .msg-row.me .bub.gif { background: none; }
+  .chat .bub.gif img { display: block; width: 220px; max-width: 100%; height: auto; border-radius: 14px; background: var(--card); }
   .composer textarea { flex: 1; min-height: 42px; max-height: 140px; resize: none; border-radius: 21px; padding: 10px 14px; font-size: 16px; margin: 0; }
   .composer .btn { height: 42px; padding: 0 18px; flex: none; }
   main.chatting { padding-bottom: 0; display: flex; flex-direction: column; }
@@ -2709,7 +2723,7 @@ function chatListHtml() {
     h += '<div class="' + cls + '"' + (m.id ? ' data-id="' + m.id + '"' : '') + '>';
     if (!mine) h += last ? face(m.name, 'mini') : '<span class="gap"></span>';
     h += '<div style="min-width:0">' + (!mine && first ? '<div class="who2">' + esc(m.name) + '</div>' : '') +
-      '<div class="bub"' + tap + '>' + chatLinkify(m.text) + '</div></div>';
+      chatBubble(m.text, tap) + '</div>';
     if (m.failed) h += '<span class="when" style="color:var(--err-text)">Didn\'t send · tap to retry</span>';
     else if (m.pending) h += last ? '<span class="when">Sending…</span>' : '';
     else if (last) h += '<span class="when">' + esc(chatTime(m.time)) + '</span>';
@@ -2720,10 +2734,99 @@ function chatListHtml() {
 }
 
 function renderChat() {
+  GIF.open = false;
   return '<div class="chat" id="chatList">' + chatListHtml() + '</div>' +
-    '<div class="composer"><textarea id="chatBox" rows="1" maxlength="' + CHAT_MAX + '" placeholder="Message the club" aria-label="Message the club"' +
+    '<div class="composer"><div id="gifPanel" class="gifpanel" hidden></div><div class="crow">' +
+    '<button class="btn gifbtn" id="gifBtn" onclick="gifToggle()" aria-label="Send a GIF" aria-expanded="false">GIF</button>' +
+    '<textarea id="chatBox" rows="1" maxlength="' + CHAT_MAX + '" placeholder="Message the club" aria-label="Message the club"' +
     ' oninput="chatTyped(this)" onkeydown="chatKey(event)">' + esc(CHAT.draft) + '</textarea>' +
-    '<button class="btn primary" onclick="chatSend()">Send</button></div>';
+    '<button class="btn primary" onclick="chatSend()">Send</button></div></div>';
+}
+
+/* A GIF message is saved as "[GIF] <link>#<width>x<height>" so the sheet stays readable.
+ * The size lets the bubble keep its space while the GIF loads, so the chat doesn't jump. */
+var CHAT_GIF_RE = /^\[GIF\] (https:\/\/[^\s#"'<>]+)(?:#(\d{1,4})x(\d{1,4}))?$/;
+function chatBubble(text, tap) {
+  var g = CHAT_GIF_RE.exec(text);
+  if (!g) return '<div class="bub"' + tap + '>' + chatLinkify(text) + '</div>';
+  var w = Number(g[2]) || 0, h = Number(g[3]) || 0;
+  var size = w && h ? ' width="' + w + '" height="' + h + '" style="aspect-ratio:' + w + '/' + h + '"' : '';
+  return '<div class="bub gif"' + tap + '><img src="' + esc(g[1]) + '" alt="GIF"' + size + ' loading="lazy" decoding="async"></div>';
+}
+
+/* ---------- GIF picker (KLIPY) ----------
+ * The GIF button opens a panel above the message box: trending GIFs first, then search as you type.
+ * Searches go straight from the phone to KLIPY. The key comes from Apps Script (the KLIPY_API_KEY
+ * secret, through KlipyKey.gs) and only to signed in members, so it's never in this public page.
+ * Tapping a GIF sends it right away. */
+var GIF = { open: false, key: null, keyAsk: null, q: '', seq: 0, timer: null, trending: null, items: [] };
+var GIF_API = 'https://api.klipy.com/v2/';
+
+function gifKey() {
+  if (GIF.key != null) return Promise.resolve(GIF.key);
+  if (!GIF.keyAsk) GIF.keyAsk = api('gifKey', []).then(function (k) { GIF.key = String(k || ''); return GIF.key; }, function (e) { GIF.keyAsk = null; throw e; });
+  return GIF.keyAsk;
+}
+function gifToggle() { if (GIF.open) gifClose(); else gifOpen(); }
+function gifOpen() {
+  var panel = document.getElementById('gifPanel'); if (!panel) return;
+  GIF.open = true; GIF.q = '';
+  panel.innerHTML = '<input id="gifQ" type="search" placeholder="Search GIFs" aria-label="Search GIFs" autocomplete="off" enterkeyhint="search"' +
+    ' oninput="gifTyped(this.value)" onkeydown="if(event.key===\'Escape\')gifClose()">' +
+    '<div class="gifgrid" id="gifGrid"><div class="gifmsg">Loading GIFs…</div></div>' +
+    '<div class="giffoot"><span>Powered by KLIPY</span><button onclick="gifClose()">Close</button></div>';
+  panel.hidden = false;
+  var b = document.getElementById('gifBtn'); if (b) { b.classList.add('on'); b.setAttribute('aria-expanded', 'true'); }
+  chatToBottom();
+  gifLoad('');
+}
+function gifClose() {
+  GIF.open = false; clearTimeout(GIF.timer); GIF.seq++;
+  var panel = document.getElementById('gifPanel'); if (panel) { panel.hidden = true; panel.innerHTML = ''; }
+  var b = document.getElementById('gifBtn'); if (b) { b.classList.remove('on'); b.setAttribute('aria-expanded', 'false'); }
+}
+function gifTyped(v) {
+  clearTimeout(GIF.timer);
+  GIF.timer = setTimeout(function () { gifLoad(v.trim()); }, 350);
+}
+function gifMsg(t) { var g = document.getElementById('gifGrid'); if (g) g.innerHTML = '<div class="gifmsg">' + esc(t) + '</div>'; }
+function gifLoad(q) {
+  GIF.q = q; var seq = ++GIF.seq;
+  if (!q && GIF.trending) { gifShow(GIF.trending); return; }
+  gifKey().then(function (key) {
+    if (seq !== GIF.seq) return;
+    if (!key) { gifMsg('GIFs aren\'t set up yet. Jonathan needs to add the KLIPY key.'); return; }
+    var url = GIF_API + (q ? 'search' : 'featured') + '?key=' + encodeURIComponent(key) +
+      '&limit=30&media_filter=tinygif,mediumgif,gif&contentfilter=low&locale=en_US' + (q ? '&q=' + encodeURIComponent(q) : '');
+    return fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+      if (seq !== GIF.seq) return;
+      var items = (d && d.results || []).map(gifItem).filter(Boolean);
+      if (!q) GIF.trending = items;
+      gifShow(items);
+    });
+  }).catch(function () { if (seq === GIF.seq) gifMsg('Couldn\'t reach KLIPY. Try again in a moment.'); });
+}
+/* Picks the small file for the grid and a mid size file to send. */
+function gifItem(r) {
+  var f = r && r.media_formats || {};
+  var thumb = f.tinygif || f.mediumgif || f.gif, send = f.mediumgif || f.gif || f.tinygif;
+  if (!thumb || !send || !/^https:\/\//.test(thumb.url || '') || !/^https:\/\/[^\s#"'<>]+$/.test(send.url || '')) return null;
+  var d = send.dims || thumb.dims || [];
+  return { thumb: thumb.url, url: send.url, w: Number(d[0]) || 0, h: Number(d[1]) || 0, alt: String(r.content_description || r.title || 'GIF') };
+}
+function gifShow(items) {
+  GIF.items = items;
+  var g = document.getElementById('gifGrid'); if (!g) return;
+  if (!items.length) { gifMsg(GIF.q ? 'No GIFs for "' + GIF.q + '".' : 'No GIFs right now.'); return; }
+  g.innerHTML = items.map(function (it, i) {
+    return '<button onclick="gifPick(' + i + ')" aria-label="' + esc(it.alt) + '"><img src="' + esc(it.thumb) + '" alt="" loading="lazy" decoding="async"></button>';
+  }).join('');
+  g.scrollTop = 0;
+}
+function gifPick(i) {
+  var it = GIF.items[i]; if (!it) return;
+  gifClose();
+  chatSendText('[GIF] ' + it.url + (it.w && it.h ? '#' + it.w + 'x' + it.h : ''));
 }
 
 function chatNearBottom() { var el = document.documentElement; return window.innerHeight + window.scrollY >= el.scrollHeight - 160; }
@@ -2789,10 +2892,13 @@ function chatSend() {
   var text = String(box ? box.value : CHAT.draft).trim();
   if (!text) return;
   if (text.length > CHAT_MAX) { toast('Keep messages under ' + CHAT_MAX + ' characters.'); return; }
-  var p = { tmp: ++CHAT.seq, id: 0, time: Date.now(), name: chatMe(), text: text, pending: true };
-  CHAT.pending.push(p);
   CHAT.draft = '';
   if (box) { box.value = ''; box.style.height = ''; box.focus(); }
+  chatSendText(text);
+}
+function chatSendText(text) {
+  var p = { tmp: ++CHAT.seq, id: 0, time: Date.now(), name: chatMe(), text: text, pending: true };
+  CHAT.pending.push(p);
   chatRedrawList(true);
   chatPost(p);
 }

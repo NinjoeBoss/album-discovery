@@ -4,7 +4,8 @@
 #
 # Members.gs and Avatars.html are private, so they come from the MEMBERS_GS and
 # AVATARS_HTML secrets instead of the public repo. SpotifyKeys.gs is built from
-# the optional SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET secrets.
+# the optional SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET secrets, and KlipyKey.gs
+# (GIF search in the chat) from the optional KLIPY_API_KEY secret.
 #
 # Safety: clasp replaces the whole project, so this stops without uploading if
 # the live project has a file that isn't in apps-script/ (for example something
@@ -56,6 +57,7 @@ jobs:
           AVATARS_HTML: ${{ secrets.AVATARS_HTML }}
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          KLIPY_API_KEY: ${{ secrets.KLIPY_API_KEY }}
         run: |
           if [ -z "$MEMBERS_GS" ]; then echo "The MEMBERS_GS secret is missing."; exit 1; fi
           if [ -z "$AVATARS_HTML" ]; then echo "The AVATARS_HTML secret is missing."; exit 1; fi
@@ -63,7 +65,7 @@ jobs:
           for f in apps-script/*; do
             [ -f "$f" ] || continue
             case "$(basename "$f")" in
-              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*|facepoints*|FacePoints*|checktoken*|CheckToken*) ;;
+              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*|facepoints*|FacePoints*|checktoken*|CheckToken*|klipykey*|KlipyKey*) ;;
               *) cp "$f" /tmp/push/ ;;
             esac
           done
@@ -77,6 +79,11 @@ jobs:
           else
             echo "Spotify keys: no SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET secrets, skipping"
           fi
+          # KLIPY key for GIF search in the chat. Always written (empty without the secret), so the
+          # app just says GIFs aren't set up yet instead of breaking.
+          klipy=$(printf '%s' "$KLIPY_API_KEY" | tr -d '[:space:]"\\')
+          if [ -n "$klipy" ]; then echo "::add-mask::$klipy"; echo "KLIPY_KEY=$klipy" >> "$GITHUB_ENV"; echo "KLIPY key: added from secrets"; else echo "KLIPY key: no KLIPY_API_KEY secret, GIFs stay off"; fi
+          printf '// Private: written by the deploy job from GitHub secrets. Not in the repo.\nvar AD_KLIPY_KEY = "%s";\n' "$klipy" > /tmp/push/KlipyKey.gs
           # Deploy check token: new and random every run, uploaded only to Apps Script
           # (never committed, never printed). The ?check= links refuse anything else.
           token=$(openssl rand -hex 24)
@@ -119,7 +126,7 @@ jobs:
           clasp pull > /dev/null
           missing=""
           for f in *; do
-            case "$f" in SpotifyKeys*|CheckToken*) continue ;; esac
+            case "$f" in SpotifyKeys*|CheckToken*|KlipyKey*) continue ;; esac
             [ -e "/tmp/push/$f" ] || missing="$missing\n  $f"
           done
           if [ -n "$missing" ]; then
@@ -179,3 +186,26 @@ jobs:
               *) echo "::notice title=Explicit::$line" ;;
             esac
           done < explicit.txt
+
+      # GIF check: asks KLIPY for one trending GIF with the saved key (the key itself is masked).
+      - name: Check GIF search (KLIPY)
+        run: |
+          if [ -z "$KLIPY_KEY" ]; then echo "::warning title=GIF check::No KLIPY_API_KEY secret yet, so GIFs are off in the chat."; exit 0; fi
+          body=$(curl -sS --max-time 30 "https://api.klipy.com/v2/featured?key=$KLIPY_KEY&limit=1&media_filter=tinygif,mediumgif,gif&contentfilter=low&locale=en_US" || true)
+          info=$(printf '%s' "$body" | python3 -c '
+          import json, sys, urllib.parse
+          try:
+              d = json.load(sys.stdin)
+              r = d["results"][0]["media_formats"]
+              parts = []
+              for k in ("tinygif", "mediumgif", "gif"):
+                  if k in r:
+                      parts.append("%s %s %s" % (k, urllib.parse.urlparse(r[k]["url"]).hostname, r[k].get("dims")))
+              print("working: " + "; ".join(parts))
+          except Exception as e:
+              print("problem: " + str(e))
+          ')
+          case "$info" in
+            working*) echo "::notice title=GIF check::KLIPY $info" ;;
+            *) echo "::error title=GIF check::KLIPY $info :: $(printf '%s' "$body" | head -c 300 | tr '\n\r' '  ')"; exit 1 ;;
+          esac

@@ -70,6 +70,7 @@ function adApiDispatch_(req) {
     case 'getChat': return getChat(args[0], args[1]);
     case 'postChat': return postChat(args[0]);
     case 'deleteChat': return deleteChat(args[0]);
+    case 'gifKey': return typeof AD_KLIPY_KEY === 'undefined' ? '' : AD_KLIPY_KEY; // KlipyKey.gs, written by the deploy job
     case 'avatars': return adAvatars_();
     case 'faces': return typeof AD_FACE_POINTS === 'undefined' ? {} : AD_FACE_POINTS; // FacePoints.gs, written by the deploy job
     case 'setPlatform': return setPlatform(args[0]);
