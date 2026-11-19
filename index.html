@@ -182,6 +182,13 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 3px; gap: 2px; flex-wrap: wrap; }
   .seg button { border: 0; background: none; border-radius: 99px; padding: 7px 14px; font-weight: 700; font-size: 13px; color: var(--plum-text); cursor: pointer; }
   .seg button.on { background: var(--plum); color: #fff; }
+  /* switching seasons: a plum pill glides from the old choice to the new one (the buttons go see-through meanwhile) */
+  .seg { position: relative; }
+  .seg button { position: relative; z-index: 1; }
+  .seg.pilled button.on { background: transparent; }
+  .seg-pill { position: absolute; left: 0; top: 0; z-index: 0; border-radius: 99px; background: var(--plum); pointer-events: none;
+    box-shadow: 0 2px 8px -2px rgba(30,27,46,.35); will-change: transform; }
+  .sswap.tween { overflow-y: clip; transition: height .36s cubic-bezier(.2,.8,.2,1); } /* height glides to the new season's size */
   .seg button .now { font-size: 9px; letter-spacing: .6px; text-transform: uppercase; background: var(--gold); color: #fff; border-radius: 99px; padding: 1px 6px; margin-left: 5px; vertical-align: 1px; }
   .shead { display: flex; align-items: baseline; gap: 10px; margin: 22px 4px 10px; }
   .shead .section-title { margin: 0; }
@@ -609,6 +616,8 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes grow { from { transform: scaleX(0); } }
   @keyframes pop { 40% { transform: scale(1.18); } }
+  @keyframes sOut { to { opacity: 0; transform: translateX(calc(var(--sdir, 1) * -18px)); } }
+  @keyframes sIn { from { opacity: 0; transform: translateX(calc(var(--sdir, 1) * 30px)); } }
   @keyframes shimmer { 0%, 72% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -635,6 +644,12 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .board li, .gcard, .queue li.tap, .card[onclick] { transition: transform .15s ease, box-shadow .2s ease; }
     .board li:active, .gcard:active, .queue li.tap:active, .card[onclick]:active { transform: scale(.98); }
     .pop { animation: pop .25s ease; }
+    .seg button { transition: transform .12s ease, color .25s ease; }
+
+    /* season switch: the old season slides away, the new one slides in from the side you tapped toward, one item after another */
+    .sswap.s-out > * { animation: sOut .15s ease-in forwards; }
+    .s-in-item { animation: sIn .44s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i, 0) * 30ms); }
+    .sswap.s-in .bars .fill { transform-origin: left; animation: grow .8s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(.12s + var(--i, 0) * 60ms); }
 
     /* gold medal shimmer */
     .board li.m1 .rank, .gcard.m1 { position: relative; overflow: hidden; }
@@ -1064,23 +1079,93 @@ function renderSeasonSelect() {
   sel.innerHTML = h;
 }
 function pickSeason(v) {
-  seasonSel = v;
-  seasonPicked = true;
-  buildRanks();
-  renderSeasonSelect();
-  show(view);
+  var app = document.getElementById('app');
+  var order = seasonNames().concat('all'), dir = order.indexOf(v) < order.indexOf(seasonSel) ? -1 : 1;
+  function swap() { seasonSel = v; seasonPicked = true; buildRanks(); renderSeasonSelect(); show(view); }
+  clearTimeout(SEASON_FX.timer);
+  if (calm() || v === seasonSel || !app.querySelector('.sswap')) { swap(); return; }
+  /* 1. In the page as it is: the pill starts gliding to the new choice, and the old season's content slides away
+        (opposite to the way you're heading). */
+  var GLIDE = 340, OUT = 150, t0 = performance.now();
+  segGlide(app, v, null, GLIDE);
+  app.style.setProperty('--sdir', dir);
+  var olds = Array.prototype.slice.call(app.querySelectorAll('.sswap'));
+  var heights = olds.map(function (el) { return el.getBoundingClientRect().height; });
+  olds.forEach(function (el) { el.classList.remove('s-in', 'tween'); el.style.height = ''; el.classList.add('s-out'); });
+  SEASON_FX.timer = setTimeout(function () {
+    // where each pill is right now, mid glide, so the redrawn one carries on from the same spot
+    var from = Array.prototype.map.call(app.querySelectorAll('.seg-pill'), function (p) { return p.getBoundingClientRect(); });
+    swap();
+    /* 2. The new season: the pill finishes its glide, the area grows or shrinks to its new size, and the
+          content slides in from the side you tapped toward, one item after another. */
+    segGlide(app, v, from, Math.max(160, GLIDE - (performance.now() - t0)));
+    Array.prototype.forEach.call(app.querySelectorAll('.sswap'), function (el, k) {
+      seasonIn(el);
+      var to = el.getBoundingClientRect().height, h0 = heights[k];
+      if (h0 == null || Math.abs(to - h0) < 2) return;
+      el.style.height = h0 + 'px'; el.classList.add('tween');
+      void el.offsetHeight;
+      el.style.height = to + 'px';
+      setTimeout(function () { el.classList.remove('tween'); el.style.height = ''; }, 420);
+    });
+  }, OUT);
+}
+var SEASON_FX = { timer: 0 };
+/* Slide the new season's content in: list rows and album cards one by one, other blocks as a whole. Numbers count up. */
+function seasonIn(el) {
+  el.classList.add('s-in');
+  var rows = el.querySelectorAll('.board li, .grid .gcard, .mgrid > .card'); // a bar chart card moves whole; its bars grow
+  var parts = Array.prototype.filter.call(el.children, function (c) {
+    for (var i = 0; i < rows.length; i++) if (c.contains(rows[i]) && c !== rows[i]) return false; // its rows move instead
+    return true;
+  }).concat(Array.prototype.filter.call(rows, function (r) {
+    for (var i = 0; i < rows.length; i++) if (r !== rows[i] && r.contains(rows[i])) return false;
+    return true;
+  }));
+  parts.sort(function (a, b) { return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1; });
+  parts.forEach(function (p, i) { p.style.setProperty('--i', Math.min(i, 12)); p.classList.add('s-in-item'); });
+  // .bars rows also drive the bar grow delay
+  Array.prototype.forEach.call(el.querySelectorAll('.bars .row'), function (r, i) { r.style.setProperty('--i', Math.min(i, 12)); });
+  runCounts(el);
+  setTimeout(function () {
+    if (!el.isConnected) return;
+    el.classList.remove('s-in');
+    parts.forEach(function (p) { p.classList.remove('s-in-item'); });
+  }, 1100);
+}
+/* Season buttons: a plum pill glides to the chosen one. from: where the pills are now (rects), or null to start
+   at the current choice. Once it lands, the pill goes away and the button's own color takes over (looks the same). */
+function segGlide(root, v, from, ms) {
+  Array.prototype.forEach.call(root.querySelectorAll('.seg'), function (seg, k) {
+    var target = seg.querySelector('button[data-s="' + (window.CSS && CSS.escape ? CSS.escape(v) : v) + '"]'); if (!target) return;
+    var cur = seg.querySelector('button.on') || target;
+    var box = seg.getBoundingClientRect(), b = seg.clientLeft, bt = seg.clientTop;
+    var pill = seg.querySelector('.seg-pill');
+    if (!pill) { pill = document.createElement('span'); pill.className = 'seg-pill'; seg.insertBefore(pill, seg.firstChild); }
+    var place = function (r) { pill.style.width = r.width + 'px'; pill.style.height = r.height + 'px'; pill.style.transform = 'translate(' + (r.left - box.left - b) + 'px,' + (r.top - box.top - bt) + 'px)'; };
+    pill.style.transition = 'none';
+    place(from && from[k] ? from[k] : cur.getBoundingClientRect());
+    seg.classList.add('pilled');
+    Array.prototype.forEach.call(seg.querySelectorAll('button'), function (x) { x.classList.toggle('on', x === target); });
+    void pill.offsetWidth;
+    var ease = 'cubic-bezier(.3,1.25,.4,1)'; // a touch of overshoot so it settles
+    pill.style.transition = 'transform ' + ms + 'ms ' + ease + ', width ' + ms + 'ms ' + ease + ', height ' + ms + 'ms ' + ease;
+    place(target.getBoundingClientRect());
+    clearTimeout(seg._pt);
+    seg._pt = setTimeout(function () { pill.remove(); seg.classList.remove('pilled'); }, ms + 40);
+  });
 }
 /* Season 1 / Season 2 / All buttons. One choice for the whole app (Home leaderboard, Albums, Stats). */
 function seasonSeg(cls) {
   var h = '<div class="seg' + (cls ? ' ' + cls : '') + '">';
   seasonNames().forEach(function (n) {
-    h += '<button class="' + (n === seasonSel ? 'on' : '') + '" onclick="pickSeason(\'' + jsq(n) + '\')">' + esc(n) + (n === D.currentSeason ? '<span class="now">Now</span>' : '') + '</button>';
+    h += '<button data-s="' + esc(n) + '" class="' + (n === seasonSel ? 'on' : '') + '" onclick="pickSeason(\'' + jsq(n) + '\')">' + esc(n) + (n === D.currentSeason ? '<span class="now">Now</span>' : '') + '</button>';
   });
-  return h + '<button class="' + (isAll() ? 'on' : '') + '" onclick="pickSeason(\'all\')">All</button></div>';
+  return h + '<button data-s="all" class="' + (isAll() ? 'on' : '') + '" onclick="pickSeason(\'all\')">All</button></div>';
 }
 /* Top of Albums and Stats: which season you're looking at, and the switch. */
 function seasonBar(extra) {
-  return '<div class="sbar"><div><div class="t1">' + esc(seasonLabel()) + '</div>' +
+  return '<div class="sbar"><div class="sswap"><div class="t1">' + esc(seasonLabel()) + '</div>' +
     '<div class="t2">' + (isAll() ? D.albums.length + ' albums across ' + seasonNames().length + ' seasons' : esc(seasonRange(seasonSel)) + ' · ' + sAlbums().length + (sAlbums().length === 1 ? ' album' : ' albums')) +
     (extra ? ' · ' + extra : '') + '</div></div>' + seasonSeg() + '</div>';
 }
@@ -1250,7 +1335,7 @@ function turnCard() {
 
 /* Home leaderboard for the season picked in the header. */
 function homeBoard() {
-  var h = '<div class="bhead"><div class="section-title">Leaderboard</div>' + seasonSeg('sm') + '</div>';
+  var head = '<div class="bhead"><div class="section-title">Leaderboard</div>' + seasonSeg('sm') + '</div>', h = '';
   if (!ranked.length) {
     var prev = !isAll() && prevSeason(seasonSel), champ = prev && (seasonRanks[prev] || [])[0];
     h += '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div>' +
@@ -1259,7 +1344,7 @@ function homeBoard() {
       h += statCard(prev + ' champion', 'var(--gold)', champ, fmt(champ.avg) + ' <span class="stars">' + stars(champ.avg) + '</span> · picked by ' + esc(champ.pickedBy)) +
         '<div style="text-align:center"><button class="btn ghost" onclick="pickSeason(\'' + jsq(prev) + '\')">See the ' + esc(prev) + ' standings</button></div>';
     }
-    return h;
+    return head + '<div class="sswap">' + h + '</div>';
   }
   var live = isRanking(ranked);
   var shown = boardAll || ranked.length <= BOARD_TOP ? ranked : ranked.slice(0, BOARD_TOP);
@@ -1274,7 +1359,7 @@ function homeBoard() {
   h += '</ol>';
   if (ranked.length > BOARD_TOP) h += '<div class="board-more"><button class="linkish" onclick="boardAll=!boardAll;show(\'home\')">' +
     (boardAll ? 'Show top ' + BOARD_TOP : 'Show all ' + ranked.length) + '</button></div>';
-  return h + '</div>';
+  return head + '<div class="sswap">' + h + '</div></div>';
 }
 
 /* Home strip: only when next Thursday's album is already locked in.
@@ -1667,7 +1752,7 @@ function albumCards(list) {
 function isSoon(a) { return !!(a.date && a.date > D.today); }
 
 function renderAlbums() {
-  var h = seasonBar();
+  var h = '';
   var names = isAll() ? seasonNames().slice().reverse() : [seasonSel];
   /* Top: albums we're on now or have listened to, newest first (this week's leads).
      Bottom: albums lined up for future Thursdays, soonest first. */
@@ -1692,7 +1777,7 @@ function renderAlbums() {
     h += '<div class="shead upnext"><div class="section-title">Upcoming</div><div class="t2">' + later.length + (later.length === 1 ? ' album' : ' albums') + ' lined up</div></div>';
     h += albumCards(later);
   }
-  return h;
+  return seasonBar() + '<div class="sswap">' + h + '</div>';
 }
 
 /* Members section at the bottom of Stats. Always covers every album; the season switch doesn't apply.
@@ -1727,11 +1812,11 @@ function renderMembers() {
   return h + '</div>';
 }
 
-function renderStats() { return statsBody() + renderMembers(); }
+function renderStats() { return seasonBar() + '<div class="sswap">' + statsBody() + '</div>' + renderMembers(); }
 function statsBody() {
   var list = sAlbums();
   var live = isAll() || seasonSel === D.currentSeason;
-  var h = seasonBar();
+  var h = ''; // the season bar is added by renderStats
   if (!ranked.length) return h + (list.length ? '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div><div class="t2">Stats show up once albums get rated.</div></div>' : emptySeason(seasonSel));
   h += '<div class="mgrid">';
   if (!isRanking(ranked)) h += '<div class="card empty-season"><div class="t1">Top rated, most hated, most divisive and hottest take show up once ' + MIN_RANKED + ' albums are rated</div><div class="t2">' + ranked.length + ' rated in ' + esc(seasonLabel()) + ' so far.</div></div>';
