@@ -2440,6 +2440,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
     var html; try { html = VIEWS[v](); } catch (e) { return null; }
     var el = document.createElement('div'); el.className = 'peek';
     el.style.visibility = 'hidden'; el.style.transform = 'translate3d(' + window.innerWidth + 'px,0,0)';
+    el.style.top = Math.max(0, document.querySelector('header').getBoundingClientRect().bottom) + 'px';
     el.innerHTML = '<main>' + html.replace(/\s(id|for|onclick|oninput|onchange)="[^"]*"/g, '') + '</main>';
     document.body.appendChild(el);
     return el;
@@ -2510,20 +2511,28 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
     if (document.getElementById('scrim').classList.contains('on') || blocked(e.target)) return;
     if (Date.now() - scrolledAt < 150) return;
     var p = e.touches[0]; spots = null;
-    t = { x0: p.clientX, y0: p.clientY, dx: 0, mode: '?', pts: [{ x: p.clientX, at: e.timeStamp }] };
+    t = { x0: p.clientX, y0: p.clientY, sy: window.scrollY, dx: 0, mode: '?', pts: [{ x: p.clientX, at: e.timeStamp }] };
   }, { passive: true });
   app.addEventListener('touchmove', function (e) {
     if (!t) return;
     var p = e.touches[0], dx = p.clientX - t.x0, dy = p.clientY - t.y0;
     if (e.touches.length !== 1) { cancel(); return; }
     if (t.mode === '?') {
-      // Decide early (before the phone commits to a scroll) and only call it sideways when it clearly is:
-      // within about 34 degrees of flat. Anything steeper is a scroll and the swipe sits out the whole gesture.
-      if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
-      t.mode = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'x' : 'y';
+      // Sideways when the drag is flatter than 45 degrees, the same line the phone itself uses for this page
+      // (touch-action: pan-y), so a thumb's natural arc still counts. Wait for 10px so the angle is a real one.
+      if (Math.hypot(dx, dy) < 10) return;
+      t.mode = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
       // If the browser has already started scrolling, the touch can't be taken over; let the scroll win cleanly.
       if (t.mode === 'x' && e.cancelable === false) t.mode = 'y';
-      if (t.mode === 'y') { t = null; return; }
+      if (t.mode === 'y') return;
+      app.classList.add('dragging');
+    } else if (t.mode === 'y') {
+      // Started a bit steep, but the page never actually scrolled and the finger is now clearly going sideways:
+      // take it over as a swipe instead of ignoring the rest of the touch.
+      if (window.scrollY !== t.sy || e.cancelable === false) { t = null; return; }
+      if (Math.abs(dx) < 18 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      t.mode = 'x'; t.x0 = p.clientX - (dx < 0 ? -10 : 10); dx = p.clientX - t.x0; // carry on from here, no jump
+      t.pts = [{ x: p.clientX, at: e.timeStamp }];
       app.classList.add('dragging');
     }
     if (e.cancelable) e.preventDefault(); // no up and down scrolling mid swipe
