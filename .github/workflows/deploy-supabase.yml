@@ -1,0 +1,98 @@
+# Deploys the Supabase back end: database changes (supabase/migrations) and the
+# `api` Edge Function the app talks to. Runs on every push to main that changes
+# supabase/, or by hand from the Actions tab.
+#
+# Secrets: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF, SUPABASE_DB_PASSWORD (required);
+# SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, KLIPY_API_KEY (optional, same as before).
+name: Deploy to Supabase
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/deploy-supabase.yml'
+
+concurrency:
+  group: supabase
+  cancel-in-progress: false
+
+env:
+  # Apps Script "Github" deployment: still sends the sign in code emails (Migrate.gs).
+  MAILER_DEPLOYMENT_ID: AKfycbwJQcPMYR2FfdVh-AwIXo_dT0t_V1PR92nCaxjux-Z2akJMAu0Q1io6CtaSk2xhWr7_
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check the secrets are there
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_PROJECT_REF SUPABASE_DB_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error title=Missing secret::Add $v under Settings > Secrets and variables > Actions."; exit 1; fi
+          done
+
+      - name: Test the API against a throwaway Postgres
+        run: |
+          docker run -d --name pg -e POSTGRES_HOST_AUTH_METHOD=trust -p 5499:5432 postgres:17 >/dev/null
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
+          docker exec pg psql -U postgres -qc "create role anon; create role authenticated; create database club"
+          docker exec -i pg psql -U postgres -d club -v ON_ERROR_STOP=1 -q < supabase/migrations/20261119000000_init.sql
+          CLUB_TEST=1 FORCE_IMPORT=yes DB_URL=postgres://postgres@localhost:5499/club deno test -A supabase/tests/api_test.ts
+
+      - name: Database changes
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
+          supabase db push -p "$SUPABASE_DB_PASSWORD"
+
+      - name: Function settings
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          KLIPY_API_KEY: ${{ secrets.KLIPY_API_KEY }}
+        run: |
+          mailer=$(printf 'club-music-mailer|%s' "$SUPABASE_DB_PASSWORD" | sha256sum | cut -c1-64)
+          echo "::add-mask::$mailer"
+          args=("MAILER_URL=https://script.google.com/macros/s/$MAILER_DEPLOYMENT_ID/exec" "MAILER_SECRET=$mailer")
+          for v in SPOTIFY_CLIENT_ID SPOTIFY_CLIENT_SECRET KLIPY_API_KEY; do
+            val=$(printf '%s' "${!v}" | tr -d '[:space:]"\\')
+            if [ -n "$val" ]; then echo "::add-mask::$val"; args+=("$v=$val"); echo "$v: set"; else echo "$v: no secret, skipped"; fi
+          done
+          supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" "${args[@]}" > /dev/null
+          echo "Function settings saved."
+
+      - name: Deploy the api function
+        run: supabase functions deploy api --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt --use-api
+
+      - name: Check it answers, and that the database stays closed
+        run: |
+          url="https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api"
+          sleep 5
+          ping=$(curl -sS --max-time 30 -H 'Content-Type: text/plain' -H 'Origin: https://clubmusic.net' -d '{"action":"ping"}' "$url")
+          echo "ping: $ping"
+          [ "$ping" = '{"ok":true,"result":1}' ] || { echo "::error title=API check::The api function didn't answer the ping."; exit 1; }
+          out=$(curl -sS --max-time 30 -H 'Content-Type: text/plain' -d '{"action":"getData","session":"0000000000000000000000000000000000000000000000000000000000000000"}' "$url")
+          echo "unknown session: $out"
+          [ "$out" = '{"ok":false,"error":"SIGNED_OUT"}' ] || { echo "::error title=API check::A made up session wasn't refused."; exit 1; }
+          anon=$(curl -sSf --max-time 30 -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys" \
+            | python3 -c 'import json,sys; print(next(k["api_key"] for k in json.load(sys.stdin) if k.get("name")=="anon"))')
+          echo "::add-mask::$anon"
+          for t in members ratings sessions chat; do
+            code=$(curl -s -o /tmp/rest.txt -w '%{http_code}' --max-time 30 -H "apikey: $anon" -H "Authorization: Bearer $anon" -H "Accept-Profile: club" \
+              "https://$SUPABASE_PROJECT_REF.supabase.co/rest/v1/$t?select=*&limit=1")
+            if [ "$code" = 200 ] && [ "$(cat /tmp/rest.txt)" != "[]" ]; then echo "::error title=Security check::club.$t can be read with the public key!"; exit 1; fi
+            echo "club.$t from outside: http $code (closed)"
+          done
+          echo "::notice title=API::Live at $url"

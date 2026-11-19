@@ -1,0 +1,52 @@
+# Every night: keeps the Supabase project awake (the Free plan pauses a project after a
+# quiet week) and saves an encrypted backup of the database as a workflow artifact
+# (kept 30 days). The Free plan has no backups of its own.
+#
+# The backup is encrypted with SUPABASE_DB_PASSWORD. To restore, download the artifact, then:
+#   openssl enc -d -aes-256-cbc -pbkdf2 -in club-music-backup.sql.gz.enc -pass pass:'<db password>' | gunzip > backup.sql
+#   psql "<connection string from Supabase > Connect>" -f backup.sql
+name: Supabase nightly (keep awake + backup)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 11 * * *'   # 3:17 am Pacific
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skip until Supabase is set up
+        id: ready
+        run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then echo "No SUPABASE_PROJECT_REF secret yet."; echo "go=false" >> "$GITHUB_OUTPUT"; else echo "go=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Keep awake
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          curl -sS --max-time 60 -H 'Content-Type: text/plain' -d '{"action":"ping"}' "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api"; echo
+      - uses: supabase/setup-cli@v1
+        if: steps.ready.outputs.go == 'true'
+        with:
+          version: latest
+      - name: Back up the database
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          set -euo pipefail
+          db_url=$(bash .github/scripts/supabase_db_url.sh)
+          echo "::add-mask::$db_url"
+          supabase db dump --db-url "$db_url" --schema club -f /tmp/schema.sql
+          supabase db dump --db-url "$db_url" --schema club --data-only --use-copy -f /tmp/data.sql
+          cat /tmp/schema.sql /tmp/data.sql | gzip -9 | openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:SUPABASE_DB_PASSWORD -out club-music-backup.sql.gz.enc
+          rm -f /tmp/schema.sql /tmp/data.sql
+          ls -l club-music-backup.sql.gz.enc
+      - uses: actions/upload-artifact@v4
+        if: steps.ready.outputs.go == 'true'
+        with:
+          name: club-music-backup-${{ github.run_id }}
+          path: club-music-backup.sql.gz.enc
+          retention-days: 30

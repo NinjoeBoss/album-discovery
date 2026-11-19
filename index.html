@@ -2519,22 +2519,22 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
   app.addEventListener('touchcancel', cancel);
 })();
 
-/* ---------- talking to the sheet (Apps Script API) ---------- */
+/* ---------- talking to the server (Supabase api function; same requests the Apps Script API took) ---------- */
 
 var API_URL = (window.AD_CONFIG && window.AD_CONFIG.apiUrl) || '';
 function storeDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
-/* POST with a plain text body: no preflight, which Apps Script can't answer. */
+/* POST with a plain text body: no preflight round trip, so every call is one request. */
 function api(action, args) {
   return fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action: action, args: args || [], session: storeGet('ad.session') || '' })
   }).then(function (r) {
-    if (!r.ok) throw new Error('The sheet didn\'t answer (' + r.status + '). Try again in a moment.');
+    if (!r.ok) throw new Error('The server didn\'t answer (' + r.status + '). Try again in a moment.');
     return r.json();
   }, function () {
-    throw new Error(navigator.onLine === false ? 'You\'re offline. Showing what was saved on this phone.' : 'Couldn\'t reach the sheet. Check your connection and try again.');
+    throw new Error(navigator.onLine === false ? 'You\'re offline. Showing what was saved on this phone.' : 'Couldn\'t reach the server. Check your connection and try again.');
   }).then(function (j) {
     if (j.ok) return j.result;
     if (j.error === 'SIGNED_OUT') { signedOut(); throw new Error('Please sign in again.'); }

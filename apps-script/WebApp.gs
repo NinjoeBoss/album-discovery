@@ -124,6 +124,9 @@ function doGet(e) {
     if (e.parameter.album) st += ' || ' + albumLinks_spotifyProbe_(e.parameter.album, e.parameter.artist || '');
     return ContentService.createTextOutput(st);
   }
+  if (e && e.parameter && e.parameter.check === 'export') {
+    return ContentService.createTextOutput(JSON.stringify(adMigrationExport_())).setMimeType(ContentService.MimeType.JSON);
+  }
   if (e && e.parameter && e.parameter.check === 'covers') return ContentService.createTextOutput(adCoverReport_());
   if (e && e.parameter && e.parameter.check === 'explicit') {
     adFixExplicitLinks_();

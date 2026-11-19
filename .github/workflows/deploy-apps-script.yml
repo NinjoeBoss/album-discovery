@@ -14,6 +14,11 @@ name: Deploy to Apps Script
 
 on:
   workflow_dispatch:
+    inputs:
+      migrate:
+        description: 'Also copy all club data into Supabase (replaces what is there) and compare old vs new'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -58,6 +63,7 @@ jobs:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           KLIPY_API_KEY: ${{ secrets.KLIPY_API_KEY }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           if [ -z "$MEMBERS_GS" ]; then echo "The MEMBERS_GS secret is missing."; exit 1; fi
           if [ -z "$AVATARS_HTML" ]; then echo "The AVATARS_HTML secret is missing."; exit 1; fi
@@ -65,7 +71,7 @@ jobs:
           for f in apps-script/*; do
             [ -f "$f" ] || continue
             case "$(basename "$f")" in
-              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*|facepoints*|FacePoints*|checktoken*|CheckToken*|klipykey*|KlipyKey*) ;;
+              FILES.txt|*.example.gs|members*|Members*|avatars*|Avatars*|spotifykeys*|SpotifyKeys*|facepoints*|FacePoints*|checktoken*|CheckToken*|klipykey*|KlipyKey*|mailersecret*|MailerSecret*) ;;
               *) cp "$f" /tmp/push/ ;;
             esac
           done
@@ -90,6 +96,11 @@ jobs:
           echo "::add-mask::$token"
           echo "CHECK_TOKEN=$token" >> "$GITHUB_ENV"
           printf '// Private: written by the deploy job each run. Not in the repo.\nvar AD_CHECK_TOKEN = "%s";\n' "$token" > /tmp/push/CheckToken.gs
+          # Mailer secret: lets the Supabase server send sign in codes through this script.
+          # Derived from SUPABASE_DB_PASSWORD so both deploy jobs agree without another secret.
+          mailer=""
+          if [ -n "$SUPABASE_DB_PASSWORD" ]; then mailer=$(printf 'club-music-mailer|%s' "$SUPABASE_DB_PASSWORD" | sha256sum | cut -c1-64); echo "::add-mask::$mailer"; fi
+          printf '// Private: written by the deploy job from GitHub secrets. Not in the repo.\nvar AD_MAILER_SECRET = "%s";\n' "$mailer" > /tmp/push/MailerSecret.gs
           grep -q 'AD_MEMBER_EMAILS' /tmp/push/Members.gs || { echo "MEMBERS_GS doesn't look like Members.gs (no AD_MEMBER_EMAILS)."; exit 1; }
           grep -q 'AVATARS' /tmp/push/Avatars.html || { echo "AVATARS_HTML doesn't look like the Avatars file (no AVATARS)."; exit 1; }
           echo "Uploading:"; ls -1 /tmp/push
@@ -128,7 +139,7 @@ jobs:
           # Files deleted on purpose from the repo; the upload removes them from the live project too.
           retired=" Index.html "
           for f in *; do
-            case "$f" in SpotifyKeys*|CheckToken*|KlipyKey*) continue ;; esac
+            case "$f" in SpotifyKeys*|CheckToken*|KlipyKey*|MailerSecret*) continue ;; esac
             case "$retired" in *" $f "*) echo "  $f (retired, will be removed)"; continue ;; esac
             [ -e "/tmp/push/$f" ] || missing="$missing\n  $f"
           done
@@ -212,3 +223,29 @@ jobs:
             working*) echo "::notice title=GIF check::KLIPY $info" ;;
             *) echo "::error title=GIF check::KLIPY $info :: $(printf '%s' "$body" | head -c 300 | tr '\n\r' '  ')"; exit 1 ;;
           esac
+
+      # ---------- Moving to Supabase (only when run by hand with "migrate" ticked) ----------
+      # Exports everything from the sheet and Apps Script properties, loads it into the
+      # Supabase database, then compares the new server's answer with the old one.
+      # Nothing personal is printed: the export stays in a temp file and is deleted.
+      - uses: denoland/setup-deno@v2
+        if: ${{ inputs.migrate }}
+        with:
+          deno-version: v2.x
+
+      - name: Copy the data into Supabase and compare
+        if: ${{ inputs.migrate }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          db_url=$(bash .github/scripts/supabase_db_url.sh)
+          echo "::add-mask::$db_url"
+          umask 077
+          curl -sSL --max-time 300 "https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?check=export&token=$CHECK_TOKEN" > /tmp/export.json
+          python3 -c 'import json; d=json.load(open("/tmp/export.json")); print("Export:", len(d["rows"]), "weeks,", len(d["data"]["albums"]), "albums,", len(d["data"]["shared"]), "shares,", len(d["chat"]), "chat messages,", len(d["sessions"]), "sign ins")'
+          DB_URL="$db_url" deno run -A supabase/scripts/import.ts /tmp/export.json /tmp/push/Members.gs /tmp/push/Avatars.html /tmp/push/FacePoints.gs
+          CLUB_TEST=1 DB_URL="$db_url" deno run -A supabase/scripts/compare.ts /tmp/export.json
+          rm -f /tmp/export.json

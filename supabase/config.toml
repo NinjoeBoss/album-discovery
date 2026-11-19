@@ -1,0 +1,6 @@
+# Supabase CLI settings (used by the GitHub deploy job).
+project_id = "club-music"
+
+[functions.api]
+# The app sends plain POSTs without a Supabase key; the function checks the club session itself.
+verify_jwt = false

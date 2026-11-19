@@ -50,6 +50,7 @@ function adApiDispatch_(req) {
   var action = String(req.action || '');
   var args = Array.isArray(req.args) ? req.args : [];
 
+  if (action === 'mail') return adMailerSend_(req); // the Supabase server's sign in emails (Migrate.gs)
   if (action === 'members') return adApiMembers_();
   if (action === 'requestCode') return adRequestCode_(args[0]);
   if (action === 'verifyCode') return adVerifyCode_(args[0], args[1]);
