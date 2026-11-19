@@ -762,6 +762,8 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
      opens), the header stays on top, only the message list scrolls, and the box sits right on the keyboard. */
   html.chatmode, html.chatmode body { height: 100%; overflow: hidden; overscroll-behavior: none; }
   html.chatmode body { position: fixed; left: 0; right: 0; top: 0; bottom: 0; height: auto; min-height: 0; display: flex; flex-direction: column; }
+  /* home screen app: iPhone can say the page is shorter than the screen (a gap under the box), so use the real screen height */
+  html.chatmode.fullh body { bottom: auto; height: var(--apph); }
   /* only while the keyboard is up does the app follow the visible area; otherwise it's simply the whole screen
      (iPhone can report a stale, too short visible height for a moment after the keyboard goes away) */
   html.chatmode.kb body { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); }
@@ -769,7 +771,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   html.chatmode main.chatting { flex: 1 1 auto; min-height: 0; width: 100%; box-sizing: border-box; padding-top: 0; }
   html.chatmode main.chatting .chat { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; justify-content: flex-start; padding-top: 12px; }
   html.chatmode main.chatting .chat > :first-child { margin-top: auto; } /* few messages: still sit at the bottom */
-  html.chatmode .composer { position: relative; flex: none; }
+  html.chatmode .composer { position: relative; flex: none; padding-bottom: max(10px, calc(env(safe-area-inset-bottom) - 12px)); }
   /* keyboard open: no home bar gap under the box, a slimmer header (just the tabs), a shorter GIF grid */
   html.kb .composer { padding-bottom: 8px; padding-top: 8px; }
   html.kb header { padding-top: calc(6px + env(safe-area-inset-top)); }
@@ -3273,7 +3275,7 @@ function chatMode(on) {
   var root = document.documentElement, was = root.classList.contains('chatmode');
   root.classList.toggle('chatmode', on);
   if (!on) {
-    root.classList.remove('kb'); root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt');
+    root.classList.remove('kb', 'fullh'); root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt'); root.style.removeProperty('--apph');
     if (was) { var a = document.activeElement; if (a && a.id === 'chatBox') a.blur(); }
     return;
   }
@@ -3290,6 +3292,15 @@ function vvFit() {
   vvTall = Math.max(vvTall, h, document.documentElement.clientHeight || 0);
   var a = document.activeElement, typing = !!a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT');
   var stick = vvList.stick, kb = typing && h < vvTall - 120;
+  // home screen app fills the whole screen (black-translucent status bar), so its height is the screen's
+  var sh = 0;
+  if (adStandalone() && window.screen && screen.height) {
+    var portrait = window.innerHeight >= window.innerWidth;
+    sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    if (sh < window.innerHeight || sh - window.innerHeight > 150) sh = 0; // doesn't look like the quirk: leave it alone
+  }
+  root.classList.toggle('fullh', !!sh && !kb);
+  if (sh) root.style.setProperty('--apph', sh + 'px'); else root.style.removeProperty('--apph');
   root.classList.toggle('kb', kb);
   if (kb) { root.style.setProperty('--vvh', h + 'px'); root.style.setProperty('--vvt', top + 'px'); }
   else { root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt'); }
