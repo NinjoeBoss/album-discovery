@@ -59,7 +59,7 @@ jobs:
           for i in $(seq 1 60); do docker exec pg psql -U postgres -qtAc "select 1" >/dev/null 2>&1 && break; sleep 1; done
           sleep 2
           docker exec pg psql -U postgres -q -c "create role anon" -c "create role authenticated" -c "create database club"
-          docker exec -i pg psql -U postgres -d club -v ON_ERROR_STOP=1 -q < supabase/migrations/20261119000000_init.sql
+          for f in supabase/migrations/*.sql; do docker exec -i pg psql -U postgres -d club -v ON_ERROR_STOP=1 -q < "$f"; done
           CLUB_TEST=1 FORCE_IMPORT=yes DB_URL=postgres://postgres@localhost:5499/club deno test -A supabase/tests/api_test.ts
 
       - name: Database changes
@@ -76,7 +76,10 @@ jobs:
         run: |
           mailer=$(printf 'club-music-mailer|%s' "$SUPABASE_DB_PASSWORD" | sha256sum | cut -c1-64)
           echo "::add-mask::$mailer"
-          args=("MAILER_URL=https://script.google.com/macros/s/$MAILER_DEPLOYMENT_ID/exec" "MAILER_SECRET=$mailer")
+          # Lets push-reminders.yml ask for the weekly reminders (same recipe there).
+          cron=$(printf 'club-music-cron|%s' "$SUPABASE_DB_PASSWORD" | sha256sum | cut -c1-64)
+          echo "::add-mask::$cron"
+          args=("MAILER_URL=https://script.google.com/macros/s/$MAILER_DEPLOYMENT_ID/exec" "MAILER_SECRET=$mailer" "CRON_SECRET=$cron")
           for v in SPOTIFY_CLIENT_ID SPOTIFY_CLIENT_SECRET KLIPY_API_KEY; do
             val=$(printf '%s' "${!v}" | tr -d '[:space:]"\\')
             if [ -n "$val" ]; then echo "::add-mask::$val"; args+=("$v=$val"); echo "$v: set"; else echo "$v: no secret, skipped"; fi

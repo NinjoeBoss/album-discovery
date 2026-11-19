@@ -1,0 +1,31 @@
+# Phone notification reminders. The api function decides what to send from the day
+# (Pacific time) and never sends the same note twice, so an extra run is harmless:
+#   Tuesday evening:   "Still need to rate <album>" to whoever hasn't, and
+#                      "Your turn to pick" to whoever picks for Thursday and hasn't yet.
+#   Thursday morning:  "New Album Thursday: <album>".
+# Times are fixed in UTC, so they move an hour later during daylight saving time.
+name: Phone reminders
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7 2 * * 3'    # Tue 6:07 pm Pacific (7:07 pm in summer)
+    - cron: '7 17 * * 4'   # Thu 9:07 am Pacific (10:07 am in summer)
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Ask the api to send reminders
+        run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then echo "No SUPABASE_PROJECT_REF secret yet."; exit 0; fi
+          cron=$(printf 'club-music-cron|%s' "$SUPABASE_DB_PASSWORD" | sha256sum | cut -c1-64)
+          echo "::add-mask::$cron"
+          body=$(python3 -c 'import json,sys; print(json.dumps({"action":"pushCron","args":[sys.argv[1]]}))' "$cron")
+          out=$(curl -sS --max-time 60 -H 'Content-Type: text/plain' -d "$body" "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/api")
+          echo "$out"
+          echo "$out" | grep -q '"ok":true' || { echo "::error title=Reminders::The api didn't send reminders: $out"; exit 1; }
+          echo "::notice title=Reminders::$out"

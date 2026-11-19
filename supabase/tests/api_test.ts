@@ -182,6 +182,77 @@ Deno.test("sign in with a code, app key, sign out", async () => {
   assertEquals((await call("getData", [], v2.session)).me.name, "Nathan");
 });
 
+Deno.test("phone notifications: subscribe, prefs, chat, ratings, test, cron", async () => {
+  const pushed: { endpoint: string; headers: Headers }[] = [];
+  const before = globalThis.fetch;
+  globalThis.fetch = (async (input: any, init?: any) => {
+    const url = String(input?.url || input);
+    if (url.startsWith("https://fcm.googleapis.com/fcm/send/")) {
+      pushed.push({ endpoint: url, headers: new Headers(init.headers) });
+      return new Response("", { status: url.endsWith("gone") ? 410 : 201 });
+    }
+    return before(input, init);
+  }) as typeof fetch;
+  const b64u = (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const sub = async (name: string) => {
+    const kp = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+    return { endpoint: "https://fcm.googleapis.com/fcm/send/" + name, keys: { p256dh: b64u(await crypto.subtle.exportKey("raw", kp.publicKey)), auth: b64u(crypto.getRandomValues(new Uint8Array(16))) } };
+  };
+  try {
+    const key = await call("pushKey", [], "");
+    assert(/^[A-Za-z0-9_-]{87}$/.test(key), "public key");
+    assertEquals(await call("pushKey", [], ""), key);                       // made once, then kept
+    const bad = { ...(await sub("x")), endpoint: "https://evil.example/x" };
+    await assertRejects(() => call("pushSubscribe", [bad], LUKE), Error, "isn't supported");
+    await call("pushSubscribe", [await sub("luke")], LUKE);
+    await call("pushSubscribe", [await sub("luke-gone")], LUKE);
+    await call("pushSubscribe", [await sub("jon")], JON);
+    assertEquals((await call("getData", [], LUKE)).me.push, { chat: true, picks: true, ratings: true, reminders: true });
+
+    // Chat goes to everyone but the sender; a subscription the service says is gone is dropped.
+    await call("postChat", ["new one"], JON);
+    assertEquals(pushed.map((p) => p.endpoint.split("/").pop()).sort(), ["luke", "luke-gone"]);
+    assertEquals(pushed[0].headers.get("Content-Encoding"), "aes128gcm");
+    assert(String(pushed[0].headers.get("Authorization")).startsWith("vapid t="));
+    pushed.length = 0;
+    await call("postChat", ["again"], JON);
+    assertEquals(pushed.map((p) => p.endpoint.split("/").pop()), ["luke"]);
+
+    // Switching chat off stops chat notes only.
+    pushed.length = 0;
+    assertEquals((await call("pushPrefs", [{ chat: false, bogus: true }], LUKE)).chat, false);
+    await call("postChat", ["quiet"], JON);
+    assertEquals(pushed.length, 0);
+
+    // First rating notifies the others; changing it later doesn't.
+    const d = await call("getData", [], LUKE);
+    const a = d.albums.find((x: any) => x.ratings.Luke == null);
+    await call("submitRating", [a.row, "Luke", 6.5, null, null, null], LUKE);
+    assertEquals(pushed.map((p) => p.endpoint.split("/").pop()), ["jon"]);
+    pushed.length = 0;
+    await call("submitRating", [a.row, "Luke", 7, null, null, null], LUKE);
+    assertEquals(pushed.length, 0);
+
+    // Test button reaches only your own phones.
+    assertEquals(await call("pushTest", [], JON), 1);
+    assertEquals(pushed.map((p) => p.endpoint.split("/").pop()), ["jon"]);
+
+    // Scheduled reminders need the secret, and never send the same note twice.
+    await assertRejects(() => call("pushCron", ["nope"], ""), Error, "Not allowed");
+    Deno.env.set("CRON_SECRET", "z".repeat(40));
+    const r1 = await call("pushCron", ["z".repeat(40)], "");
+    assertEquals(typeof r1.today, "string");
+    const r2 = await call("pushCron", ["z".repeat(40)], "");
+    assertEquals(r2.sent, []);
+
+    // Unsubscribing removes the phone.
+    await call("pushUnsubscribe", ["https://fcm.googleapis.com/fcm/send/jon"], JON);
+    await assertRejects(() => call("pushTest", [], JON), Error, "Couldn't reach");
+  } finally {
+    globalThis.fetch = before;
+  }
+});
+
 Deno.test("songLinks, avatars, platform", async () => {
   const d = await call("getData");
   const added = d.albums[0];

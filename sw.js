@@ -1,6 +1,6 @@
 /* Club Music service worker: makes the app open fast and work offline.
  * Bump VERSION whenever index.html changes so phones pick up the new copy. */
-var VERSION = 'ad-v80';
+var VERSION = 'ad-v81';
 var SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
@@ -48,5 +48,36 @@ self.addEventListener('fetch', function (e) {
     });
   }).catch(function () {
     return caches.match(nav ? './' : req).then(function (hit) { return hit || caches.match('index.html'); });
+  }));
+});
+
+/* Phone notifications. The api function sends { title, body, tag, url }, encrypted for this phone. */
+self.addEventListener('push', function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
+  // iPhone needs every push to show something, or it stops delivering them.
+  e.waitUntil(self.registration.showNotification(d.title || 'Club Music', {
+    body: d.body || '',
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    icon: 'icons/icon-192.png',
+    badge: 'icons/badge-96.png',
+    data: { url: d.url || './' }
+  }));
+});
+
+/* Tapping a notification: bring the open app forward and go there, or open the app at that spot. */
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var url = new URL((e.notification.data && e.notification.data.url) || './', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (c.url.indexOf(self.registration.scope) === 0 && 'focus' in c) {
+        c.postMessage({ type: 'go', url: url });
+        return c.focus();
+      }
+    }
+    return self.clients.openWindow(url);
   }));
 });

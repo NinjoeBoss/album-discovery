@@ -11,6 +11,7 @@
 
 import postgres from "npm:postgres@3.4.5";
 import * as L from "./lookups.ts";
+import * as Push from "./push.ts";
 
 const TZ = "America/Los_Angeles";
 const SHARE_BASE = 100000;
@@ -339,10 +340,11 @@ async function getData(s: Session | null) {
   }));
 
   const me = s ? members.find((m) => m.name === s.member) : null;
+  const [mp] = s ? await sql`select push_prefs from club.members where name = ${s.member}` : [];
   return {
     season: seasonOf(seasons, today), currentSeason: seasonOf(seasons, today),
     seasons: seasons.map((x) => ({ name: x.name, start: x.start, count: perSeason[x.name] || 0 })),
-    me: { email: me?.email || "", name: me?.name || "", admin: !!me?.is_admin, platform: me?.platform || "" },
+    me: { email: me?.email || "", name: me?.name || "", admin: !!me?.is_admin, platform: me?.platform || "", push: pushPrefs(mp?.push_prefs) },
     members: names,
     albums,
     shared: rows.filter((r) => r.kind === "share" && r.album).map((r) => shape(r, 0)),
@@ -395,9 +397,10 @@ async function submitRating(s: Session, row: unknown, _member: unknown, score: u
     text = String(comment).trim();
     if (text.length > COMMENT_MAX) fail(`Comments can be up to ${COMMENT_MAX} characters.`);
   }
-  await locked(async (tx) => {
+  const first = await locked(async (tx) => {
     const [a] = await tx`select id from club.albums where id = ${id} and album is not null`;
     if (!a) fail("That album could not be found.");
+    const [prev] = await tx`select score from club.ratings where album_id = ${id} and member = ${s.member}`;
     await tx`
       insert into club.ratings (album_id, member, score, fav, least, comment, rated_at)
       values (${id}, ${s.member}, ${sc}, ${fav == null ? "" : String(fav)}, ${least == null ? "" : String(least)}, ${text ?? ""}, now())
@@ -407,8 +410,23 @@ async function submitRating(s: Session, row: unknown, _member: unknown, score: u
         least = case when ${least == null} then ratings.least else excluded.least end,
         comment = case when ${text == null} then ratings.comment else excluded.comment end,
         rated_at = case when ratings.score is null and ratings.rated_at is null then now() else ratings.rated_at end`;
+    return !prev || prev.score == null;
   });
+  if (first) await inBackground(ratedNote(s.member, id));
   return getData(s);
+}
+
+/** "Luke rated X · 3 of 5 have rated it" (no score, so nobody is swayed), or the group average once everyone has. */
+async function ratedNote(member: string, id: number) {
+  const [a] = await sql`select album, kind from club.albums where id = ${id}`;
+  const names = (await loadMembers()).map((m) => m.name);
+  const scores = (await sql`select member, score from club.ratings where album_id = ${id} and score is not null`).filter((r) => names.includes(r.member));
+  const all = a.kind === "pick" && scores.length === names.length;
+  const avg = scores.reduce((t, r) => t + Number(r.score), 0) / (scores.length || 1);
+  await notify("ratings", all
+    ? { title: `Everyone has rated ${a.album}`, body: `${member} was last in. Group average: ${(Math.round(avg * 100) / 100).toString()}`, tag: "rated-" + id, url: `./?go=album&row=${id}` }
+    : { title: `${member} rated ${a.album}`, body: a.kind === "pick" ? `${scores.length} of ${names.length} have rated it.` : "Heard it before share", tag: "rated-" + id, url: `./?go=album&row=${id}` },
+    { except: member });
 }
 
 /* ---------- New Album Thursday ---------- */
@@ -452,6 +470,10 @@ async function submitPick(s: Session, _member: unknown, album: unknown, artist: 
     await tx`delete from club.kv where key like ${"miss|%|" + target.id}`;
     return { row: target.id, date: target.week, season: seasonOf(seasons, target.week) };
   });
+  await inBackground(notify("picks", {
+    title: replace ? `${s.member} changed their pick` : `${s.member} picked an album`,
+    body: `${p.album} by ${p.artist}, for ${pretty(result.date)}`, tag: "album-" + result.row, url: `./?go=album&row=${result.row}`,
+  }, { except: s.member }));
   return { ...result, data: await getData(s) };
 }
 
@@ -513,8 +535,11 @@ async function submitShare(s: Session, album: unknown, artist: unknown, year: un
              on conflict (id) do update set week = excluded.week, album = excluded.album, artist = excluded.artist, year = excluded.year,
                picked_by = excluded.picked_by, cover = excluded.cover, spotify = null, apple = null, spotify_artist = null, apple_artist = null, tracks = null`;
     await tx`delete from club.kv where key like ${"miss|%|" + id}`;
-    return { album: p.album, date: pick.week };
+    return { album: p.album, date: pick.week, row: id };
   });
+  await inBackground(notify("picks", {
+    title: `${s.member} shared one they've heard before`, body: `${p.album} by ${p.artist}`, tag: "album-" + result.row, url: `./?go=album&row=${result.row}`,
+  }, { except: s.member }));
   return { ...result, data: await getData(s) };
 }
 
@@ -594,6 +619,9 @@ async function postChat(s: Session, textArg: unknown) {
   return locked(async (tx) => {
     const [r] = await tx`insert into club.chat (id, name, text) select coalesce(max(id), 0) + 1, ${s.member}, ${text} from club.chat returning id, at`;
     return { id: Number(r.id), time: new Date(r.at).getTime(), name: s.member, text };
+  }).then(async (msg) => {
+    await inBackground(notify("chat", { title: s.member, body: chatPreview(text), tag: "chat", url: "./?go=chat", urgency: "high" }, { except: s.member }));
+    return msg;
   });
 }
 
@@ -605,6 +633,123 @@ async function deleteChat(s: Session, idArg: unknown) {
   await sql`update club.chat set text = '' where id = ${id}`;   // keeps the id, so ids are never reused
   await kvSet("chat|gen", String(Date.now()));
   return true;
+}
+
+/* ---------- phone notifications ---------- */
+
+const PUSH_KINDS = ["chat", "picks", "ratings", "reminders"] as const;
+type PushKind = typeof PUSH_KINDS[number];
+const PUSH_SUBJECT = "https://clubmusic.net";
+const PUSH_PER_MEMBER = 10;
+
+/** The club's VAPID key pair: made the first time it's needed and kept in kv (never leaves the database). */
+let vapidKeys: Push.VapidKeys | null = null;
+async function vapid(): Promise<Push.VapidKeys> {
+  if (vapidKeys) return vapidKeys;
+  let v = await kvGet("vapid");
+  if (!v) {
+    await sql`insert into club.kv (key, value) values ('vapid', ${sql.json(await Push.makeVapidKeys() as any)}) on conflict do nothing`;
+    v = await kvGet("vapid");
+  }
+  return vapidKeys = v;
+}
+
+function pushPrefs(raw: any) {
+  const out: Record<PushKind, boolean> = { chat: true, picks: true, ratings: true, reminders: true };
+  for (const k of PUSH_KINDS) if (raw && typeof raw[k] === "boolean") out[k] = raw[k];
+  return out;
+}
+
+/**
+ * Sends a note to every phone whose member wants this kind, except `except`
+ * (or only to `only`). Subscriptions the push service says are gone are removed.
+ */
+async function notify(kind: PushKind | "test", note: Push.Note, opts: { except?: string; only?: string[] } = {}) {
+  const subs = await sql`select s.endpoint, s.p256dh, s.auth, s.member, m.push_prefs from club.push_subs s join club.members m on m.name = s.member`;
+  const to = subs.filter((r) => (kind === "test" || pushPrefs(r.push_prefs)[kind]) &&
+    r.member !== opts.except && (!opts.only || opts.only.includes(r.member)));
+  if (!to.length) return 0;
+  const keys = await vapid();
+  const results = await Promise.all(to.map((r) => Push.sendOne({ endpoint: r.endpoint, p256dh: r.p256dh, auth: r.auth }, note, keys, PUSH_SUBJECT)));
+  const gone = to.filter((_, i) => results[i] === "gone").map((r) => r.endpoint);
+  const ok = to.filter((_, i) => results[i] === "ok").map((r) => r.endpoint);
+  if (gone.length) await sql`delete from club.push_subs where endpoint in ${sql(gone)}`;
+  if (ok.length) await sql`update club.push_subs set last_ok = now() where endpoint in ${sql(ok)}`;
+  return ok.length;
+}
+
+/** Lets the reply go back right away while the notes go out (Supabase keeps the function running for them). */
+function inBackground(p: Promise<unknown>) {
+  const safe = p.catch((e) => console.error("notify", e));
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil && !Deno.env.get("CLUB_TEST")) { rt.waitUntil(safe); return; }
+  return safe;
+}
+
+const short = (t: string, n = 140) => t.length > n ? t.slice(0, n - 1).trimEnd() + "…" : t;
+const chatPreview = (text: string) => /^\[GIF\] https:\/\//.test(text) ? "sent a GIF" : short(text.replace(/\s+/g, " "));
+
+async function pushSubscribe(s: Session, sub: any) {
+  const endpoint = String(sub?.endpoint || ""), p256dh = String(sub?.keys?.p256dh || ""), auth = String(sub?.keys?.auth || "");
+  if (!Push.okEndpoint(endpoint)) fail("This browser's notification service isn't supported.");
+  if (!/^[A-Za-z0-9_-]{80,100}$/.test(p256dh) || !/^[A-Za-z0-9_-]{16,32}$/.test(auth)) fail("That notification subscription looks broken. Try turning notifications off and on.");
+  await sql`insert into club.push_subs (endpoint, member, session_hash, p256dh, auth) values (${endpoint}, ${s.member}, ${s.hash}, ${p256dh}, ${auth})
+            on conflict (endpoint) do update set member = excluded.member, session_hash = excluded.session_hash, p256dh = excluded.p256dh, auth = excluded.auth`;
+  await sql`delete from club.push_subs where member = ${s.member} and endpoint not in (
+              select endpoint from club.push_subs where member = ${s.member} order by created desc limit ${PUSH_PER_MEMBER})`;
+  return true;
+}
+
+async function setPushPrefs(s: Session, raw: any) {
+  const [m] = await sql`select push_prefs from club.members where name = ${s.member}`;
+  const prefs = pushPrefs(m?.push_prefs);
+  for (const k of PUSH_KINDS) if (raw && typeof raw[k] === "boolean") prefs[k] = raw[k];
+  await sql`update club.members set push_prefs = ${sql.json(prefs)} where name = ${s.member}`;
+  return prefs;
+}
+
+/** Called on a schedule by GitHub Actions (push-reminders.yml). Safe to call twice: each note goes out once. */
+async function pushCron(secretArg: unknown) {
+  const secret = Deno.env.get("CRON_SECRET") || "";
+  if (secret.length < 32 || String(secretArg || "") !== secret) fail("Not allowed.");
+  const today = todayYmd();
+  const weekday = new Date(today + "T12:00:00Z").getUTCDay();   // 4 = Thursday
+  const once = async (key: string) => (await sql`insert into club.kv (key, value, expires) values (${"pushsent|" + key}, 'true', now() + interval '30 days')
+                                               on conflict do nothing returning key`).length > 0;
+  const sent: string[] = [];
+  const members = await loadMembers();
+  const names = members.map((m) => m.name);
+  const picks = await sql`select id, to_char(week, 'YYYY-MM-DD') week, album, artist, picked_by from club.albums where kind = 'pick' order by id`;
+  const current = [...picks].reverse().find((r) => r.album && r.week <= today);
+
+  if (weekday === 4) {
+    // New Album Thursday
+    const drop = picks.find((r) => r.week === today && r.album);
+    if (drop && await once("release|" + drop.id)) {
+      await notify("picks", { title: "New Album Thursday", body: `${drop.album} by ${drop.artist}` + (drop.picked_by ? ` (${drop.picked_by}'s pick)` : ""),
+        tag: "album-" + drop.id, url: `./?go=album&row=${drop.id}`, ttl: 12 * 3600 });
+      sent.push("release");
+    }
+  } else if (current) {
+    // A nudge before the next album: whoever hasn't rated the current one yet.
+    const rated = new Set((await sql`select member from club.ratings where album_id = ${current.id} and score is not null`).map((r) => r.member));
+    const behind = names.filter((n) => !rated.has(n));
+    if (behind.length && await once(`remind|${current.id}|${today}`)) {
+      await notify("reminders", { title: `Still need to rate ${current.album}`, body: "The next album drops Thursday. Get your score in.",
+        tag: "remind-" + current.id, url: `./?go=rate&row=${current.id}`, ttl: 12 * 3600 }, { only: behind });
+      sent.push("remind:" + behind.join(","));
+    }
+    // And whoever picks for the coming Thursday, if they haven't yet.
+    const turns = turnsOf(picks, rotationOf(members));
+    const i = picks.findIndex((r) => r.week > today);
+    const next = picks[i];
+    if (next && !next.album && turns[i] && next.week <= shiftDays(today, 7) && await once(`turn|${next.id}|${today}`)) {
+      await notify("reminders", { title: "Your turn to pick", body: `Pick the album for ${pretty(next.week)}.`, tag: "turn", url: "./?go=add", ttl: 12 * 3600 }, { only: [turns[i]] });
+      sent.push("turn:" + turns[i]);
+    }
+  }
+  if (Math.random() < 0.2) await sql`delete from club.kv where key like 'pushsent|%' and expires < now()`;
+  return { today, sent };
 }
 
 /* ---------- dispatch ---------- */
@@ -622,6 +767,8 @@ async function dispatch(req: any) {
     case "verifyCode": return verifyCode(a[0], a[1]);
     case "useAppKey": return useAppKey(a[0]);
     case "ping": return (await sql`select 1 ok`)[0].ok;   // keep alive (Free plan pauses after a quiet week)
+    case "pushCron": return pushCron(a[0]);
+    case "pushKey": return (await vapid()).publicKey;
   }
 
   const s = await sessionFor(req?.session);
@@ -654,6 +801,17 @@ async function dispatch(req: any) {
     }
     case "songLinks": return songLinks(a[0], a[1], a[2]);
     case "appKey": return appKey(s);
+    case "pushSubscribe": return pushSubscribe(s, a[0]);
+    case "pushUnsubscribe":
+      await sql`delete from club.push_subs where endpoint = ${String(a[0] || "")} and member = ${s.member}`;
+      return true;
+    case "pushPrefs": return setPushPrefs(s, a[0]);
+    case "pushTest": {
+      await rateLimit("pushtest|" + s.member, 5, 600, "That's a lot of tests. Try again in a few minutes.");
+      const n = await notify("test", { title: "Notifications are on", body: "This is how Club Music will reach you.", tag: "test", url: "./" }, { only: [s.member] });
+      if (!n) fail("Couldn't reach this phone. Turn notifications off and on, then try again.");
+      return n;
+    }
     case "signOut":
       await sql`delete from club.app_keys where session_hash = ${s.hash}`;
       await sql`delete from club.sessions where token_hash = ${s.hash}`;

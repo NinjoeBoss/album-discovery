@@ -404,6 +404,19 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .chosen .fields { display: grid; gap: 12px; }
   .note { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--band); margin-top: 12px; }
   .note.warn { background: var(--wait); }
+  /* phone notifications (profile) */
+  .pushlist { background: var(--band); border-radius: 14px; padding: 2px 14px; }
+  .pushrow { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line);
+    padding: 11px 0; text-align: left; color: var(--ink); cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent; }
+  .pushrow:last-child { border-bottom: 0; }
+  .pushrow b { display: block; font-size: 14px; }
+  .pushrow small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; line-height: 1.35; }
+  .tgl { flex: none; width: 46px; height: 28px; border-radius: 14px; background: var(--line); position: relative; transition: background .2s; }
+  .tgl::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+  .tgl.on { background: var(--plum2-bg); }
+  .tgl.on::after { transform: translateX(18px); }
+  .pushfoot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; }
+  .pushmsg { margin-top: 8px; }
   .linkish { background: none; border: 0; color: var(--plum2); font-weight: 700; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; }
   .queue { list-style: none; margin: 0; padding: 0; }
   .queue li { display: grid; grid-template-columns: 74px 48px 1fr auto; gap: 12px; align-items: center; padding: 8px 6px; border-top: 1px solid var(--band); }
@@ -1038,6 +1051,136 @@ function setPlatform(p) {
   var sc = document.getElementById('scrim'), y = sc.scrollTop;
   openProfile(); sc.scrollTop = y;
 }
+
+/* ---------- phone notifications ---------- */
+
+/* Web Push: works in the home screen app on iPhone (iOS 16.4+), on Android and in desktop browsers.
+   Each phone turns it on once (the phone asks permission). Which kinds come is saved to the member's
+   account on the server, so the switches are the same on every phone they use. */
+var PUSH_KINDS = [
+  ['chat', 'Club chat', 'New messages'],
+  ['picks', 'New albums', 'Picks, shares and New Album Thursday'],
+  ['ratings', 'Ratings', 'When someone rates (scores stay hidden until everyone is in)'],
+  ['reminders', 'Reminders', 'Tuesday nudge to rate, and when it\'s your turn to pick']
+];
+var pushState = { sub: null, checked: false, busy: false, msg: '' };
+function pushSupported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && location.protocol === 'https:'; }
+function pushReg() { return navigator.serviceWorker.ready; }
+function pushPrefsNow() { return (D && D.me && D.me.push) || { chat: true, picks: true, ratings: true, reminders: true }; }
+function pushRedraw() { var box = document.getElementById('pushBox'); if (box) box.innerHTML = pushBox(); }
+function pushCheck() {
+  if (!pushSupported()) return;
+  pushReg().then(function (reg) { return reg.pushManager.getSubscription(); })
+    .then(function (sub) { pushState.sub = sub; }, function () {})
+    .then(function () { pushState.checked = true; pushRedraw(); });
+}
+function pushBox() {
+  var note = function (t) { return '<div class="t2">' + t + '</div>'; };
+  if (AD_IOS && !adStandalone()) return note('On iPhone, notifications only work in the home screen app. Add Club Music to your home screen, open it from there, and turn them on here.');
+  if (!pushSupported()) return note('This browser can\'t show notifications.');
+  if (Notification.permission === 'denied') return note(AD_IOS ? 'Notifications are blocked. Turn them on in Settings › Notifications › Club Music, then come back here.' : 'Notifications are blocked for this site. Allow them in your browser\'s site settings, then come back here.');
+  if (!pushState.checked) return note('Checking…');
+  var msg = pushState.msg ? '<div class="t2 pushmsg">' + esc(pushState.msg) + '</div>' : '';
+  if (!pushState.sub) return '<div class="t2" style="margin-bottom:10px">Get notified on this phone about chat messages, new picks, ratings and reminders. You choose which.</div>' +
+    '<button class="btn primary"' + (pushState.busy ? ' disabled' : '') + ' onclick="pushOn()">' + (pushState.busy ? 'Turning on…' : 'Turn on notifications') + '</button>' + msg;
+  var p = pushPrefsNow();
+  return '<div class="pushlist">' + PUSH_KINDS.map(function (k) {
+    return '<button class="pushrow" role="switch" aria-checked="' + !!p[k[0]] + '" onclick="pushToggle(\'' + k[0] + '\')"><span><b>' + k[1] + '</b><small>' + k[2] + '</small></span>' +
+      '<i class="tgl' + (p[k[0]] ? ' on' : '') + '"></i></button>';
+  }).join('') + '</div>' +
+    '<div class="pushfoot"><button class="linkish" onclick="pushTest()">Send a test</button><button class="linkish" onclick="pushOff()">Turn off on this phone</button></div>' + msg;
+}
+function pushKeyBytes(b64) {
+  var t = b64.replace(/-/g, '+').replace(/_/g, '/'), s = atob(t + '==='.slice((t.length + 3) % 4)), out = new Uint8Array(s.length);
+  for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+function pushSubscribe(reg) {
+  return api('pushKey').then(function (key) {
+    var opts = { userVisibleOnly: true, applicationServerKey: pushKeyBytes(key) };
+    return reg.pushManager.subscribe(opts).catch(function () {
+      // An old subscription made with another key blocks a new one: drop it and try again.
+      return reg.pushManager.getSubscription().then(function (old) { return old && old.unsubscribe(); }).then(function () { return reg.pushManager.subscribe(opts); });
+    });
+  }).then(function (sub) {
+    return api('pushSubscribe', [sub.toJSON()]).then(function () { storeSet('ad.pushSync', String(Date.now())); return sub; });
+  });
+}
+function pushOn() {
+  if (pushState.busy) return;
+  pushState.busy = true; pushState.msg = ''; pushRedraw();
+  // Asked straight from the tap: iPhone only shows the permission question then.
+  Promise.resolve(Notification.requestPermission()).then(function (perm) {
+    if (perm !== 'granted') throw new Error(perm === 'denied' ? '' : 'Notifications weren\'t allowed. Tap the button to try again.');
+    return pushReg();
+  }).then(pushSubscribe).then(function (sub) {
+    pushState.sub = sub; pushState.busy = false; pushState.msg = 'Notifications are on for this phone.'; pushRedraw();
+  }, function (e) { pushState.busy = false; pushState.msg = e.message; pushRedraw(); });
+}
+function pushToggle(k) {
+  var p = pushPrefsNow(), ch = {}, v = !p[k];
+  ch[k] = v;
+  if (D && D.me) { D.me.push = Object.assign({}, p, ch); storeSet('ad.data', JSON.stringify(D)); }
+  pushState.msg = ''; pushRedraw();
+  api('pushPrefs', [ch]).then(function (prefs) {
+    if (D && D.me) { D.me.push = prefs; storeSet('ad.data', JSON.stringify(D)); }
+    pushRedraw();
+  }, function (e) {
+    if (D && D.me && D.me.push) D.me.push[k] = !v;
+    pushState.msg = e.message; pushRedraw();
+  });
+}
+function pushTest() {
+  pushState.msg = 'Sending…'; pushRedraw();
+  api('pushTest').then(function () { pushState.msg = 'Sent. It should show up in a few seconds (check Notification Center if the app is open).'; pushRedraw(); },
+    function (e) { pushState.msg = e.message; pushRedraw(); });
+}
+function pushOff() {
+  var sub = pushState.sub; if (!sub) return;
+  api('pushUnsubscribe', [sub.endpoint]).catch(function () {});
+  Promise.resolve(sub.unsubscribe()).catch(function () {}).then(function () {
+    pushState.sub = null; pushState.msg = 'Notifications are off for this phone.'; storeDel('ad.pushSync'); pushRedraw();
+  });
+}
+/* Once a day, remind the server of this phone's subscription (phones sometimes renew it). */
+function pushSync() {
+  if (!pushSupported() || Notification.permission !== 'granted') return;
+  if (Date.now() - Number(storeGet('ad.pushSync') || 0) < 864e5) return;
+  pushReg().then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+    if (sub) return api('pushSubscribe', [sub.toJSON()]).then(function () { storeSet('ad.pushSync', String(Date.now())); });
+  }).catch(function () {});
+}
+/* Signing out: this phone stops getting the old member's notifications (the server drops them too). */
+function pushDropLocal() {
+  storeDel('ad.pushSync'); pushState.sub = null; pushState.checked = false; pushState.msg = '';
+  if (!pushSupported()) return;
+  navigator.serviceWorker.getRegistration().then(function (reg) { return reg && reg.pushManager.getSubscription(); })
+    .then(function (sub) { return sub && sub.unsubscribe(); }).catch(function () {});
+}
+
+/* Tapping a notification opens the app at ?go=chat, ?go=album&row=12, ?go=rate&row=12 or ?go=add
+   (or, if the app is already open, the service worker passes the same address along). */
+function parseGo(u) { var m = /[?&]go=([a-z]+)(?:&row=(\d+))?/.exec(u || ''); return m ? { go: m[1], row: m[2] ? Number(m[2]) : 0 } : null; }
+var pendingGo = parseGo(location.search);
+if (pendingGo) {
+  try { history.replaceState(history.state, '', location.pathname + location.search.replace(/[?&](go|row)=[^&]*/g, '').replace(/^&/, '?') + location.hash); } catch (e) {}
+}
+function runPendingGo() {
+  var g = pendingGo;
+  if (!g || !D || !storeGet('ad.session')) return;
+  if (g.go === 'album' || g.go === 'rate') {
+    if (!albumByRow(g.row)) return;            // not in this copy yet: try again after the refresh
+    if (g.go === 'rate') { closeAlbum(); goRate(g.row); } else openAlbum(g.row);
+  } else if (g.go === 'chat' || g.go === 'add') { closeAlbum(); show(g.go); }
+  pendingGo = null;
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) {
+  var d = e.data || {};
+  if (d.type !== 'go') return;
+  pendingGo = parseGo(d.url);
+  runPendingGo();
+  if (D && storeGet('ad.session')) refresh(false);
+});
 
 /* ---------- seasons ---------- */
 
@@ -2100,10 +2243,12 @@ function openProfile() {
     : '<div><b>You\'re all caught up.</b></div>';
 
   h += '<div class="section-title" style="margin-left:0">Listen on</div>' + platformSeg();
+  h += '<div class="section-title" style="margin-left:0">Notifications</div><div id="pushBox">' + pushBox() + '</div>';
   h += '<div class="section-title" style="margin-left:0">Appearance</div>' + themeSeg();
   h += '<div class="actions" style="margin-top:18px"><button class="btn ghost" onclick="signOut()">Sign out</button></div>';
   document.getElementById('modal').innerHTML = h;
   openScrim();
+  pushCheck();
 }
 
 /* ---------- remove an album ---------- */
@@ -2869,6 +3014,7 @@ function ensureAppKey() {
 }
 function signedOut() {
   storeDel('ad.appKey'); adApplyAppKey();
+  pushDropLocal();
   storeDel('ad.session'); storeDel('ad.data'); storeDel('ad.platform'); storeDel('ad.platformSync');
   storeDel('ad.chat'); clearTimeout(CHAT.timer); CHAT = { msgs: [], pending: [], last: 0, gen: '', cached: false, fresh: false, draft: '', timer: null, busy: false, seq: 0 };
   D = null; closeAlbum(); syncBack();
@@ -3202,8 +3348,9 @@ function refresh(first) {
     prep(data);
     // Same numbers as what's on screen (the usual case when the app opens from its saved copy): leave the page alone
     // rather than rebuild it, which made covers and photos blink.
-    if (!first && before && storeGet('ad.data') === before) return;
+    if (!first && before && storeGet('ad.data') === before) { runPendingGo(); return; }
     if (first || safeToRedraw()) show(view);
+    runPendingGo();
   }, function (e) {
     clearTimeout(slow); badge.classList.remove('on');
     if (!storeGet('ad.session')) return; // signed out: sign in screen is up
@@ -3247,8 +3394,9 @@ function start() {
   chatLoadCache(); chatPoll();
   var cached = null;
   try { cached = JSON.parse(storeGet('ad.data') || 'null'); } catch (e) {}
-  if (cached) { cached.today = localToday(); prep(cached); show('home'); }
+  if (cached) { cached.today = localToday(); prep(cached); show('home'); runPendingGo(); }
   refresh(!cached);
+  pushSync();
 }
 
 /* Coming back to the app after a while: pull fresh numbers. */
