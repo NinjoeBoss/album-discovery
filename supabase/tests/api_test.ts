@@ -224,6 +224,18 @@ Deno.test("phone notifications: subscribe, prefs, chat, ratings, test, cron", as
     await call("postChat", ["again"], JON);
     assertEquals(pushed.map((p) => p.endpoint.split("/").pop()), ["luke"]);
 
+    // Luke has the app open on screen: no buzz. Once it goes to the background, notes come again.
+    pushed.length = 0;
+    await call("getChat", [0, "", true], LUKE);
+    await call("postChat", ["you're here"], JON);
+    assertEquals(pushed.length, 0);
+    await call("pushTest", [], LUKE);                       // the test button still works in the app
+    assertEquals(pushed.length, 1);
+    pushed.length = 0;
+    await call("chatAway", [], LUKE);
+    await call("postChat", ["you left"], JON);
+    assertEquals(pushed.map((p) => p.endpoint.split("/").pop()), ["luke"]);
+
     // Switching chat off stops chat notes only.
     pushed.length = 0;
     assertEquals((await call("pushPrefs", [{ chat: false, bogus: true }], LUKE)).chat, false);

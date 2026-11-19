@@ -597,7 +597,9 @@ async function songLinks(row: unknown, platform: unknown, songs: unknown) {
 
 async function chatGen() { return String((await kvGet("chat|gen")) ?? "1"); }
 
-async function getChat(sinceArg: unknown, gen: unknown) {
+/** here = the app is on screen right now: no phone notifications while that's true (see notify). */
+async function getChat(s: Session, sinceArg: unknown, gen: unknown, here?: unknown) {
+  if (here === true) await sql`update club.members set active_at = now() where name = ${s.member}`;
   let since = Math.max(0, Number(sinceArg) || 0);
   const [[{ last }], g] = await Promise.all([sql`select coalesce(max(id), 0)::int last from club.chat`, chatGen()]);
   if (String(gen || "") !== g) since = 0;
@@ -668,6 +670,7 @@ const PUSH_KINDS = ["chat", "picks", "ratings", "reminders"] as const;
 type PushKind = typeof PUSH_KINDS[number];
 const PUSH_SUBJECT = "https://clubmusic.net";
 const PUSH_PER_MEMBER = 10;
+const IN_APP_SECONDS = 45;     // the open app checks chat at least every 30s while on screen
 
 /** The club's VAPID key pair: made the first time it's needed and kept in kv (never leaves the database). */
 let vapidKeys: Push.VapidKeys | null = null;
@@ -692,8 +695,12 @@ function pushPrefs(raw: any) {
  * (or only to `only`). Subscriptions the push service says are gone are removed.
  */
 async function notify(kind: PushKind | "test", note: Push.Note, opts: { except?: string; only?: string[] } = {}) {
-  const subs = await sql`select s.endpoint, s.p256dh, s.auth, s.member, m.push_prefs from club.push_subs s join club.members m on m.name = s.member`;
-  const to = subs.filter((r) => (kind === "test" || pushPrefs(r.push_prefs)[kind]) &&
+  // "here": that member has the app open on screen (checked in within IN_APP_SECONDS), so skip them.
+  // Test notes always go, since you press that button from inside the app.
+  const subs = await sql`select s.endpoint, s.p256dh, s.auth, s.member, m.push_prefs,
+                           coalesce(m.active_at > now() - make_interval(secs => ${IN_APP_SECONDS}), false) here
+                         from club.push_subs s join club.members m on m.name = s.member`;
+  const to = subs.filter((r) => (kind === "test" || (pushPrefs(r.push_prefs)[kind] && !r.here)) &&
     r.member !== opts.except && (!opts.only || opts.only.includes(r.member)));
   if (!to.length) return 0;
   const keys = await vapid();
@@ -814,7 +821,8 @@ async function dispatch(req: any) {
     case "removePick": return removePick(s, a[0], a[1]);
     case "submitShare": return submitShare(s, a[0], a[1], a[2], a[3], a[4], a[5]);
     case "removeShare": return removeShare(s, a[0]);
-    case "getChat": return getChat(a[0], a[1]);
+    case "getChat": return getChat(s, a[0], a[1], a[2]);
+    case "chatAway": await sql`update club.members set active_at = null where name = ${s.member}`; return true;
     case "chatLive": return chatLive();
     case "postChat": return postChat(s, a[0]);
     case "deleteChat": return deleteChat(s, a[0]);

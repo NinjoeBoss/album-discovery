@@ -3055,8 +3055,9 @@ function hideInstall() { storeSet('ad.installHidden', '1'); show(view); }
  * new every few seconds; elsewhere it checks every 30 seconds so the gold dot on the tab can show unread messages.
  * Only what changed is drawn, so a half typed message is never wiped. */
 var CHAT = { msgs: [], pending: [], last: 0, gen: '', cached: false, fresh: false, draft: '', timer: null, busy: false, seq: 0 };
-/* With the live socket up, polling is only a backup, so it can be lazy. */
-var CHAT_FAST = 4000, CHAT_SLOW = 30000, CHAT_LIVE_FAST = 15000, CHAT_LIVE_SLOW = 60000, CHAT_MAX = 500;
+/* With the live socket up, polling is only a backup, so it can be lazy. Every check also tells the
+ * server the app is on screen, which stops phone notifications (server allows 45s), so stay under 30s. */
+var CHAT_FAST = 4000, CHAT_SLOW = 30000, CHAT_LIVE_FAST = 15000, CHAT_LIVE_SLOW = 30000, CHAT_MAX = 500;
 
 function chatLoadCache() {
   try {
@@ -3265,7 +3266,7 @@ function chatPoll() {
     CHAT.busy = false;
     if (CHAT.again) { CHAT.again = false; chatPoll(); } else chatSchedule();
   }
-  api('getChat', [CHAT.cached || CHAT.fresh ? CHAT.last : 0, CHAT.gen], 10000).then(function (r) {
+  api('getChat', [CHAT.cached || CHAT.fresh ? CHAT.last : 0, CHAT.gen, !document.hidden], 10000).then(function (r) {
     chatTake(r); done();
   }, done);
 }
@@ -3406,9 +3407,20 @@ function chatDelete(id) {
   });
 }
 document.addEventListener('visibilitychange', function () {
-  if (document.hidden) { clearTimeout(CHAT.timer); CHAT.timer = null; liveStop(); return; }
-  if (D && storeGet('ad.session')) chatPoll();   // also reopens the live socket
+  if (document.hidden) { clearTimeout(CHAT.timer); CHAT.timer = null; liveStop(); chatAway(); return; }
+  if (D && storeGet('ad.session')) chatPoll();   // also reopens the live socket, and says we're back
 });
+window.addEventListener('pagehide', chatAway);
+/* Leaving the screen: tell the server right away so notifications start again. keepalive lets it
+ * finish after the page is put away; if it never arrives, the server stops counting us after 45s. */
+function chatAway() {
+  var sess = storeGet('ad.session');
+  if (!sess || !API_URL) return;
+  try {
+    fetch(API_URL, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'chatAway', args: [], session: sess }) }).catch(function () {});
+  } catch (e) {}
+}
 window.addEventListener('online', function () { if (D && storeGet('ad.session')) { liveStop(); chatPoll(); } });
 
 /* ---------- start up ---------- */
