@@ -243,8 +243,11 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .wwait .thumb { width: 64px; height: 64px; }
   .wwait .t1 { font-size: 17px; font-weight: 800; margin: 3px 0 2px; }
   .waiting .wkick { margin-top: 4px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
-  @media (prefers-reduced-motion: no-preference) { .wface { animation: waitPulse 2.6s ease-in-out infinite; } }
-  @keyframes waitPulse { 0%, 100% { box-shadow: 0 0 0 4px var(--card), 0 0 0 7px rgb(var(--glow) / .45); } 50% { box-shadow: 0 0 0 4px var(--card), 0 0 0 12px rgb(var(--glow) / .15); } }
+  /* breathing ring around the picker's photo: its own layer that only scales and fades, so the phone never repaints the photo */
+  .waiting .hart::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; opacity: 0;
+    box-shadow: 0 0 0 4px var(--card), 0 0 0 10px rgb(var(--glow) / .22); }
+  @media (prefers-reduced-motion: no-preference) { .waiting .hart::after { animation: waitPulse 2.6s ease-in-out infinite; } }
+  @keyframes waitPulse { 0%, 100% { opacity: 0; transform: scale(1); } 50% { opacity: 1; transform: scale(1.035); } }
   .htop { display: flex; gap: 16px; align-items: flex-start; }
   .htop > div:first-child { flex: 1; min-width: 0; }
   .bigavg { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
@@ -539,9 +542,11 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* refresh indicator: a thin gold line sweeping along the bottom edge of the header */
   .syncing { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; opacity: 0; transition: opacity .3s; pointer-events: none; font-size: 0; color: transparent; }
   .syncing.on { opacity: 1; }
-  .syncing::before { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 40%; background: linear-gradient(90deg, transparent, var(--gold), transparent); animation: syncSweep 1.1s ease-in-out infinite; }
-  @keyframes syncSweep { from { left: -40%; } to { left: 100%; } }
-  @media (prefers-reduced-motion: reduce) { .syncing::before { left: 0; width: 100%; animation: none; background: var(--gold); opacity: .6; } }
+  /* moves with transform only, so the textured header isn't repainted on every frame while it sweeps */
+  .syncing::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; background: linear-gradient(90deg, transparent, var(--gold), transparent); transform: translateX(-100%); will-change: transform; }
+  .syncing.on::before { animation: syncSweep 1.1s ease-in-out infinite; }
+  @keyframes syncSweep { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+  @media (prefers-reduced-motion: reduce) { .syncing::before, .syncing.on::before { width: 100%; transform: none; animation: none; background: var(--gold); opacity: .6; } }
 
   /* ---------- motion and graphics ---------- */
   /* vinyl record that sits behind the cover in the album popup */
@@ -579,8 +584,10 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .peek > main > * { animation: none !important; }
 
   /* sliding gold underline under the tabs */
-  .ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--gold); border-radius: 3px 3px 0 0; pointer-events: none; }
-  .ink.ready { transition: transform .38s cubic-bezier(.2,.8,.2,1), width .38s cubic-bezier(.2,.8,.2,1); }
+  /* 100px wide and stretched with scaleX, so sliding it never changes layout (width) or repaints the header */
+  .ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 100px; background: var(--gold); border-radius: 3px 3px 0 0; pointer-events: none;
+    transform-origin: 0 0; transform: scaleX(0); will-change: transform; }
+  .ink.ready { transition: transform .38s cubic-bezier(.2,.8,.2,1); }
   nav.inked button.on { border-bottom-color: transparent; }
 
   /* confetti layer */
@@ -2122,12 +2129,12 @@ function runCounts(root) {
 
 /* Slides the gold underline to the current tab. */
 var inkReady = false;
+function inkT(x, w) { return 'translate3d(' + x.toFixed(1) + 'px,0,0) scaleX(' + (w / 100).toFixed(4) + ')'; } // .ink is 100px wide
 function moveInk() {
   var nav = document.getElementById('nav'), ink = document.getElementById('ink'), b = nav && nav.querySelector('button.on');
   if (!ink || !b || !b.offsetWidth) return;
   if (!inkReady) ink.classList.remove('ready');
-  ink.style.width = b.offsetWidth + 'px';
-  ink.style.transform = 'translateX(' + b.offsetLeft + 'px)';
+  ink.style.transform = inkT(b.offsetLeft, b.offsetWidth);
   if (!inkReady) { void ink.offsetWidth; ink.classList.add('ready'); inkReady = true; }
   if (nav.scrollWidth > nav.clientWidth) {
     var left = b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2;
@@ -2287,6 +2294,7 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
     }
   }
   chatShown(v);
+  if (window.swipeWarm) swipeWarm(); // rebuild the tabs beside this one for the next swipe
 }
 /* iPhone Safari sometimes stops drawing the sticky header after the page under it changes size. Nudging a style on
    the next frame makes it draw the header again where it belongs. */
@@ -2424,23 +2432,65 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
     el.style.transition = ms ? 'transform ' + ms + 'ms ' + EASE : 'none';
     el.style.transform = x ? 'translate3d(' + x + 'px,0,0)' : '';
   }
-  /* The tab you're heading to, drawn read only beside the page (ids stripped so nothing clashes). */
+  /* The tab you're heading to, drawn read only beside the page (ids stripped so nothing clashes).
+     The tabs on either side are built ahead of time, hidden, while the phone is idle (warm), so the first frame of a
+     swipe only has to show one, not draw a whole page. Their covers and photos are loaded and laid out already too. */
+  var ready = {}, warmJob = 0;
+  function build(v) {
+    var html; try { html = VIEWS[v](); } catch (e) { return null; }
+    var el = document.createElement('div'); el.className = 'peek';
+    el.style.visibility = 'hidden'; el.style.transform = 'translate3d(' + window.innerWidth + 'px,0,0)';
+    el.innerHTML = '<main>' + html.replace(/\s(id|for|onclick|oninput|onchange)="[^"]*"/g, '') + '</main>';
+    document.body.appendChild(el);
+    return el;
+  }
+  function clearReady() { for (var k in ready) if (ready[k] !== peek) ready[k].remove(); ready = {}; }
+  function warm() {
+    warmJob = 0;
+    if (t || busy) { schedule(); return; } // mid swipe: wait until it's over
+    clearReady();
+    if (!D || calm() || SUBS[view] || nav.style.display === 'none' || !storeGet('ad.session')) return;
+    var list = tabs(), i = list.indexOf(view); if (i < 0) return;
+    [list[i - 1], list[i + 1]].forEach(function (v) { if (v) { var el = build(v); if (el) ready[v] = el; } });
+  }
+  function schedule() {
+    if (warmJob) return;
+    warmJob = window.requestIdleCallback ? { idle: requestIdleCallback(warm, { timeout: 800 }) } : { timer: setTimeout(warm, 300) };
+  }
+  window.swipeWarm = function () { // the page changed: the ready copies are out of date
+    clearReady();
+    if (warmJob) { if (warmJob.idle) cancelIdleCallback(warmJob.idle); else clearTimeout(warmJob.timer); warmJob = 0; }
+    schedule();
+  };
   function makePeek(v) {
     if (peekV === v) return;
     dropPeek();
-    var html; try { html = VIEWS[v](); } catch (e) { return; }
-    peek = document.createElement('div'); peek.className = 'peek';
-    peek.style.top = Math.max(0, document.querySelector('header').getBoundingClientRect().bottom) + 'px';
-    peek.innerHTML = '<main>' + html.replace(/\s(id|for|onclick|oninput|onchange)="[^"]*"/g, '') + '</main>';
-    document.body.appendChild(peek); peekV = v;
+    var el = ready[v] || build(v); if (!el) return;
+    el.style.top = Math.max(0, document.querySelector('header').getBoundingClientRect().bottom) + 'px';
+    el.style.visibility = '';
+    peek = el; peekV = v;
   }
-  function dropPeek() { if (peek) peek.remove(); peek = null; peekV = null; }
+  function dropPeek() {
+    if (peek) {
+      if (ready[peekV] === peek) { peek.style.visibility = 'hidden'; peek.style.transition = 'none'; peek.style.transform = 'translate3d(' + window.innerWidth + 'px,0,0)'; }
+      else peek.remove();
+    }
+    peek = null; peekV = null;
+  }
   /* Gold underline sits part way between the current tab name and the next one. */
+  /* Tab name spots are measured once when a drag starts, not on every frame (reading them right after moving
+     things forces the phone to lay the page out again mid frame). */
+  var spots = null;
+  function measure() {
+    spots = {};
+    Array.prototype.forEach.call(nav.querySelectorAll('button[data-v]'), function (b) { spots[b.dataset.v] = { x: b.offsetLeft, w: b.offsetWidth }; });
+  }
   function inkAt(from, to, f, ms) {
-    var a = btn(from), b = to ? btn(to) : a; if (!ink || !a || !b) return;
-    var x = a.offsetLeft + (b.offsetLeft - a.offsetLeft) * f, w = a.offsetWidth + (b.offsetWidth - a.offsetWidth) * f;
-    ink.style.transition = ms ? 'transform ' + ms + 'ms ' + EASE + ', width ' + ms + 'ms ' + EASE : 'none';
-    ink.style.transform = 'translateX(' + x + 'px)'; ink.style.width = w + 'px';
+    if (!spots) measure();
+    var a = spots[from], b = to ? spots[to] : a; if (!ink || !a || !b) return;
+    var x = a.x + (b.x - a.x) * f, w = a.w + (b.w - a.w) * f;
+    ink.style.transition = ms ? 'transform ' + ms + 'ms ' + EASE : 'none';
+    ink.style.transform = inkT(x, w);
   }
   function draw() {
     raf = 0; if (!t) return;
@@ -2459,7 +2509,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
     if (busy || !D || e.touches.length !== 1 || nav.style.display === 'none' || SUBS[view]) return; // Rate and Add Album don't swipe
     if (document.getElementById('scrim').classList.contains('on') || blocked(e.target)) return;
     if (Date.now() - scrolledAt < 150) return;
-    var p = e.touches[0];
+    var p = e.touches[0]; spots = null;
     t = { x0: p.clientX, y0: p.clientY, dx: 0, mode: '?', pts: [{ x: p.clientX, at: e.timeStamp }] };
   }, { passive: true });
   app.addEventListener('touchmove', function (e) {
@@ -2889,7 +2939,7 @@ function chatTake(r) {
   if (CHAT.msgs.length > 300) CHAT.msgs = CHAT.msgs.slice(-200);
   var firstAnswer = !CHAT.fresh;
   CHAT.last = r.last || 0; CHAT.gen = r.gen || ''; CHAT.fresh = true;
-  if (changed || firstAnswer) { chatSaveCache(); chatRedrawList(); }
+  if (changed || firstAnswer) { chatSaveCache(); chatRedrawList(); if (view !== 'chat' && window.swipeWarm) swipeWarm(); }
   if (view === 'chat') chatMarkSeen(); else chatDot();
 }
 
@@ -2965,14 +3015,20 @@ function safeToRedraw() { return !document.getElementById('scrim').classList.con
 /* Fresh numbers from the sheet. Redraws only pages where nobody is typing. */
 function refresh(first) {
   var badge = document.getElementById('syncing');
-  badge.classList.add('on');
+  // Supabase usually answers in well under half a second; only show the sweep when it's actually slow, so the
+  // header doesn't flash on every refresh.
+  var slow = setTimeout(function () { badge.classList.add('on'); }, 450);
   api('getData').then(function (data) {
-    if (savesPending) return; // a rating is still saving; its answer brings fresher numbers
-    badge.classList.remove('on');
+    if (savesPending) { clearTimeout(slow); return; } // a rating is still saving; its answer brings fresher numbers
+    clearTimeout(slow); badge.classList.remove('on');
+    var before = storeGet('ad.data');
     prep(data);
+    // Same numbers as what's on screen (the usual case when the app opens from its saved copy): leave the page alone
+    // rather than rebuild it, which made covers and photos blink.
+    if (!first && before && storeGet('ad.data') === before) return;
     if (first || safeToRedraw()) show(view);
   }, function (e) {
-    badge.classList.remove('on');
+    clearTimeout(slow); badge.classList.remove('on');
     if (!storeGet('ad.session')) return; // signed out: sign in screen is up
     if (!D) document.getElementById('app').innerHTML = '<div class="card">' + esc(e.message) + '<div class="actions"><button class="btn primary" onclick="refresh(true)">Try again</button></div></div>';
     else toast(e.message);
