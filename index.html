@@ -761,7 +761,10 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
      the screen you can actually see (--vvh / --vvt come from visualViewport, so they shrink when the keyboard
      opens), the header stays on top, only the message list scrolls, and the box sits right on the keyboard. */
   html.chatmode, html.chatmode body { height: 100%; overflow: hidden; overscroll-behavior: none; }
-  html.chatmode body { position: fixed; left: 0; right: 0; top: var(--vvt, 0px); height: var(--vvh, 100%); min-height: 0; display: flex; flex-direction: column; }
+  html.chatmode body { position: fixed; left: 0; right: 0; top: 0; bottom: 0; height: auto; min-height: 0; display: flex; flex-direction: column; }
+  /* only while the keyboard is up does the app follow the visible area; otherwise it's simply the whole screen
+     (iPhone can report a stale, too short visible height for a moment after the keyboard goes away) */
+  html.chatmode.kb body { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); }
   html.chatmode header { position: relative; flex: none; }
   html.chatmode main.chatting { flex: 1 1 auto; min-height: 0; width: 100%; box-sizing: border-box; padding-top: 0; }
   html.chatmode main.chatting .chat { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; justify-content: flex-start; padding-top: 12px; }
@@ -3286,10 +3289,10 @@ function vvFit() {
   if (Math.abs(w - vvWide) > 2) { vvWide = w; vvTall = 0; }
   vvTall = Math.max(vvTall, h, document.documentElement.clientHeight || 0);
   var a = document.activeElement, typing = !!a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT');
-  var stick = vvList.stick;
-  root.style.setProperty('--vvh', h + 'px');
-  root.style.setProperty('--vvt', top + 'px');
-  root.classList.toggle('kb', typing && h < vvTall - 120);
+  var stick = vvList.stick, kb = typing && h < vvTall - 120;
+  root.classList.toggle('kb', kb);
+  if (kb) { root.style.setProperty('--vvh', h + 'px'); root.style.setProperty('--vvt', top + 'px'); }
+  else { root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt'); }
   // the page itself should never scroll here; if the phone nudged it to show the box, put it back
   if (window.scrollY) window.scrollTo(0, 0);
   if (stick) { var l = document.getElementById('chatList'); if (l) l.scrollTop = l.scrollHeight; }
@@ -3299,7 +3302,13 @@ window.addEventListener('resize', vvFit);
 window.addEventListener('orientationchange', function () { setTimeout(vvFit, 300); });
 // the keyboard opens and closes a moment after focus changes; check again once it has settled
 document.addEventListener('focusin', function () { vvFit(); setTimeout(vvFit, 350); });
-document.addEventListener('focusout', function () { setTimeout(vvFit, 50); setTimeout(vvFit, 400); });
+document.addEventListener('focusout', function () { setTimeout(vvFit, 0); setTimeout(vvFit, 400); });
+/* Tapping the messages (not a link, GIF or your own bubble) puts the keyboard away. */
+document.addEventListener('click', function (e) {
+  if (!document.documentElement.classList.contains('chatmode')) return;
+  var t = e.target; if (!t.closest || !t.closest('#chatList') || t.closest('a, button, .msg-row.me .bub')) return;
+  var a = document.activeElement; if (a && (a.id === 'chatBox' || a.id === 'gifQ')) a.blur();
+});
 /* Dragging the messages down while typing puts the keyboard away, like Messages does. */
 document.addEventListener('touchstart', function (e) {
   var l = e.target.closest && e.target.closest('#chatList'); if (!l || !document.documentElement.classList.contains('kb')) return;
