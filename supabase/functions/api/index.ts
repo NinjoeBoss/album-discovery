@@ -263,15 +263,19 @@ async function fillLookups(rows: any[], budgetMs = LOOKUP_MS) {
 
 /* ---------- the club's data ---------- */
 
-/** Most picked song among the members' picks, written the way the old sheet formula wrote it. */
+/**
+ * Most picked song among the members' picks, written like the old sheet did ("Song  (2 votes)").
+ * One pick alone is shown as is; no picks or no overlap is "No agreement yet", which the app hides.
+ */
+const NO_AGREEMENT = "No agreement yet";
 function groupSong(values: string[]) {
   const v = values.filter(Boolean);
-  if (!v.length) return "";
+  if (!v.length) return NO_AGREEMENT;
   const order: string[] = [], count = new Map<string, number>();
   for (const s of v) { if (!count.has(s)) order.push(s); count.set(s, (count.get(s) || 0) + 1); }
   const m = Math.max(...count.values());
   if (m > 1) return order.find((s) => count.get(s) === m) + "  (" + m + " votes)";
-  return v.length > 1 ? "Nothing in common" : v[0];
+  return v.length > 1 ? NO_AGREEMENT : v[0];
 }
 
 /** Keeps OPEN_WEEKS_AHEAD open Thursdays ready past today (the sheet needed rows added by hand). */

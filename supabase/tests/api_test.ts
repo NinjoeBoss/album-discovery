@@ -94,7 +94,7 @@ Deno.test("getData keeps the old shape", async () => {
   const favs = NAMES.map((n) => a.fav[n]).filter(Boolean);
   const nB = favs.filter((x) => x === "Song B").length, nA = favs.filter((x) => x === "Song A").length;
   const top = Math.max(nA, nB);
-  assertEquals(a.groupFav, top > 1 ? `${favs.find((x) => favs.filter((y) => y === x).length === top)}  (${top} votes)` : favs.length > 1 ? "Nothing in common" : favs[0] || "");
+  assertEquals(a.groupFav, top > 1 ? `${favs.find((x) => favs.filter((y) => y === x).length === top)}  (${top} votes)` : favs.length === 1 ? favs[0] : "No agreement yet");
   assert(d.albums.every((x: any, i: number, all: any[]) => i === 0 || x.row > all[i - 1].row));
   const s2 = d.albums.filter((x: any) => x.season === "Season 2");
   if (s2.length) assertEquals(s2[0].number, 1);

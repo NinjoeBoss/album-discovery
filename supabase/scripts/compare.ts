@@ -16,6 +16,8 @@ const now = await getData({ member: admin, email: "", admin: true, hash: "" }) a
 const problems: string[] = [];
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const isSearch = (u: string) => !u || /\/search(\/|\?)/.test(u);
+// The sheet said either "Nothing in common" or "No agreement yet" for no overlap (or blank); the app hides both quiet ones.
+const quiet = (x: unknown) => !x || x === "No agreement yet" || x === "Nothing in common";
 const round = (x: number | null) => x == null ? null : Math.round(x * 1e6) / 1e6;
 
 for (const k of ["season", "currentSeason", "members", "rotation", "turn", "shareDays", "commentMax", "today"]) {
@@ -41,6 +43,7 @@ function check(list: "albums" | "shared") {
     if (!b) { problems.push(`${list} row ${a.row} missing`); continue; }
     for (const k of fields) {
       if ((k === "spotifyArtist" || k === "appleArtist") && !a[k]) continue;  // new server may have found one
+      if ((k === "groupFav" || k === "groupLeast") && quiet(a[k]) && quiet(b[k])) continue;
       if (!same(a[k], b[k])) problems.push(`${list} row ${a.row}: ${k} differs` +
         (k === "groupFav" || k === "groupLeast" ? ` (before ${JSON.stringify(a[k])}, now ${JSON.stringify(b[k])})` : ""));
     }
