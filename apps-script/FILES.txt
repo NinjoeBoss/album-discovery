@@ -6,7 +6,6 @@ Avatars.html
 Chat.gs
 CommentOfTheDay.gs
 Cover Art.gs
-Index.html
 Members.gs
 Shares.gs
 Tracklists.gs

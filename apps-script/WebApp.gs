@@ -1,7 +1,7 @@
 /**
  * Club Music website (server side), beta
  *
- * Reads the season tab live and serves the website in Index.html.
+ * Reads the season tab live and answers the app (see Api.gs).
  * Columns are found by their header names, so moving columns around
  * in the sheet won't break the site as long as the headers keep their names.
  *
@@ -21,17 +21,9 @@
  * Installable app: Api.gs answers the app hosted on GitHub Pages and handles
  * its sign in. Everything below works the same for both.
  *
- * Sign in (old Apps Script site): the site knows who is visiting from their Google account, so there
- * is no "Who are you?" step and nobody can save a rating as someone else.
- * Deploy settings for this to work:
- *   Execute as: User accessing the web app
- *   Who has access: Anyone with Google account
- * Each member needs edit access to the spreadsheet (they already have it) and
- * approves the permissions screen once the first time they open the site.
- *
  * Profile pictures live in their own HTML file named "Avatars" (a script that
- * sets AVATARS = { Name: 'data:image/jpeg;base64,...' }). Index pulls it in
- * with include('Avatars'), so the photos stay separate from the page code.
+ * sets AVATARS = { Name: 'data:image/jpeg;base64,...' }). Api.gs reads it and
+ * hands the photos to the app.
  *
  * Removing albums: the picker can remove their own album until someone rates
  * it; anyone in AD_ADMINS can remove any unrated album.
@@ -114,10 +106,9 @@ var AD_ADMINS = ['Jonathan'];
 var AD_APP_URL = 'https://clubmusic.net/';
 
 /**
- * The old Apps Script site was retired on Nov 5, 2026 (everyone uses the app now).
+ * The old Apps Script site was retired on Nov 5, 2026 and its Index file was
+ * deleted Nov 19 (it's in the repo's git history if ever needed).
  * Opening the /exec link shows a short page with a button to the app instead.
- * The old page is still in the Index file; to bring it back, return
- * HtmlService.createTemplateFromFile('Index').evaluate() here instead.
  */
 function doGet(e) {
   if (e && e.parameter && e.parameter.check) {
@@ -151,12 +142,6 @@ function doGet(e) {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/** Lets Index pull in another HTML file (used for the Avatars file). Missing file = no photos. */
-function include(name) {
-  adOwnerOnly_();
-  try { return HtmlService.createHtmlOutputFromFile(name).getContent(); }
-  catch (e) { return '<script>var AVATARS = {};</script>'; }
-}
 
 /** Everything the website needs, in one call. */
 function getData() {

@@ -120,13 +120,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     --ok-bg: #173a26; --ok-text: #8fe0ad; --err-bg: #44191e; --err-text: #ffb3b8; --love: #f46a9b; --shine: rgba(255,255,255,.14);
     --shadow: rgba(0,0,0,.45);
   }
-  /* theme switch in the header */
-  .theme-btn { margin-left: auto; align-self: center; width: 38px; height: 38px; border-radius: 99px; border: 0; background: rgba(255,255,255,.1); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: none; }
-  .theme-btn:hover { box-shadow: 0 0 0 2px var(--gold); }
-  .theme-btn svg { width: 20px; height: 20px; }
-  .theme-btn .moon { display: none; }
-  html[data-theme="dark"] .theme-btn .sun { display: none; }
-  html[data-theme="dark"] .theme-btn .moon { display: block; }
   html.theming, html.theming * { transition: background-color .3s ease, color .3s ease, border-color .3s ease !important; }
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Roboto, Arial, sans-serif; background: var(--canvas); color: var(--ink); }
@@ -158,7 +151,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* signed out: no tab row under the title, so give the bar its own bottom space (else the title and theme button touch the edge) */
   header.bare { padding-bottom: 14px; }
   .brand h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: .3px; }
-  .avatar { margin-left: 0; align-self: center; width: 38px; height: 38px; border-radius: 99px; border: 2px solid rgba(255,255,255,.85); font-weight: 900; font-size: 16px; color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: none; }
+  .avatar { margin-left: auto; align-self: center; width: 38px; height: 38px; border-radius: 99px; border: 2px solid rgba(255,255,255,.85); font-weight: 900; font-size: 16px; color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: none; }
   .avatar:hover { box-shadow: 0 0 0 3px var(--plum2); }
   .avatar.guest { background: var(--plum); color: #fff; }
   .avatar img, .pbig img, .mini img { width: 100%; height: 100%; border-radius: 99px; object-fit: cover; display: block; }
@@ -169,16 +162,23 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bar); color: #fff; border: 1px solid rgba(255,255,255,.12); padding: 12px 18px; border-radius: 99px; font-weight: 700; font-size: 14px; z-index: 30; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 90vw; text-align: center; }
 
-  /* season dropdown in the header */
-  header select.season-pick { width: auto; flex: none; font: inherit; font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
-    color: #fff; background: var(--plum2-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23fff'/%3E%3C/svg%3E") no-repeat right 10px center;
-    border: 0; border-radius: 99px; padding: 6px 28px 6px 12px; cursor: pointer; -webkit-appearance: none; appearance: none; }
-  header select.season-pick:hover, header select.season-pick:focus { outline: none; box-shadow: 0 0 0 2px var(--gold); }
-  header select.season-pick option { color: var(--ink); background: var(--card); text-transform: none; font-weight: 700; }
 
   /* season bar on Albums, Members, Stats */
   .sbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .sbar .t1 { font-size: 20px; font-weight: 900; }
+  .bhead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin: 26px 4px 10px; }
+  .bhead .section-title { margin: 0; }
+  .seg.sm button { padding: 5px 11px; font-size: 12px; }
+  /* Rate and Add Album open as their own page with a way back, instead of being tabs */
+  .subbar { display: flex; align-items: center; gap: 10px; margin: -4px 0 12px; }
+  .subbar .back { border: 0; background: var(--card); border: 1px solid var(--line); color: var(--plum-text); font-weight: 700; font-size: 14px; border-radius: 99px; padding: 7px 14px 7px 10px; cursor: pointer; }
+  .subbar .subt { font-size: 20px; font-weight: 900; }
+  .more { margin-top: 2px; }
+  .more summary { cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; color: var(--plum-text); padding: 8px 0 2px; border-top: 1px solid var(--band); }
+  .more summary::-webkit-details-marker { display: none; }
+  .more summary::after { content: ' ›'; }
+  .more[open] summary::after { content: ' ‹'; }
+  .turn { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
   .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 3px; gap: 2px; flex-wrap: wrap; }
   .seg button { border: 0; background: none; border-radius: 99px; padding: 7px 14px; font-weight: 700; font-size: 13px; color: var(--plum-text); cursor: pointer; }
   .seg button.on { background: var(--plum); color: #fff; }
@@ -666,7 +666,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .queue li { grid-template-columns: 54px 42px 1fr auto; gap: 10px; }
     .queue .thumb { width: 42px; height: 42px; }
     .brand h1 { font-size: 19px; }
-    .theme-btn { width: 34px; height: 34px; } .theme-btn svg { width: 18px; height: 18px; }
     /* album popup on phones: small cover beside the title, everything else full width below */
     .scrim { padding-left: 8px; padding-right: 8px; }
     .modal { padding: 14px; }
@@ -724,20 +723,12 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 <body>
 <header>
   <div class="brand"><h1>Club Music</h1>
-    <select class="season-pick" id="season" onchange="pickSeason(this.value)" aria-label="Season"><option>Season</option></select>
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" aria-label="Switch light or dark mode" title="Switch light or dark mode">
-      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
-      <svg class="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a.6.6 0 0 0-.8-.7A9.5 9.5 0 1 0 21.2 15.4a.6.6 0 0 0-.7-.8z"/></svg>
-    </button>
     <button class="avatar" id="avatar" style="display:none" onclick="openProfile()" aria-label="Your profile"></button></div>
   <nav id="nav" class="inked">
     <span class="ink" id="ink"></span>
     <button data-v="home" class="on">Home</button>
-    <button data-v="rate">Rate</button>
-    <button data-v="add">Add Album</button>
     <button data-v="albums">Albums</button>
     <button data-v="stats">Stats</button>
-    <button data-v="members">Members</button>
     <button data-v="chat" id="chatTab">Chat</button>
   </nav>
   <div class="syncing" id="syncing" role="status">Updating…</div>
@@ -813,8 +804,6 @@ function applyTheme(animate) {
   if (sc.classList.contains('on') && document.querySelector('#modal .phead')) { var y = sc.scrollTop; openProfile(); sc.scrollTop = y; }
 }
 function setTheme(t) { storeSet('ad.theme', t); applyTheme(true); refreshThemeSeg(); }
-/* header button: flips between light and dark (and stops following the phone) */
-function toggleTheme() { setTheme(isDark() ? 'light' : 'dark'); }
 function themeSeg() {
   var t = themePref();
   return '<div class="seg" id="themeSeg">' + [['auto', 'Match phone'], ['light', 'Light'], ['dark', 'Dark']].map(function (o) {
@@ -1029,7 +1018,7 @@ function seasonNames() { return (D.seasons || []).map(function (s) { return s.na
 function seasonObj(name) { return (D.seasons || []).filter(function (s) { return s.name === name; })[0] || null; }
 function isAll() { return seasonSel === 'all'; }
 function seasonLabel() { return isAll() ? 'All seasons' : seasonSel; }
-/* Albums in the season picked in the header dropdown. */
+/* Albums in the season picked with the season switch. */
 function sAlbums() { return isAll() ? D.albums : D.albums.filter(function (a) { return a.season === seasonSel; }); }
 function prevSeason(name) { var n = seasonNames(), i = n.indexOf(name); return i > 0 ? n[i - 1] : null; }
 /* "Jul 16 to Nov 5" or "Nov 12 onward". A season ends the Thursday before the next one starts. */
@@ -1054,6 +1043,7 @@ function buildRanks() {
 }
 function renderSeasonSelect() {
   var sel = document.getElementById('season');
+  if (!sel) return; // the header dropdown was removed Nov 19; the season switch lives on each page now
   var h = '';
   seasonNames().slice().reverse().forEach(function (n) {
     h += '<option value="' + esc(n) + '"' + (n === seasonSel ? ' selected' : '') + '>' + esc(n) + (n === D.currentSeason ? ' (now)' : '') + '</option>';
@@ -1068,15 +1058,19 @@ function pickSeason(v) {
   renderSeasonSelect();
   show(view);
 }
-/* Segmented buttons at the top of Albums, Members and Stats (same choice as the header dropdown). */
-function seasonBar(extra) {
-  var h = '<div class="sbar"><div><div class="eyebrow">Showing</div><div class="t1">' + esc(seasonLabel()) + '</div>' +
-    '<div class="t2">' + (isAll() ? D.albums.length + ' albums across ' + seasonNames().length + ' seasons' : esc(seasonRange(seasonSel)) + ' · ' + sAlbums().length + (sAlbums().length === 1 ? ' album' : ' albums')) +
-    (extra ? ' · ' + extra : '') + '</div></div><div class="seg">';
+/* Season 1 / Season 2 / All buttons. One choice for the whole app (Home leaderboard, Albums, Stats). */
+function seasonSeg(cls) {
+  var h = '<div class="seg' + (cls ? ' ' + cls : '') + '">';
   seasonNames().forEach(function (n) {
     h += '<button class="' + (n === seasonSel ? 'on' : '') + '" onclick="pickSeason(\'' + jsq(n) + '\')">' + esc(n) + (n === D.currentSeason ? '<span class="now">Now</span>' : '') + '</button>';
   });
-  return h + '<button class="' + (isAll() ? 'on' : '') + '" onclick="pickSeason(\'all\')">All</button></div></div>';
+  return h + '<button class="' + (isAll() ? 'on' : '') + '" onclick="pickSeason(\'all\')">All</button></div>';
+}
+/* Top of Albums and Stats: which season you're looking at, and the switch. */
+function seasonBar(extra) {
+  return '<div class="sbar"><div><div class="t1">' + esc(seasonLabel()) + '</div>' +
+    '<div class="t2">' + (isAll() ? D.albums.length + ' albums across ' + seasonNames().length + ' seasons' : esc(seasonRange(seasonSel)) + ' · ' + sAlbums().length + (sAlbums().length === 1 ? ' album' : ' albums')) +
+    (extra ? ' · ' + extra : '') + '</div></div>' + seasonSeg() + '</div>';
 }
 /* Shown when the chosen season has nothing yet. */
 function emptySeason(name) {
@@ -1206,7 +1200,8 @@ function renderHome() {
   var wait = waitingSlot();
   if (wait) {
     var prev = thisWeek();
-    return installCard() + waitingHero(wait) + nextCard() + (prev && prev.date && prev.date <= D.today ? lastWeekCard(prev) : '') + homeBoard();
+    var oweLast = prev && prev.date && prev.date <= D.today && rateState.member && prev.ratings[rateState.member] == null;
+    return installCard() + waitingHero(wait) + nextCard() + turnCard() + (oweLast ? lastWeekCard(prev) : '') + homeBoard();
   }
   var a = thisWeek();
   if (!a) return '<div class="card">No albums yet.</div>' + nextCard();
@@ -1229,12 +1224,21 @@ function renderHome() {
       (mine != null ? 'Your score: ' + num(mine) + '<span class="yours">· Edit</span>' : 'Rate it') + '</button></div>' +
     '</div></div>';
 
-  return h + shareStrip(a) + nextCard() + homeBoard();
+  return h + shareStrip(a) + nextCard() + turnCard() + homeBoard();
+}
+
+/* Home: when you're the next one to pick and haven't yet, a nudge that opens Add Album. */
+function turnCard() {
+  var m = rateState.member; if (!m || myPending(m)) return '';
+  var s = slotFor(m), first = D.slots.filter(function (x) { return x.date && x.date > D.today; })[0];
+  if (!s || !first || first.row !== s.row) return '';
+  return '<div class="card turn"><div><div class="eyebrow">You\'re up next · ' + esc(fmtDate(s.date, true)) + seasonTag(s.date) + '</div>' +
+    '<div class="t2">Nothing locked in yet.</div></div><button class="btn gold" onclick="show(\'add\')">Pick your album</button></div>';
 }
 
 /* Home leaderboard for the season picked in the header. */
 function homeBoard() {
-  var h = '<div class="section-title">' + esc(seasonLabel()) + ' leaderboard</div>';
+  var h = '<div class="bhead"><div class="section-title">Leaderboard</div>' + seasonSeg('sm') + '</div>';
   if (!ranked.length) {
     var prev = !isAll() && prevSeason(seasonSel), champ = prev && (seasonRanks[prev] || [])[0];
     h += '<div class="card empty-season"><div class="t1">No ratings in ' + esc(seasonLabel()) + ' yet</div>' +
@@ -1253,7 +1257,7 @@ function homeBoard() {
     h += '<li class="' + (live && i < 3 ? 'm' + (i + 1) : '') + '" onclick="openAlbum(' + x.row + ')" title="' + esc(x.album + ' · ' + x.artist) + '"><div class="rank">' + (live ? i + 1 : '–') + '</div>' + img(x, 'thumb') +
       '<div class="binfo"><div class="t1">' + esc(x.album) + '</div><div class="t2 bline">' + artistLink(x, 'art') + '<span class="bw dot">·</span>' + face(x.pickedBy, 'tiny') + '<span class="bw pname">' + esc(x.pickedBy) + '</span>' +
       (isAll() ? '<span class="stag">' + esc(x.season) + '</span>' : '') + '</div></div>' +
-      '<div class="score"><b>' + cnt(x.avg) + '</b><span class="stars">' + stars(x.avg) + '</span></div></li>';
+      '<div class="score"><b>' + cnt(x.avg) + '</b></div></li>';
   });
   h += '</ol>';
   if (ranked.length > BOARD_TOP) h += '<div class="board-more"><button class="linkish" onclick="boardAll=!boardAll;show(\'home\')">' +
@@ -1382,7 +1386,7 @@ function renderAdd() {
       '<div class="pending">' + img(todays, 'thumb') + '<div class="pinfo"><div class="t1">' + esc(todays.album) + '</div><div class="t2">' + esc(todays.artist) + (todays.year ? ' · ' + esc(todays.year) : '') + '</div></div></div>' +
       '<div class="pactions"><button class="btn ghost" onclick="startChange(' + todays.row + ')">Change album</button>' +
       '<button class="btn danger" onclick="confirmRemove(' + todays.row + ')">Remove</button></div>' +
-      '<div class="phint">Everyone already heard it? Swap it out. You can change or remove it until someone rates it.</div></div>';
+      '<div class="phint">Everyone already heard it? Swap it out.</div></div>';
     return h + addTail();
   }
 
@@ -1496,7 +1500,7 @@ function shareCard(pick) {
     if (canRemoveShare(mine)) {
       h += '<div class="pactions"><button class="btn ghost" onclick="startShareChange(' + mine.row + ')">Swap it</button>' +
         '<button class="btn danger" onclick="confirmRemoveShare(' + mine.row + ')">Remove</button></div>' +
-        '<div class="phint">' + (shareOut(mine) ? 'Everyone can rate it now.' : 'Everyone sees it on ' + esc(fmtDate(pick.date)) + ' next to your pick.') + ' You can swap or remove it until someone else rates it.</div>';
+        '<div class="phint">' + (shareOut(mine) ? 'Everyone can rate it now.' : 'Shows up ' + esc(fmtDate(pick.date)) + ' next to your pick.') + '</div>';
     } else h += '<div class="phint">People are rating it, so it stays.</div>';
     return h + '</div>';
   }
@@ -1644,7 +1648,7 @@ function albumCards(list) {
     var now = !soon && a === cur;
     h += '<div class="gcard ' + medalClass(a) + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
       '<div class="info">' + (now ? '<div class="nowtag">This week</div>' : '') + '<div class="t1">' + esc(a.album) + '</div><div class="t2">' + artistLink(a) + '</div>' +
-      '<div class="t2" style="margin-top:4px">' + (a.shared ? 'Shared by ' + esc(a.pickedBy) + ' · ' + (a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) : soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<span class="stars">' + stars(a.avg) + '</span> ' + fmt(a.avg)) + '</div></div></div>';
+      '<div class="t2" style="margin-top:4px">' + (a.shared ? 'Shared by ' + esc(a.pickedBy) + ' · ' + (a.avg == null ? 'Not rated yet' : '<b>' + fmt(a.avg) + '</b>') : soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<b>' + fmt(a.avg) + '</b>') + '</div></div></div>';
   });
   return h + '</div>';
 }
@@ -1679,12 +1683,13 @@ function renderAlbums() {
   return h;
 }
 
+/* Members section at the bottom of Stats. Always covers every album; the season switch doesn't apply.
+   Four numbers each, the rest behind "More". */
 function renderMembers() {
-  /* Members always covers every album; seasons don't apply here. */
   var list = D.albums;
   var due = list.filter(function (a) { return !a.date || a.date <= D.today; });
   var pairs = pairStats(list);
-  var h = '<div class="mgrid">';
+  var h = '<div class="section-title">Members · all seasons</div><div class="mgrid">';
   /* The signed in member's card comes first; everyone else keeps the usual order. */
   var me = rateState.member;
   var order = me ? [me].concat(D.members.filter(function (m) { return m !== me; })) : D.members;
@@ -1692,26 +1697,26 @@ function renderMembers() {
     var picks = list.filter(function (a) { return a.pickedBy === m; });
     var pickAvg = avgOf(picks.map(function (a) { return a.avg; }));
     var given = list.map(function (a) { return a.ratings[m]; }).filter(function (v) { return v != null; });
-    var owed = due.filter(function (a) { return a.ratings[m] == null; });
     var said = due.filter(function (a) { return a.comments[m]; }).length;
     var mine = pairs.filter(function (p) { return p.a === m || p.b === m; }).sort(function (x, y) { return x.gap - y.gap; })[0];
     var fav = list.filter(function (a) { return a.ratings[m] != null; }).sort(function (x, y) { return y.ratings[m] - x.ratings[m]; })[0];
     h += '<div class="card mcard" style="border-top:8px solid ' + color(m) + '"><h3>' + face(m, 'mini') + esc(m) + (m === rateState.member ? '<span class="you">You</span>' : '') + '</h3>' +
       kv('Picks', picks.length) +
-      kv('Heard it before shares', (D.shared || []).filter(function (a) { return a.pickedBy === m; }).length) +
-      kv('Avg score of their picks', pickAvg == null ? 'No ratings yet' : fmt(pickAvg) + ' <span class="stars">' + stars(pickAvg) + '</span>') +
+      kv('Avg score of their picks', pickAvg == null ? 'No ratings yet' : fmt(pickAvg)) +
       kv('Avg rating they give', given.length ? fmt(avgOf(given)) : 'Hasn\'t rated yet') +
-      kv('Albums rated', given.length + ' of ' + due.length) +
-      kv('Comments left', said + ' of ' + due.length) +
       kv('Favorite', fav ? esc(fav.album) + ' (' + num(fav.ratings[m]) + ')' : 'None yet') +
-      kv('Taste twin', mine ? esc(mine.a === m ? mine.b : mine.a) + ' (' + mine.gap.toFixed(1) + ' apart)' : 'Not enough shared ratings') +
-      (owed.length ? '<div class="todo muted">Still to rate: ' + owed.map(function (a) { return esc(a.album); }).join(', ') + '</div>' : '') +
-      '</div>';
+      '<details class="more"><summary>More</summary>' +
+        kv('Albums rated', given.length + ' of ' + due.length) +
+        kv('Comments left', said + ' of ' + due.length) +
+        kv('Taste twin', mine ? esc(mine.a === m ? mine.b : mine.a) + ' (' + mine.gap.toFixed(1) + ' apart)' : 'Not enough shared ratings') +
+        kv('Heard it before shares', (D.shared || []).filter(function (a) { return a.pickedBy === m; }).length) +
+      '</details></div>';
   });
   return h + '</div>';
 }
 
-function renderStats() {
+function renderStats() { return statsBody() + renderMembers(); }
+function statsBody() {
   var list = sAlbums();
   var live = isAll() || seasonSel === D.currentSeason;
   var h = seasonBar();
@@ -1892,26 +1897,16 @@ function openAlbum(row) {
     (a.shared ? '<div class="tile"><b>Alongside</b><span>' + esc((shareMain(a) || {}).album || 'That week\'s pick') + '</span></div>'
       : '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : a.avg != null ? 'Starts at ' + MIN_RANKED + ' rated' : 'Not ranked yet') + '</span></div>') + '</div></div></div>';
 
-  var loved = '';
-  if (!isQuiet(a.groupFav) || !isQuiet(a.groupLeast)) {
-    loved = '<div class="songs"><div><b>♥ Most loved</b>' + (isQuiet(a.groupFav) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupFav, a.groupFav)) + '</div>' +
-      '<div><b>✕ Most disliked</b>' + (isQuiet(a.groupLeast) ? '<span class="muted">No agreement yet</span>' : songLink(a, a.groupLeast, a.groupLeast)) + '</div></div>';
-  }
-
-  if (soon) h += loved;
-
   if (!soon) {
     h += '<div class="section-title" style="margin-left:0">Ratings</div><table class="rt">';
     D.members.forEach(function (m) {
       var v = a.ratings[m];
       var extra = '';
-      if (a.fav[m]) extra += '<div class="take"><span class="lv">♥</span> ' + songLink(a, a.fav[m]) + '</div>';
-      if (a.least[m]) extra += '<div class="take"><span class="dl">✕</span> ' + songLink(a, a.least[m]) + '</div>';
       if (a.comments[m]) extra += '<div class="take"><q>' + esc(a.comments[m]) + '</q></div>';
       h += '<tr><td class="n" style="background:' + color(m) + '"><span class="nm">' + face(m, 'tiny') + esc(m) + '</span></td><td><b>' + (v == null ? '<span class="muted">Not rated</span>' : num(v)) + '</b> <span class="stars">' + stars(v) + '</span>' +
         (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
     });
-    h += '</table>' + loved + songPicks(a) + '<div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
+    h += '</table>' + songPicks(a) + '<div class="actions"><button class="btn primary" onclick="closeAlbum();goRate(' + a.row + ')">Rate this album</button>' +
       (canRemove(a) ? '<button class="btn danger" onclick="confirmRemove(' + a.row + ')">Remove album</button>' : '') +
       (canRemoveShare(a) ? '<button class="btn danger" onclick="confirmRemoveShare(' + a.row + ')">Remove share</button>' : '') + '</div>' +
       (a.shared ? '<div class="phint">A bonus album ' + esc(a.pickedBy) + ' already knows. Rate it if you like; it doesn\'t count toward the leaderboard.</div>' : '');
@@ -1950,7 +1945,9 @@ function songPicks(a) {
   order.forEach(function (song) {
     var p = picks[song], n = tracks.indexOf(song);
     h += '<li><span class="tn">' + (n < 0 ? '' : n + 1) + '</span>' +
-      '<span class="sn">' + songLink(a, song) + (p.love.length && p.hate.length ? '<span class="tag warn">Split</span>' : '') + '</span>' +
+      '<span class="sn">' + songLink(a, song) + (p.love.length && p.hate.length ? '<span class="tag warn">Split</span>'
+        : song === songName(a.groupFav) && p.love.length > 1 ? '<span class="tag">Most loved</span>'
+        : song === songName(a.groupLeast) && p.hate.length > 1 ? '<span class="tag warn">Most disliked</span>' : '') + '</span>' +
       '<span class="pk">' + (p.love.length ? '<span class="lv">♥</span>' + faces(p.love) : '') +
       (p.hate.length ? '<span class="dl">✕</span>' + faces(p.hate) : '') + '</span></li>';
   });
@@ -1993,6 +1990,7 @@ function openProfile() {
   else if (slot) h += '<div class="next empty" style="border-radius:10px;padding:12px"><div><div class="t1">Nothing lined up yet</div><div class="t2">Your next turn is ' + esc(fmtDate(slot.date, true)) + seasonTag(slot.date) + '.</div></div>' +
     '<button class="btn gold" onclick="closeAlbum();show(\'add\')">Add album</button></div>';
   else h += '<div class="muted">No open turn for you on the sheet yet.</div>';
+  h += '<div style="margin-top:8px"><button class="linkish" onclick="closeAlbum();show(\'add\')">Pick order, bonus share and what\'s coming up ›</button></div>';
 
   h += '<div class="section-title" style="margin-left:0">Still to finish</div>';
   h += owed.length ? '<ul class="owe">' + owed.slice(0, 8).map(function (a) {
@@ -2064,11 +2062,11 @@ document.getElementById('scrim').addEventListener('click', function (e) { if (e.
 
 /* ---------- phone back button ----------
  * Android's back button (and back gestures) walks browser history. The app keeps
- * up to two history entries of its own: one while you're on a tab other than Home,
- * one more while a popup is open. So back closes the popup, then returns to Home,
+ * up to three history entries of its own: one while you're on a tab other than Home,
+ * one more while Rate or Add Album is open over a tab other than Home, and one more while a popup is open. So back closes the popup, then returns to Home,
  * and only leaves the app from Home. */
 var popupOpen = false, backTimer = null, backWaiting = false;
-function backWanted() { return (D && view !== 'home' ? 1 : 0) + (popupOpen ? 1 : 0); }
+function backWanted() { return (D && view !== 'home' ? 1 : 0) + (D && SUBS[view] && subFrom !== 'home' ? 1 : 0) + (popupOpen ? 1 : 0); }
 function backHave() { var st = history.state; return st && st.adLvl ? st.adLvl : 0; }
 /* Called after anything that changes the tab or opens/closes a popup. Batched, so
  * "close popup then switch tab" in one tap settles to one history change. */
@@ -2087,6 +2085,7 @@ function syncBack() {
 window.addEventListener('popstate', function () {
   if (backWaiting) { backWaiting = false; syncBack(); return; } // our own cleanup, not the user
   if (popupOpen) closeAlbum();
+  else if (D && SUBS[view]) show(subFrom);
   else if (D && view !== 'home') show('home');
   syncBack();
 });
@@ -2242,18 +2241,27 @@ function pairStats(list) {
 /* ---------- actions ---------- */
 
 var shownView = null;
+/* Rate and Add Album aren't tabs: they open over the tab you came from, with a Back button (and the phone's back). */
+var SUBS = { rate: 'Rate', add: 'Your pick' }, subFrom = 'home';
+var TAB_NAMES = { home: 'Home', albums: 'Albums', stats: 'Stats', chat: 'Chat' };
+function subBar(v) {
+  return '<div class="subbar"><button class="back" onclick="subBack()">‹ ' + esc(TAB_NAMES[subFrom] || 'Back') + '</button><div class="subt">' + SUBS[v] + '</div></div>';
+}
+function subBack() { show(subFrom); }
 function show(v, quiet) { // quiet: a swipe already slid the page in, so skip the entrance animations
+  if (!SUBS[v] && !TAB_NAMES[v]) v = 'home';
+  if (SUBS[v] && !SUBS[view]) subFrom = TAB_NAMES[view] ? view : 'home';
   var entering = v !== shownView;
   view = v; shownView = v;
-  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
-  document.getElementById('season').style.visibility = v === 'members' ? 'hidden' : ''; // Members ignores seasons
+  var tab = SUBS[v] ? subFrom : v;
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.dataset.v === tab); });
   var app = document.getElementById('app');
   app.classList.remove('enter');
   // Go to the top before the new tab goes in. Swapping a long page for a short one while scrolled down makes the
   // page shrink under the scroll, and iPhone Safari can then lose the sticky header (title, tabs, profile picture)
   // until the next touch.
   if (entering) window.scrollTo(0, 0);
-  app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats, chat: renderChat }[v]();
+  app.innerHTML = (SUBS[v] ? subBar(v) : '') + { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, stats: renderStats, chat: renderChat }[v]();
   app.classList.toggle('chatting', v === 'chat');
   moveInk();
   syncBack();
@@ -2388,7 +2396,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
    Ignored on the score slider, a text box you're typing in, sideways scrolling strips, while a popup is open, and when signed out. */
 (function () {
   var app = document.getElementById('app'), nav = document.getElementById('nav'), ink = document.getElementById('ink');
-  var VIEWS = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats, chat: renderChat };
+  var VIEWS = { home: renderHome, albums: renderAlbums, stats: renderStats, chat: renderChat };
   var EASE = 'cubic-bezier(.22,.61,.36,1)';
   var t = null, busy = false, peek = null, peekV = null, raf = 0, scrolledAt = 0;
   // A touch while the page is still gliding from a flick is meant to stop the scroll, not start a swipe.
@@ -2439,7 +2447,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
   function finish(cb, ms) { setTimeout(function () { cb(); busy = false; }, ms + 20); }
   app.addEventListener('touchstart', function (e) {
     t = null;
-    if (busy || !D || e.touches.length !== 1 || nav.style.display === 'none') return;
+    if (busy || !D || e.touches.length !== 1 || nav.style.display === 'none' || SUBS[view]) return; // Rate and Add Album don't swipe
     if (document.getElementById('scrim').classList.contains('on') || blocked(e.target)) return;
     if (Date.now() - scrolledAt < 150) return;
     var p = e.touches[0];
@@ -2546,7 +2554,6 @@ var signState = { members: null, name: null, hint: '', busy: false, err: '' };
 
 function chrome(on) {
   document.getElementById('nav').style.display = on ? '' : 'none';
-  document.getElementById('season').style.display = on ? '' : 'none';
   document.querySelector('header').classList.toggle('bare', !on);
   if (!on) document.getElementById('avatar').style.display = 'none';
 }
@@ -2944,7 +2951,7 @@ document.addEventListener('visibilitychange', function () {
 /* ---------- start up ---------- */
 
 function localToday() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
-function safeToRedraw() { return !document.getElementById('scrim').classList.contains('on') && ['home', 'albums', 'members', 'stats'].indexOf(view) >= 0; }
+function safeToRedraw() { return !document.getElementById('scrim').classList.contains('on') && ['home', 'albums', 'stats'].indexOf(view) >= 0; }
 
 /* Fresh numbers from the sheet. Redraws only pages where nobody is typing. */
 function refresh(first) {

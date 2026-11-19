@@ -125,8 +125,11 @@ jobs:
           printf '{"scriptId":"%s","rootDir":".","fileExtension":"gs","scriptExtensions":[".gs"],"htmlExtensions":[".html"],"jsonExtensions":[".json"]}' "$SCRIPT_ID" > .clasp.json
           clasp pull > /dev/null
           missing=""
+          # Files deleted on purpose from the repo; the upload removes them from the live project too.
+          retired=" Index.html "
           for f in *; do
             case "$f" in SpotifyKeys*|CheckToken*|KlipyKey*) continue ;; esac
+            case "$retired" in *" $f "*) echo "  $f (retired, will be removed)"; continue ;; esac
             [ -e "/tmp/push/$f" ] || missing="$missing\n  $f"
           done
           if [ -n "$missing" ]; then
