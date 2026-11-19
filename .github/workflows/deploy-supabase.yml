@@ -47,8 +47,10 @@ jobs:
       - name: Test the API against a throwaway Postgres
         run: |
           docker run -d --name pg -e POSTGRES_HOST_AUTH_METHOD=trust -p 5499:5432 postgres:17 >/dev/null
-          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
-          docker exec pg psql -U postgres -qc "create role anon; create role authenticated; create database club"
+          # Wait until it answers real queries (the image restarts once during first start up).
+          for i in $(seq 1 60); do docker exec pg psql -U postgres -qtAc "select 1" >/dev/null 2>&1 && break; sleep 1; done
+          sleep 2
+          docker exec pg psql -U postgres -q -c "create role anon" -c "create role authenticated" -c "create database club"
           docker exec -i pg psql -U postgres -d club -v ON_ERROR_STOP=1 -q < supabase/migrations/20261119000000_init.sql
           CLUB_TEST=1 FORCE_IMPORT=yes DB_URL=postgres://postgres@localhost:5499/club deno test -A supabase/tests/api_test.ts
 
