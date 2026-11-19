@@ -41,7 +41,8 @@ function check(list: "albums" | "shared") {
     if (!b) { problems.push(`${list} row ${a.row} missing`); continue; }
     for (const k of fields) {
       if ((k === "spotifyArtist" || k === "appleArtist") && !a[k]) continue;  // new server may have found one
-      if (!same(a[k], b[k])) problems.push(`${list} row ${a.row}: ${k} differs`);
+      if (!same(a[k], b[k])) problems.push(`${list} row ${a.row}: ${k} differs` +
+        (k === "groupFav" || k === "groupLeast" ? ` (before ${JSON.stringify(a[k])}, now ${JSON.stringify(b[k])})` : ""));
     }
     if (round(a.avg) !== round(b.avg)) problems.push(`${list} row ${a.row}: avg differs`);
     for (const p of ["spotify", "apple"]) if (!isSearch(a[p]) && a[p] !== b[p]) problems.push(`${list} row ${a.row}: ${p} link differs`);
