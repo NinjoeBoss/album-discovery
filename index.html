@@ -762,8 +762,8 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
      opens), the header stays on top, only the message list scrolls, and the box sits right on the keyboard. */
   html.chatmode, html.chatmode body { height: 100%; overflow: hidden; overscroll-behavior: none; }
   html.chatmode body { position: fixed; left: 0; right: 0; top: 0; bottom: 0; height: auto; min-height: 0; display: flex; flex-direction: column; }
-  /* home screen app: iPhone can say the page is shorter than the screen (a gap under the box), so use the real screen height */
-  html.chatmode.fullh body { bottom: auto; height: var(--apph); }
+  /* home screen app where iPhone already keeps the bottom strip (home bar) outside the page: no extra spacing for it */
+  html.chatmode.nobar .composer { padding-bottom: 10px; }
   /* only while the keyboard is up does the app follow the visible area; otherwise it's simply the whole screen
      (iPhone can report a stale, too short visible height for a moment after the keyboard goes away) */
   html.chatmode.kb body { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); }
@@ -3275,7 +3275,7 @@ function chatMode(on) {
   var root = document.documentElement, was = root.classList.contains('chatmode');
   root.classList.toggle('chatmode', on);
   if (!on) {
-    root.classList.remove('kb', 'fullh'); root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt'); root.style.removeProperty('--apph');
+    root.classList.remove('kb', 'nobar'); root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt');
     if (was) { var a = document.activeElement; if (a && a.id === 'chatBox') a.blur(); }
     return;
   }
@@ -3292,15 +3292,15 @@ function vvFit() {
   vvTall = Math.max(vvTall, h, document.documentElement.clientHeight || 0);
   var a = document.activeElement, typing = !!a && (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT');
   var stick = vvList.stick, kb = typing && h < vvTall - 120;
-  // home screen app fills the whole screen (black-translucent status bar), so its height is the screen's
-  var sh = 0;
+  // Home screen app: if the page already stops short of the bottom of the screen, iPhone has kept the home bar
+  // strip for itself (it can't be drawn on), so the home bar spacing under the box would just be extra gap.
+  var nobar = false;
   if (adStandalone() && window.screen && screen.height) {
     var portrait = window.innerHeight >= window.innerWidth;
-    sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-    if (sh < window.innerHeight || sh - window.innerHeight > 150) sh = 0; // doesn't look like the quirk: leave it alone
+    var sh = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    nobar = sh - Math.max(window.innerHeight, document.documentElement.clientHeight || 0) >= 20;
   }
-  root.classList.toggle('fullh', !!sh && !kb);
-  if (sh) root.style.setProperty('--apph', sh + 'px'); else root.style.removeProperty('--apph');
+  root.classList.toggle('nobar', nobar);
   root.classList.toggle('kb', kb);
   if (kb) { root.style.setProperty('--vvh', h + 'px'); root.style.setProperty('--vvt', top + 'px'); }
   else { root.style.removeProperty('--vvh'); root.style.removeProperty('--vvt'); }
