@@ -67,6 +67,9 @@ function adApiDispatch_(req) {
     case 'removePick': return removePick(args[0], args[1]);
     case 'submitShare': return submitShare(args[0], args[1], args[2], args[3], args[4], args[5]);
     case 'removeShare': return removeShare(args[0]);
+    case 'getChat': return getChat(args[0], args[1]);
+    case 'postChat': return postChat(args[0]);
+    case 'deleteChat': return deleteChat(args[0]);
     case 'avatars': return adAvatars_();
     case 'faces': return typeof AD_FACE_POINTS === 'undefined' ? {} : AD_FACE_POINTS; // FacePoints.gs, written by the deploy job
     case 'setPlatform': return setPlatform(args[0]);

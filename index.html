@@ -678,6 +678,33 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .mbody .tile { flex: 1 1 auto; }
     .mbody .listen .btn { flex: 1; text-align: center; }
   }
+
+  /* ---------- club chat ---------- */
+  .chat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 8px; }
+  .chat .day { align-self: center; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
+  .chat .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 86%; }
+  .chat .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
+  .chat .msg-row .mini { margin-right: 0; width: 28px; height: 28px; font-size: 12px; }
+  .chat .msg-row .gap { width: 28px; flex: none; }
+  .chat .msg-row.first { margin-top: 8px; }
+  .chat .bub { background: var(--card); color: var(--ink); border-radius: 18px; padding: 8px 12px; box-shadow: 0 1px 2px var(--shadow); font-size: 15px; line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+  .chat .msg-row.me .bub { background: var(--plum2-bg); color: #fff; }
+  .chat .msg-row.me .bub a { color: #fff; }
+  .chat .bub a { color: var(--plum2); font-weight: 500; }
+  .chat .who2 { font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 0 2px 2px; }
+  .chat .when { font-size: 11px; color: var(--muted); margin: 0 4px 4px; white-space: nowrap; flex: none; }
+  .chat .pending .bub { opacity: .6; }
+  .chat .failed .bub { box-shadow: 0 0 0 2px var(--err-text); }
+  .chat .del { display: none; border: 0; background: none; color: var(--err-text); font-size: 12px; font-weight: 700; cursor: pointer; padding: 0 4px 6px; flex: none; }
+  .chat .msg-row.sel .del { display: inline-block; }
+  .chat .msg-row.me .bub { cursor: pointer; }
+  .chat-empty { text-align: center; padding: 30px 10px; }
+  .composer { position: sticky; bottom: 0; z-index: 5; display: flex; gap: 8px; align-items: flex-end; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--canvas); }
+  .composer textarea { flex: 1; min-height: 42px; max-height: 140px; resize: none; border-radius: 21px; padding: 10px 14px; font-size: 16px; margin: 0; }
+  .composer .btn { height: 42px; padding: 0 18px; flex: none; }
+  main.chatting { padding-bottom: 0; display: flex; flex-direction: column; }
+  main.chatting .chat { flex: 1; justify-content: flex-end; }
+  nav button .dot { display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--gold); margin-left: 5px; vertical-align: 2px; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -697,6 +724,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     <button data-v="albums">Albums</button>
     <button data-v="stats">Stats</button>
     <button data-v="members">Members</button>
+    <button data-v="chat" id="chatTab">Chat</button>
   </nav>
   <div class="syncing" id="syncing" role="status">Updating…</div>
 </header>
@@ -2211,7 +2239,8 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
   // page shrink under the scroll, and iPhone Safari can then lose the sticky header (title, tabs, profile picture)
   // until the next touch.
   if (entering) window.scrollTo(0, 0);
-  app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats }[v]();
+  app.innerHTML = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats, chat: renderChat }[v]();
+  app.classList.toggle('chatting', v === 'chat');
   moveInk();
   syncBack();
   if (v === 'home') heroGlow();
@@ -2226,6 +2255,7 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
       runCounts(app);
     }
   }
+  chatShown(v);
 }
 /* iPhone Safari sometimes stops drawing the sticky header after the page under it changes size. Nudging a style on
    the next frame makes it draw the header again where it belongs. */
@@ -2344,7 +2374,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
    Ignored on the score slider, a text box you're typing in, sideways scrolling strips, while a popup is open, and when signed out. */
 (function () {
   var app = document.getElementById('app'), nav = document.getElementById('nav'), ink = document.getElementById('ink');
-  var VIEWS = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats };
+  var VIEWS = { home: renderHome, rate: renderRate, add: renderAdd, albums: renderAlbums, members: renderMembers, stats: renderStats, chat: renderChat };
   var EASE = 'cubic-bezier(.22,.61,.36,1)';
   var t = null, busy = false, peek = null, peekV = null, raf = 0, scrolledAt = 0;
   // A touch while the page is still gliding from a flick is meant to stop the scroll, not start a swipe.
@@ -2583,6 +2613,7 @@ function ensureAppKey() {
 function signedOut() {
   storeDel('ad.appKey'); adApplyAppKey();
   storeDel('ad.session'); storeDel('ad.data'); storeDel('ad.platform'); storeDel('ad.platformSync');
+  storeDel('ad.chat'); clearTimeout(CHAT.timer); CHAT = { msgs: [], pending: [], last: 0, gen: '', cached: false, fresh: false, draft: '', timer: null, busy: false, seq: 0 };
   D = null; closeAlbum(); syncBack();
   signState = { members: null, name: null, hint: '', busy: false, err: '' };
   loadMembers();
@@ -2607,6 +2638,202 @@ function installCard() {
 }
 function installApp() { if (!deferredInstall) return; deferredInstall.prompt(); deferredInstall.userChoice.then(function () { deferredInstall = null; show(view); }); }
 function hideInstall() { storeSet('ad.installHidden', '1'); show(view); }
+
+/* ---------- club chat ----------
+ * One group chat. Messages come from the Chat tab on the sheet. While the Chat tab is open the app asks for anything
+ * new every few seconds; elsewhere it checks every 30 seconds so the gold dot on the tab can show unread messages.
+ * Only what changed is drawn, so a half typed message is never wiped. */
+var CHAT = { msgs: [], pending: [], last: 0, gen: '', cached: false, fresh: false, draft: '', timer: null, busy: false, seq: 0 };
+var CHAT_FAST = 4000, CHAT_SLOW = 30000, CHAT_MAX = 500;
+
+function chatLoadCache() {
+  try {
+    var c = JSON.parse(storeGet('ad.chat') || 'null');
+    if (c && Array.isArray(c.msgs)) { CHAT.msgs = c.msgs; CHAT.last = c.last || 0; CHAT.gen = c.gen || ''; CHAT.cached = true; }
+  } catch (e) {}
+}
+function chatSaveCache() { storeSet('ad.chat', JSON.stringify({ msgs: CHAT.msgs.slice(-200), last: CHAT.last, gen: CHAT.gen })); }
+function chatMe() { return D && D.me ? D.me.name : ''; }
+function chatSeen() { return Number(storeGet('ad.chatSeen') || 0); }
+function chatUnread() {
+  var seen = chatSeen(), me = chatMe();
+  return !!me && CHAT.msgs.some(function (m) { return m.id > seen && m.name !== me; });
+}
+function chatMarkSeen() { if (CHAT.last > chatSeen()) storeSet('ad.chatSeen', String(CHAT.last)); chatDot(); }
+function chatDot() {
+  var b = document.getElementById('chatTab'); if (!b) return;
+  var on = view !== 'chat' && chatUnread(), has = !!b.querySelector('.dot');
+  if (on === has) return;
+  b.innerHTML = 'Chat' + (on ? '<span class="dot" aria-label="new messages"></span>' : '');
+  if (typeof moveInk === 'function') moveInk();
+}
+
+function chatDayKey(t) { var d = new Date(t); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+function chatDayLabel(t) {
+  var d = new Date(t), now = new Date(), y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (chatDayKey(t) === chatDayKey(now)) return 'Today';
+  if (chatDayKey(t) === chatDayKey(y)) return 'Yesterday';
+  var o = { weekday: 'short', month: 'short', day: 'numeric' };
+  if (d.getFullYear() !== now.getFullYear()) o.year = 'numeric';
+  return d.toLocaleDateString('en-US', o);
+}
+function chatTime(t) { return new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); }
+/* Escapes the text and turns web addresses (Spotify, Apple Music, YouTube...) into links. */
+function chatLinkify(text) {
+  var re = /https?:\/\/[^\s<>"']+/g, out = '', i = 0, m;
+  while ((m = re.exec(text))) {
+    var u = m[0].replace(/[.,;:!?)\]]+$/, '');
+    out += esc(text.slice(i, m.index)) + '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + '</a>';
+    i = m.index + u.length; re.lastIndex = i;
+  }
+  return out + esc(text.slice(i));
+}
+
+function chatListHtml() {
+  var me = chatMe(), all = CHAT.msgs.concat(CHAT.pending), h = '';
+  if (!all.length) {
+    return '<div class="card chat-empty">' + (CHAT.fresh || CHAT.cached
+      ? '<div class="t1">No messages yet</div><div class="t2" style="margin-top:4px">Start the conversation about this week\'s album.</div>'
+      : '<div class="loading">Loading the chat…</div>') + '</div>';
+  }
+  var GAP = 5 * 60000;
+  all.forEach(function (m, i) {
+    var prev = all[i - 1], next = all[i + 1];
+    var newDay = !prev || chatDayKey(prev.time) !== chatDayKey(m.time);
+    if (newDay) h += '<div class="day">' + esc(chatDayLabel(m.time)) + '</div>';
+    var first = newDay || prev.name !== m.name || m.time - prev.time > GAP;
+    var last = !next || next.name !== m.name || next.time - m.time > GAP || chatDayKey(next.time) !== chatDayKey(m.time);
+    var mine = m.name === me;
+    var cls = 'msg-row' + (mine ? ' me' : '') + (first ? ' first' : '') + (m.pending ? ' pending' : '') + (m.failed ? ' failed' : '');
+    var tap = m.failed ? ' onclick="chatRetry(' + m.tmp + ')"' : (mine && m.id ? ' onclick="chatPick(this)"' : '');
+    h += '<div class="' + cls + '"' + (m.id ? ' data-id="' + m.id + '"' : '') + '>';
+    if (!mine) h += last ? face(m.name, 'mini') : '<span class="gap"></span>';
+    h += '<div style="min-width:0">' + (!mine && first ? '<div class="who2">' + esc(m.name) + '</div>' : '') +
+      '<div class="bub"' + tap + '>' + chatLinkify(m.text) + '</div></div>';
+    if (m.failed) h += '<span class="when" style="color:var(--err-text)">Didn\'t send · tap to retry</span>';
+    else if (m.pending) h += last ? '<span class="when">Sending…</span>' : '';
+    else if (last) h += '<span class="when">' + esc(chatTime(m.time)) + '</span>';
+    if (mine && m.id) h += '<button class="del" onclick="chatDelete(' + m.id + ')">Delete</button>';
+    h += '</div>';
+  });
+  return h;
+}
+
+function renderChat() {
+  return '<div class="chat" id="chatList">' + chatListHtml() + '</div>' +
+    '<div class="composer"><textarea id="chatBox" rows="1" maxlength="' + CHAT_MAX + '" placeholder="Message the club" aria-label="Message the club"' +
+    ' oninput="chatTyped(this)" onkeydown="chatKey(event)">' + esc(CHAT.draft) + '</textarea>' +
+    '<button class="btn primary" onclick="chatSend()">Send</button></div>';
+}
+
+function chatNearBottom() { var el = document.documentElement; return window.innerHeight + window.scrollY >= el.scrollHeight - 160; }
+function chatToBottom() { requestAnimationFrame(function () { window.scrollTo(0, document.documentElement.scrollHeight); }); }
+function chatRedrawList(forceBottom) {
+  var list = view === 'chat' && document.getElementById('chatList'); if (!list) return;
+  var stick = forceBottom || chatNearBottom();
+  list.innerHTML = chatListHtml();
+  if (stick) chatToBottom();
+}
+/* Called at the end of every show(). */
+function chatShown(v) {
+  if (v === 'chat') {
+    var box = document.getElementById('chatBox'); if (box && CHAT.draft) chatTyped(box);
+    chatToBottom(); chatMarkSeen();
+    chatPoll();
+  } else {
+    chatDot(); chatSchedule();
+  }
+}
+
+function chatSchedule() {
+  clearTimeout(CHAT.timer); CHAT.timer = null;
+  if (!storeGet('ad.session') || document.hidden) return;
+  CHAT.timer = setTimeout(chatPoll, view === 'chat' ? CHAT_FAST : CHAT_SLOW);
+}
+function chatPoll() {
+  clearTimeout(CHAT.timer); CHAT.timer = null;
+  if (!storeGet('ad.session')) return;
+  if (CHAT.busy) return;
+  CHAT.busy = true;
+  api('getChat', [CHAT.cached || CHAT.fresh ? CHAT.last : 0, CHAT.gen]).then(function (r) {
+    CHAT.busy = false; chatTake(r); chatSchedule();
+  }, function () { CHAT.busy = false; chatSchedule(); });
+}
+function chatTake(r) {
+  var changed = false;
+  if (r.full) { CHAT.msgs = r.messages || []; changed = true; }
+  else if (r.messages && r.messages.length) {
+    var have = {}; CHAT.msgs.forEach(function (m) { have[m.id] = 1; });
+    r.messages.forEach(function (m) { if (!have[m.id]) { CHAT.msgs.push(m); changed = true; } });
+  }
+  if (changed) CHAT.msgs.sort(function (a, b) { return a.id - b.id; });
+  if (CHAT.msgs.length > 300) CHAT.msgs = CHAT.msgs.slice(-200);
+  var firstAnswer = !CHAT.fresh;
+  CHAT.last = r.last || 0; CHAT.gen = r.gen || ''; CHAT.fresh = true;
+  if (changed || firstAnswer) { chatSaveCache(); chatRedrawList(); }
+  if (view === 'chat') chatMarkSeen(); else chatDot();
+}
+
+function chatTyped(el) {
+  CHAT.draft = el.value;
+  el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight + 2, 140) + 'px';
+}
+/* Enter sends on a computer (Shift+Enter for a new line). On a phone, return makes a new line and Send sends. */
+function chatKey(e) {
+  if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+  if (window.matchMedia && matchMedia('(pointer: coarse)').matches) return;
+  e.preventDefault(); chatSend();
+}
+function chatSend() {
+  var box = document.getElementById('chatBox');
+  var text = String(box ? box.value : CHAT.draft).trim();
+  if (!text) return;
+  if (text.length > CHAT_MAX) { toast('Keep messages under ' + CHAT_MAX + ' characters.'); return; }
+  var p = { tmp: ++CHAT.seq, id: 0, time: Date.now(), name: chatMe(), text: text, pending: true };
+  CHAT.pending.push(p);
+  CHAT.draft = '';
+  if (box) { box.value = ''; box.style.height = ''; box.focus(); }
+  chatRedrawList(true);
+  chatPost(p);
+}
+function chatPost(p) {
+  p.pending = true; p.failed = false;
+  api('postChat', [p.text]).then(function (m) {
+    CHAT.pending = CHAT.pending.filter(function (x) { return x !== p; });
+    if (!CHAT.msgs.some(function (x) { return x.id === m.id; })) CHAT.msgs.push(m);
+    CHAT.msgs.sort(function (a, b) { return a.id - b.id; });
+    chatSaveCache(); chatRedrawList(true);
+    chatPoll(); // picks up anything someone else said at the same moment
+  }, function (e) {
+    p.pending = false; p.failed = true;
+    chatRedrawList();
+    toast('That message didn\'t send: ' + (e.message || 'something went wrong'));
+  });
+}
+function chatRetry(tmp) {
+  var p = CHAT.pending.filter(function (x) { return x.tmp === tmp; })[0];
+  if (!p || p.pending) return;
+  chatRedrawList(); chatPost(p); chatRedrawList();
+}
+/* Tap your own message to show its Delete button; tap again to hide it. */
+function chatPick(bub) {
+  var row = bub.closest('.msg-row'), was = row.classList.contains('sel');
+  Array.prototype.forEach.call(document.querySelectorAll('.chat .msg-row.sel'), function (r) { r.classList.remove('sel'); });
+  if (!was) row.classList.add('sel');
+}
+function chatDelete(id) {
+  var keep = CHAT.msgs.slice();
+  CHAT.msgs = CHAT.msgs.filter(function (m) { return m.id !== id; });
+  chatSaveCache(); chatRedrawList();
+  api('deleteChat', [id]).then(function () { chatPoll(); }, function (e) {
+    CHAT.msgs = keep; chatSaveCache(); chatRedrawList();
+    toast(e.message || 'Couldn\'t delete that message.');
+  });
+}
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) { clearTimeout(CHAT.timer); CHAT.timer = null; return; }
+  if (D && storeGet('ad.session')) chatPoll();
+});
 
 /* ---------- start up ---------- */
 
@@ -2662,6 +2889,7 @@ function start() {
   chrome(true);
   ensureAppKey();
   loadAvatars(); loadFaces();
+  chatLoadCache(); chatPoll();
   var cached = null;
   try { cached = JSON.parse(storeGet('ad.data') || 'null'); } catch (e) {}
   if (cached) { cached.today = localToday(); prep(cached); show('home'); }

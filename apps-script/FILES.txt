@@ -3,6 +3,7 @@
 Album Links.gs
 Api.gs
 Avatars.html
+Chat.gs
 CommentOfTheDay.gs
 Cover Art.gs
 Index.html
