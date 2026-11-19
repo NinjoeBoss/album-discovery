@@ -162,6 +162,12 @@ Deno.test("chat: load, post, delete, rate limit", async () => {
   await call("deleteChat", [4], JON);
   const c2 = await call("getChat", [4, c.gen]);
   assertEquals(c2.full, true);
+
+  // Live channel details: none without Supabase's settings, a websocket address with them.
+  assertEquals(await call("chatLive", []), null);
+  Deno.env.set("SUPABASE_URL", "https://abc.supabase.co"); Deno.env.set("SUPABASE_ANON_KEY", "anon-key");
+  assertEquals(await call("chatLive", []), { url: "wss://abc.supabase.co/realtime/v1/websocket", key: "anon-key", topic: "club-chat" });
+  Deno.env.delete("SUPABASE_URL"); Deno.env.delete("SUPABASE_ANON_KEY");
 });
 
 Deno.test("sign in with a code, app key, sign out", async () => {

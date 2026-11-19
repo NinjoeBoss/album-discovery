@@ -620,6 +620,7 @@ async function postChat(s: Session, textArg: unknown) {
     const [r] = await tx`insert into club.chat (id, name, text) select coalesce(max(id), 0) + 1, ${s.member}, ${text} from club.chat returning id, at`;
     return { id: Number(r.id), time: new Date(r.at).getTime(), name: s.member, text };
   }).then(async (msg) => {
+    await inBackground(chatPing(msg.id));
     await inBackground(notify("chat", { title: s.member, body: chatPreview(text), tag: "chat", url: "./?go=chat", urgency: "high" }, { except: s.member }));
     return msg;
   });
@@ -632,7 +633,33 @@ async function deleteChat(s: Session, idArg: unknown) {
   if (m.name !== s.member && !s.admin) fail("You can only delete your own messages.");
   await sql`update club.chat set text = '' where id = ${id}`;   // keeps the id, so ids are never reused
   await kvSet("chat|gen", String(Date.now()));
+  await inBackground(chatPing(id));
   return true;
+}
+
+/* ---------- live chat ----------
+ * Open apps keep a socket to Supabase Realtime on a public broadcast channel. The server
+ * only says "chat changed" there (no names, no text, since anyone with the public key could
+ * listen); each app then asks getChat with its session as usual. Polling stays on as backup. */
+const LIVE_TOPIC = "club-chat";
+
+function chatLive() {
+  const base = Deno.env.get("SUPABASE_URL"), key = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!base || !key) return null;
+  return { url: base.replace(/^http/, "ws") + "/realtime/v1/websocket", key, topic: LIVE_TOPIC };
+}
+
+async function chatPing(last: number) {
+  const base = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY");
+  if (!base || !key || Deno.env.get("CLUB_TEST")) return;
+  const headers: Record<string, string> = { "Content-Type": "application/json", apikey: key };
+  if (key.startsWith("eyJ")) headers.Authorization = "Bearer " + key;
+  const r = await fetch(base + "/realtime/v1/api/broadcast", {
+    method: "POST", headers, signal: AbortSignal.timeout(5000),
+    body: JSON.stringify({ messages: [{ topic: LIVE_TOPIC, event: "chat", payload: { last } }] }),
+  });
+  if (!r.ok) console.error("chatPing", r.status, await r.text());
 }
 
 /* ---------- phone notifications ---------- */
@@ -788,6 +815,7 @@ async function dispatch(req: any) {
     case "submitShare": return submitShare(s, a[0], a[1], a[2], a[3], a[4], a[5]);
     case "removeShare": return removeShare(s, a[0]);
     case "getChat": return getChat(a[0], a[1]);
+    case "chatLive": return chatLive();
     case "postChat": return postChat(s, a[0]);
     case "deleteChat": return deleteChat(s, a[0]);
     case "gifKey": return Deno.env.get("KLIPY_API_KEY") || "";

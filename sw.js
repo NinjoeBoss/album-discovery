@@ -1,6 +1,6 @@
 /* Club Music service worker: makes the app open fast and work offline.
  * Bump VERSION whenever index.html changes so phones pick up the new copy. */
-var VERSION = 'ad-v81';
+var VERSION = 'ad-v82';
 var SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
@@ -56,14 +56,18 @@ self.addEventListener('push', function (e) {
   var d = {};
   try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : '' }; }
   // iPhone needs every push to show something, or it stops delivering them.
-  e.waitUntil(self.registration.showNotification(d.title || 'Club Music', {
+  // A chat note means the open app (if any) should fetch right away, not wait for its next check.
+  var tell = d.tag === 'chat' ? self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+    list.forEach(function (c) { c.postMessage({ type: 'chat' }); });
+  }) : Promise.resolve();
+  e.waitUntil(tell.then(function () { return self.registration.showNotification(d.title || 'Club Music', {
     body: d.body || '',
     tag: d.tag || undefined,
     renotify: !!d.tag,
     icon: 'icons/icon-192.png',
     badge: 'icons/badge-96.png',
     data: { url: d.url || './' }
-  }));
+  }); }));
 });
 
 /* Tapping a notification: bring the open app forward and go there, or open the app at that spot. */

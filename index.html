@@ -1176,6 +1176,7 @@ function runPendingGo() {
 }
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) {
   var d = e.data || {};
+  if (d.type === 'chat') { liveNudge(); return; }
   if (d.type !== 'go') return;
   pendingGo = parseGo(d.url);
   runPendingGo();
@@ -2897,15 +2898,22 @@ var API_URL = (window.AD_CONFIG && window.AD_CONFIG.apiUrl) || '';
 function storeDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
 /* POST with a plain text body: no preflight round trip, so every call is one request. */
-function api(action, args) {
+/* timeoutMs (optional): give up after that long. iPhone can leave a request hanging forever
+ * after the app was in the background, which used to freeze the chat's checking. */
+function api(action, args, timeoutMs) {
+  var ctl = timeoutMs && window.AbortController ? new AbortController() : null;
+  var timer = ctl ? setTimeout(function () { ctl.abort(); }, timeoutMs) : null;
   return fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: action, args: args || [], session: storeGet('ad.session') || '' })
+    body: JSON.stringify({ action: action, args: args || [], session: storeGet('ad.session') || '' }),
+    signal: ctl ? ctl.signal : undefined
   }).then(function (r) {
+    clearTimeout(timer);
     if (!r.ok) throw new Error('The server didn\'t answer (' + r.status + '). Try again in a moment.');
     return r.json();
   }, function () {
+    clearTimeout(timer);
     throw new Error(navigator.onLine === false ? 'You\'re offline. Showing what was saved on this phone.' : 'Couldn\'t reach the server. Check your connection and try again.');
   }).then(function (j) {
     if (j.ok) return j.result;
@@ -3016,7 +3024,7 @@ function signedOut() {
   storeDel('ad.appKey'); adApplyAppKey();
   pushDropLocal();
   storeDel('ad.session'); storeDel('ad.data'); storeDel('ad.platform'); storeDel('ad.platformSync');
-  storeDel('ad.chat'); clearTimeout(CHAT.timer); CHAT = { msgs: [], pending: [], last: 0, gen: '', cached: false, fresh: false, draft: '', timer: null, busy: false, seq: 0 };
+  storeDel('ad.chat'); clearTimeout(CHAT.timer); liveStop(); CHAT = { msgs: [], pending: [], last: 0, gen: '', cached: false, fresh: false, draft: '', timer: null, busy: false, seq: 0 };
   D = null; closeAlbum(); syncBack();
   signState = { members: null, name: null, hint: '', busy: false, err: '' };
   loadMembers();
@@ -3047,7 +3055,8 @@ function hideInstall() { storeSet('ad.installHidden', '1'); show(view); }
  * new every few seconds; elsewhere it checks every 30 seconds so the gold dot on the tab can show unread messages.
  * Only what changed is drawn, so a half typed message is never wiped. */
 var CHAT = { msgs: [], pending: [], last: 0, gen: '', cached: false, fresh: false, draft: '', timer: null, busy: false, seq: 0 };
-var CHAT_FAST = 4000, CHAT_SLOW = 30000, CHAT_MAX = 500;
+/* With the live socket up, polling is only a backup, so it can be lazy. */
+var CHAT_FAST = 4000, CHAT_SLOW = 30000, CHAT_LIVE_FAST = 15000, CHAT_LIVE_SLOW = 60000, CHAT_MAX = 500;
 
 function chatLoadCache() {
   try {
@@ -3240,16 +3249,87 @@ function chatShown(v) {
 function chatSchedule() {
   clearTimeout(CHAT.timer); CHAT.timer = null;
   if (!storeGet('ad.session') || document.hidden) return;
-  CHAT.timer = setTimeout(chatPoll, view === 'chat' ? CHAT_FAST : CHAT_SLOW);
+  var fast = view === 'chat';
+  CHAT.timer = setTimeout(chatPoll, LIVE.up ? (fast ? CHAT_LIVE_FAST : CHAT_LIVE_SLOW) : (fast ? CHAT_FAST : CHAT_SLOW));
 }
 function chatPoll() {
   clearTimeout(CHAT.timer); CHAT.timer = null;
   if (!storeGet('ad.session')) return;
-  if (CHAT.busy) return;
-  CHAT.busy = true;
-  api('getChat', [CHAT.cached || CHAT.fresh ? CHAT.last : 0, CHAT.gen]).then(function (r) {
-    CHAT.busy = false; chatTake(r); chatSchedule();
-  }, function () { CHAT.busy = false; chatSchedule(); });
+  liveStart();
+  // A check already on its way may have left before the new message was saved: go again right after it.
+  if (CHAT.busy && Date.now() - CHAT.busyAt < 12000) { CHAT.again = true; return; }
+  var req = CHAT.req = (CHAT.req || 0) + 1;
+  CHAT.busy = true; CHAT.busyAt = Date.now(); CHAT.again = false;
+  function done() {
+    if (req !== CHAT.req) return;            // an older, timed out check finishing late
+    CHAT.busy = false;
+    if (CHAT.again) { CHAT.again = false; chatPoll(); } else chatSchedule();
+  }
+  api('getChat', [CHAT.cached || CHAT.fresh ? CHAT.last : 0, CHAT.gen], 10000).then(function (r) {
+    chatTake(r); done();
+  }, done);
+}
+
+/* ---------- live chat ----------
+ * A socket to Supabase Realtime (Phoenix protocol, no library). The server only says "chat
+ * changed" on it, never the text; the app then fetches with getChat like always. */
+var LIVE = { ws: null, cfg: null, asking: false, up: false, hb: null, rt: null, tries: 0, ref: 0 };
+function liveSend(topic, event, payload) {
+  if (!LIVE.ws || LIVE.ws.readyState !== 1) return;
+  var ref = String(++LIVE.ref);
+  LIVE.ws.send(JSON.stringify({ topic: topic, event: event, payload: payload, ref: ref, join_ref: topic === 'phoenix' ? undefined : '1' }));
+}
+function liveStart() {
+  if (LIVE.ws || LIVE.rt || LIVE.cfg === false || !window.WebSocket || document.hidden || !storeGet('ad.session')) return;
+  if (!LIVE.cfg) {
+    if (LIVE.asking) return;
+    LIVE.asking = true;
+    api('chatLive', [], 10000).then(function (c) {
+      LIVE.asking = false;
+      LIVE.cfg = c && c.key ? c : false;       // false: server has no live channel, polling only
+      liveStart();
+    }, function () { LIVE.asking = false; liveRetry(); });
+    return;
+  }
+  var c = LIVE.cfg, topic = 'realtime:' + c.topic, ws;
+  try { ws = new WebSocket(c.url + '?apikey=' + encodeURIComponent(c.key) + '&vsn=1.0.0'); } catch (e) { liveRetry(); return; }
+  LIVE.ws = ws;
+  ws.onopen = function () {
+    liveSend(topic, 'phx_join', { config: { broadcast: { self: false, ack: false }, presence: { key: '' }, postgres_changes: [], private: false }, access_token: c.key });
+    LIVE.hb = setInterval(function () { liveSend('phoenix', 'heartbeat', {}); }, 25000);
+  };
+  ws.onmessage = function (e) {
+    var m; try { m = JSON.parse(e.data); } catch (x) { return; }
+    if (m.topic !== topic) return;
+    if (m.event === 'phx_reply' && !LIVE.up) {
+      if (m.payload && m.payload.status === 'ok') { LIVE.up = true; LIVE.tries = 0; chatPoll(); }  // catch up on anything said while connecting
+      else ws.close();
+    } else if (m.event === 'broadcast') liveNudge();
+    else if (m.event === 'phx_error' || m.event === 'phx_close') ws.close();
+  };
+  ws.onclose = function () {
+    if (LIVE.ws !== ws) return;
+    clearInterval(LIVE.hb); LIVE.hb = null; LIVE.ws = null;
+    var was = LIVE.up; LIVE.up = false;
+    if (was) chatSchedule();                  // back to quick polling while it reconnects
+    liveRetry();
+  };
+}
+function liveRetry() {
+  clearTimeout(LIVE.rt); LIVE.rt = null;
+  if (document.hidden || !storeGet('ad.session')) return;
+  var wait = Math.min(30000, 1000 * Math.pow(2, LIVE.tries++));
+  LIVE.rt = setTimeout(function () { LIVE.rt = null; liveStart(); }, wait);
+}
+function liveStop() {
+  clearTimeout(LIVE.rt); LIVE.rt = null; clearInterval(LIVE.hb); LIVE.hb = null;
+  var ws = LIVE.ws; LIVE.ws = null; LIVE.up = false; LIVE.tries = 0;
+  if (ws) try { ws.close(); } catch (e) {}
+}
+/* Something changed (socket or a chat notification arriving): fetch now. */
+function liveNudge() {
+  if (!storeGet('ad.session') || document.hidden) return;
+  chatPoll();
 }
 function chatTake(r) {
   var changed = false;
@@ -3326,9 +3406,10 @@ function chatDelete(id) {
   });
 }
 document.addEventListener('visibilitychange', function () {
-  if (document.hidden) { clearTimeout(CHAT.timer); CHAT.timer = null; return; }
-  if (D && storeGet('ad.session')) chatPoll();
+  if (document.hidden) { clearTimeout(CHAT.timer); CHAT.timer = null; liveStop(); return; }
+  if (D && storeGet('ad.session')) chatPoll();   // also reopens the live socket
 });
+window.addEventListener('online', function () { if (D && storeGet('ad.session')) { liveStop(); chatPoll(); } });
 
 /* ---------- start up ---------- */
 

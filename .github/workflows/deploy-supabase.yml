@@ -110,6 +110,30 @@ jobs:
             echo "club.$t from outside: http $code (closed)"
           done
           echo "::notice title=API::Live at $url"
+          # Live chat: join a test channel with the public key and send one broadcast through the
+          # REST endpoint (same path the function uses). Only warns: the app falls back to polling.
+          pip install -q websockets >/dev/null 2>&1 || true
+          python3 - "$SUPABASE_PROJECT_REF" "$anon" <<'PY' || echo "::warning title=Live chat::Realtime broadcast check failed. Chat still works by polling."
+          import asyncio, json, sys, urllib.request, websockets
+          ref, key = sys.argv[1], sys.argv[2]
+          async def main():
+              async with websockets.connect(f"wss://{ref}.supabase.co/realtime/v1/websocket?apikey={key}&vsn=1.0.0") as ws:
+                  topic = "realtime:club-chat-check"
+                  await ws.send(json.dumps({"topic": topic, "event": "phx_join", "ref": "1", "join_ref": "1",
+                      "payload": {"config": {"broadcast": {"self": False}, "presence": {"key": ""}, "postgres_changes": [], "private": False}, "access_token": key}}))
+                  while True:
+                      m = json.loads(await asyncio.wait_for(ws.recv(), 10))
+                      if m["event"] == "phx_reply" and m["topic"] == topic:
+                          assert m["payload"]["status"] == "ok", m; break
+                  req = urllib.request.Request(f"https://{ref}.supabase.co/realtime/v1/api/broadcast", method="POST",
+                      data=json.dumps({"messages": [{"topic": "club-chat-check", "event": "chat", "payload": {"last": 0}}]}).encode(),
+                      headers={"Content-Type": "application/json", "apikey": key, "Authorization": "Bearer " + key})
+                  print("broadcast http", urllib.request.urlopen(req, timeout=10).status)
+                  while True:
+                      m = json.loads(await asyncio.wait_for(ws.recv(), 10))
+                      if m["event"] == "broadcast": print("Live chat channel works."); return
+          asyncio.run(main())
+          PY
 
       # Points the app at this server (config.js) and bumps the service worker so phones
       # pick it up. Does nothing once config.js already has the right address.
