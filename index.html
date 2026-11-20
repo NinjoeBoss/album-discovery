@@ -794,7 +794,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .flow { position: fixed; inset: 0; z-index: 18; background: #050407; color: #fff; overflow: hidden; display: none; touch-action: none;
     -webkit-user-select: none; user-select: none; }
   .flow.on { display: block; }
-  .fl-glow { position: absolute; left: -20%; right: -20%; top: -10%; height: 85%; opacity: .42; pointer-events: none; transition: background-color .8s ease;
+  .fl-glow { position: absolute; left: -20%; right: -20%; top: -10%; height: 85%; opacity: 0; pointer-events: none; transition: opacity .9s ease; will-change: opacity;
     -webkit-mask-image: radial-gradient(closest-side, #000, transparent); mask-image: radial-gradient(closest-side, #000, transparent); }
   .fl-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px;
     padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left)); }
@@ -804,15 +804,20 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fl-seg::-webkit-scrollbar { display: none; }
   .fl-seg button { flex: none; border: 0; border-radius: 99px; padding: 7px 13px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); font-size: 13px; font-weight: 700; cursor: pointer; }
   .fl-seg button.on { background: #fff; color: #1e1b2e; }
-  .fl-stage { position: absolute; left: 0; right: 0; top: var(--st); height: var(--s); cursor: grab; }
+  .fl-glow.on { opacity: .42; }
+  .fl-stage { position: absolute; left: 0; right: 0; top: var(--st); height: var(--s); cursor: grab;
+    transform-style: preserve-3d; perspective: var(--persp, 900px); perspective-origin: 50% 50%; }
   .fl-stage:active { cursor: grabbing; }
-  .fl-item { position: absolute; left: 50%; top: 0; width: var(--s); height: var(--s); margin-left: calc(var(--s) / -2); perspective: 1400px; will-change: transform;
-    -webkit-box-reflect: below 2px linear-gradient(transparent 62%, rgba(255,255,255,.28)); }
+  .fl-item { position: absolute; left: 50%; top: 0; width: var(--s); height: var(--s); margin-left: calc(var(--s) / -2); perspective: 1400px; will-change: transform; }
+  .fl-refl { position: absolute; left: 0; right: 0; top: calc(100% + 2px); height: 100%; overflow: hidden; pointer-events: none; opacity: .3; transition: opacity .3s ease;
+    -webkit-mask-image: linear-gradient(#000, transparent 42%); mask-image: linear-gradient(#000, transparent 42%); }
+  .fl-refl > * { width: 100%; height: 100%; object-fit: cover; display: block; transform: scaleY(-1); }
+  .fl-refl .fl-blank { font-size: 0; }
+  .fl-item.flip .fl-refl { opacity: 0; }
   .fl-card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3,.9,.3,1); }
   .fl-item.flip .fl-card { transform: rotateY(180deg); }
   .fl-front, .fl-back { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 3px; overflow: hidden; }
   .fl-front img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-  .fl-front::after { content: ''; position: absolute; inset: 0; background: #000; opacity: var(--dim, 0); pointer-events: none; }
   .fl-blank { width: 100%; height: 100%; display: grid; place-items: center; padding: 12%; text-align: center; font-weight: 900; font-size: calc(var(--s) / 9); color: #1e1b2e; }
   .fl-back { transform: rotateY(180deg); background: linear-gradient(160deg, #2a2540, #141221); display: flex; flex-direction: column; padding: 10px 10px 8px; border: 1px solid rgba(255,255,255,.12); }
   .fl-back h4 { margin: 0 0 6px; font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -823,11 +828,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fl-back li b { color: #f46a9b; font-weight: 700; flex: none; }
   .fl-back .fl-none { flex: 1; display: grid; place-items: center; opacity: .6; font-size: 13px; text-align: center; }
   .fl-back button { margin-top: 8px; border: 0; border-radius: 99px; padding: 8px; background: #fff; color: #1e1b2e; font-weight: 700; font-size: 13px; cursor: pointer; }
-  .fl-info { position: absolute; left: 0; right: 0; top: var(--it); z-index: 2; text-align: center; padding: 0 20px; pointer-events: none; }
-  .fl-info.in { animation: flInfo .35s ease both; }
+  .fl-info { position: absolute; left: 0; right: 0; top: var(--it); z-index: 2; text-align: center; padding: 0 20px; pointer-events: none; contain: layout style; }
   .fl-info { transition: opacity .25s ease; }
   .flow.flipped .fl-info { opacity: 0; }
-  @keyframes flInfo { from { opacity: 0; transform: translateY(6px); } }
   .fl-t { font-size: clamp(18px, 4.6vw, 28px); font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fl-a { margin-top: 3px; font-size: clamp(14px, 3.4vw, 18px); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fl-m { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; font-size: 13px; color: rgba(255,255,255,.75); }
@@ -863,7 +866,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .fl-bot { padding-top: 4px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   }
   .fl-empty { position: absolute; inset: 0; display: grid; place-items: center; opacity: .7; }
-  @media (prefers-reduced-motion: reduce) { .fl-card { transition: none; } .fl-info.in { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .fl-card, .fl-refl, .fl-glow { transition: none; } }
 </style>
 </head>
 <body>
@@ -2748,7 +2751,7 @@ function closeFlow() {
   flowOpen = false;
   if (flowPhone() && flowLandscape()) flowDismissed = true; // closed while sideways: stay closed until upright again
   flowStop();
-  if (FLOW && FLOW.raf) { cancelAnimationFrame(FLOW.raf); FLOW.raf = 0; }
+  if (FLOW) { FLOW.drag = null; flowHalt(); clearTimeout(FLOW.glowT); }
   document.getElementById('flow').classList.remove('on');
   if (!popupOpen) document.body.classList.remove('locked');
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
@@ -2763,39 +2766,44 @@ function flowSeason(i) {
 }
 function flowBuild(jump) {
   var F = FLOW, el = document.getElementById('flow');
+  flowHalt();
   F.list = flowList(F.season);
-  F.flip = -1; F.fz = F.fzT = 0; F.cur = -1; F.drag = null;
+  F.flip = -1; F.cur = -1; F.drag = null;
   el.classList.remove('flipped');
   if (jump) {
     var k = 0;
     F.list.forEach(function (a, i) { if (!isSoon(a)) k = i; }); // land on this week's album
-    F.pos = F.target = k;
+    F.pos = k;
   }
   var segs = ['all'].concat(seasonNames());
   var fsOK = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled) && !adStandalone();
   var n = F.list.length;
-  var h = '<div class="fl-glow" id="flGlow"></div>' +
+  var h = '<div class="fl-glow" id="flGlowA"></div><div class="fl-glow" id="flGlowB"></div>' +
     '<div class="fl-top" id="flTop"><button class="fl-x" onclick="closeFlow()" aria-label="Close Cover Flow">×</button><div class="fl-seg">' +
     segs.map(function (s, i) { return '<button class="' + (s === F.season ? 'on' : '') + '" onclick="flowSeason(' + i + ')">' + (s === 'all' ? 'All' : esc(s)) + '</button>'; }).join('') +
     '</div>' + (fsOK ? '<button class="fl-fs" onclick="flowFull()" aria-label="Full screen">⤢</button>' : '<span class="fl-sp"></span>') + '</div>';
   if (!n) {
     el.innerHTML = h + '<div class="fl-empty">No albums in ' + esc(F.season) + ' yet</div>';
+    F.items = null;
     return;
   }
+  /* Each cover carries its own mirror image underneath (part of the same layer, so it costs nothing while moving). */
   h += '<div class="fl-stage" id="flStage">' + F.list.map(function (a, i) {
-    return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' +
-      (a.cover ? '<img src="' + esc(a.cover) + '" alt="' + esc(a.album) + '" draggable="false">'
-        : '<div class="fl-blank" style="background:' + color(a.pickedBy) + '">' + esc(a.album) + '</div>') +
-      '</div><div class="fl-back"></div></div></div>';
+    var art = a.cover ? '<img src="' + esc(a.cover) + '" alt="" draggable="false" decoding="async">'
+      : '<div class="fl-blank" style="background:' + color(a.pickedBy) + '">' + esc(a.album) + '</div>';
+    return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + art.replace('alt=""', 'alt="' + esc(a.album) + '"') +
+      '</div><div class="fl-back"></div></div><div class="fl-refl" aria-hidden="true">' + art + '</div></div>';
   }).join('') + '</div><div class="fl-info" id="flInfo"></div>' +
     '<div class="fl-bot" id="flBot"><button class="fl-play" id="flPlay" onclick="flowPlay()" aria-label="Play">▶</button>' +
     '<input type="range" id="flScrub" min="0" max="' + (n - 1) + '" step="1" value="' + Math.round(F.pos) + '" aria-label="Scrub through albums" oninput="flowStop();flowGo(+this.value)">' +
     '<span class="fl-n" id="flN"></span></div>';
   el.innerHTML = h;
   F.items = [].slice.call(el.querySelectorAll('.fl-item'));
+  F.shown = {};
+  F.glow = 0; F.glowRow = null;
   flowWire(document.getElementById('flStage'));
   flowSize();
-  flowPaint();
+  flowPlace(F.pos);
 }
 /* Sizes the covers to the screen: big in landscape or on a computer, about half the width on a phone held upright. */
 function flowSize() {
@@ -2811,25 +2819,116 @@ function flowSize() {
   el.style.setProperty('--s', S + 'px');
   el.style.setProperty('--st', st + 'px');
   el.style.setProperty('--it', (st + S + gap) + 'px');
+  el.style.setProperty('--persp', Math.round(S * 3.2) + 'px');
 }
-/* Puts every cover in place for the current scroll position (a fraction while gliding). */
-function flowPaint() {
-  var F = FLOW, S = F.S, p = F.pos;
+
+/* ---- motion ----
+ * Where cover i sits when the carousel is at position p (p = which album is in the middle; fractions while moving).
+ * The stage is one shared 3D scene, so the graphics chip sorts which cover is in front; no z-index juggling. */
+function flowXf(i, p) {
+  var S = FLOW.S, d = i - p, ad = Math.abs(d), c = Math.min(ad, 1), sg = d < 0 ? -1 : 1;
+  var x = sg * (c * S * 0.62 + Math.max(0, ad - 1) * S * 0.2), z = -c * S * 0.55, ry = -sg * c * 72;
+  return 'translate3d(' + x.toFixed(2) + 'px,0,' + z.toFixed(2) + 'px) rotateY(' + ry.toFixed(2) + 'deg) scale(1)';
+}
+function flowShow(i, on) {
+  var F = FLOW;
+  if (!!F.shown[i] === on) return;
+  F.shown[i] = on;
+  F.items[i].style.visibility = on ? '' : 'hidden';
+}
+/* Puts covers straight at p (dragging, resizing, or after a glide). Only covers near the screen are drawn. */
+function flowPlace(p) {
+  var F = FLOW; if (!F.items) return;
+  F.pos = p;
   for (var i = 0; i < F.items.length; i++) {
-    var it = F.items[i], d = i - p, ad = Math.abs(d);
-    if (ad > F.reach) { if (!it.hid) { it.style.visibility = 'hidden'; it.hid = true; } continue; }
-    if (it.hid) { it.style.visibility = ''; it.hid = false; }
-    var c = Math.min(ad, 1), sg = d < 0 ? -1 : 1;
-    var x = sg * (c * S * 0.62 + Math.max(0, ad - 1) * S * 0.2);
-    var z = -c * S * 0.55, ry = -sg * c * 72;
-    var sc = i === F.flip ? 1 + (F.fz || 0) * (F.flipScale - 1) : 1;
-    it.style.transform = 'perspective(' + Math.round(S * 3.2) + 'px) translate3d(' + x.toFixed(1) + 'px,0,' + z.toFixed(1) + 'px) rotateY(' + ry.toFixed(1) + 'deg) scale(' + sc.toFixed(3) + ')';
-    it.style.zIndex = 1000 - Math.round(ad * 10);
-    it.style.setProperty('--dim', (c * 0.28 + Math.max(0, ad - F.reach + 2) * 0.35).toFixed(2));
+    var near = Math.abs(i - p) <= F.reach;
+    flowShow(i, near);
+    if (near) F.items[i].style.transform = flowXf(i, p);
   }
-  var cur = Math.max(0, Math.min(F.items.length - 1, Math.round(p)));
+  flowCur(p);
+}
+/* Critically damped spring from the current spot and speed to album T: no bounce, and a flick hands its speed
+ * straight to the glide so there's no hitch when the finger lets go. */
+var FLOW_W = 11; // spring speed (higher = snappier)
+function flowAt(g, now) {
+  var t = Math.min((now - g.t0) / 1000, g.dur);
+  if (t >= g.dur) return { p: g.T, v: 0 };
+  var e = Math.exp(-g.w * t);
+  return { p: g.T + (g.A + g.B * t) * e, v: e * (g.B - g.w * (g.A + g.B * t)) };
+}
+function flowNow() {
+  var F = FLOW;
+  return F.glide ? flowAt(F.glide, performance.now()) : { p: F.pos, v: F.vel || 0 };
+}
+/* Stops a glide where it is right now (finger came down mid glide). */
+function flowHalt() {
+  var F = FLOW; if (!F || !F.glide) return;
+  var p = flowNow().p, g = F.glide;
+  F.glide = null;
+  if (F.items) flowPlace(p);
+  g.anims.forEach(function (a) { a.cancel(); });
+}
+/* The glide itself is handed to the browser as one precomputed animation per cover (Web Animations), so it runs on
+ * the graphics side at the screen's full refresh rate (120Hz on ProMotion) and keeps going even if the page is busy. */
+function flowGlide(T, v0) {
+  var F = FLOW; if (!F.items || !F.items.length) return;
+  var now = performance.now(), st = flowNow(), p0 = st.p;
+  if (v0 == null) v0 = st.v;
+  T = Math.max(0, Math.min(F.items.length - 1, Math.round(T)));
+  var old = F.glide; F.glide = null;
+  if (calm() || !F.items[0].animate || (Math.abs(T - p0) < 0.002 && Math.abs(v0) < 0.05)) {
+    if (old) old.anims.forEach(function (a) { a.cancel(); });
+    flowPlace(T); flowSettle(); return;
+  }
+  var w = FLOW_W, A = p0 - T, B = v0 + w * A, dur = 0;
+  for (var t = 0.05; t < 3; t += 0.005) {
+    var e = Math.exp(-w * t);
+    if (Math.abs((A + B * t) * e) < 0.0015 && Math.abs(e * (B - w * (A + B * t))) < 0.05) { dur = t; break; }
+  }
+  if (!dur) dur = 3;
+  var steps = Math.max(2, Math.ceil(dur * 120)), ps = [], lo = Math.min(p0, T), hi = Math.max(p0, T);
+  for (var k = 0; k <= steps; k++) {
+    var tk = dur * k / steps, pk = k === steps ? T : T + (A + B * tk) * Math.exp(-w * tk);
+    ps.push(pk); if (pk < lo) lo = pk; if (pk > hi) hi = pk;
+  }
+  var g = { t0: now, A: A, B: B, T: T, w: w, dur: dur, anims: [] };
+  for (var i = 0; i < F.items.length; i++) {
+    var it = F.items[i];
+    if (i < lo - F.reach || i > hi + F.reach) { flowShow(i, false); continue; }
+    flowShow(i, true);
+    var kf = new Array(ps.length);
+    for (k = 0; k < ps.length; k++) kf[k] = { transform: flowXf(i, ps[k]) };
+    it.style.transform = kf[kf.length - 1].transform; // where it ends up once the animation is gone
+    g.anims.push(it.animate(kf, { duration: dur * 1000, easing: 'linear', fill: 'forwards' }));
+  }
+  if (old) old.anims.forEach(function (a) { a.cancel(); }); // new ones are already in place, so nothing blinks
+  F.glide = g; F.pos = T;
+  g.anims[0].onfinish = function () {
+    if (F.glide !== g) return;
+    F.glide = null;
+    g.anims.forEach(function (a) { a.cancel(); });
+    flowPlace(T); flowSettle();
+  };
+  flowWatch();
+}
+/* While gliding, keeps the title, counter and scrubber in step with whichever cover is passing the middle. */
+function flowWatch() {
+  var F = FLOW; if (F.watch) return;
+  F.watch = requestAnimationFrame(function tick() {
+    F.watch = 0;
+    if (!flowOpen || !F.glide) return;
+    flowCur(flowNow().p);
+    F.watch = requestAnimationFrame(tick);
+  });
+}
+function flowCur(p) {
+  var F = FLOW, cur = Math.max(0, Math.min(F.items.length - 1, Math.round(p)));
   if (cur !== F.cur) { F.cur = cur; flowInfo(); }
 }
+function flowSettle() { flowGlowSoon(); }
+function flowTarget() { var F = FLOW; return F.glide ? F.glide.T : Math.round(F.pos); }
+function flowGo(i) { if (FLOW && FLOW.items) flowGlide(i); }
+
 function flowInfo() {
   var F = FLOW, a = F.list[F.cur]; if (!a) return;
   var soon = isSoon(a);
@@ -2840,33 +2939,29 @@ function flowInfo() {
     (soon ? '<span class="fl-tag">Up next</span>' : a.avg != null ? '<span class="fl-score">' + fmt(a.avg) + ' ' + stars(a.avg) + '</span>' : '');
   var el = document.getElementById('flInfo');
   el.innerHTML = '<div class="fl-t">' + esc(a.album) + '</div><div class="fl-a">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div><div class="fl-m">' + m + '</div>';
-  el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+  if (el.animate && !calm()) el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
   document.getElementById('flN').textContent = (F.cur + 1) + ' of ' + F.list.length;
   var sc = document.getElementById('flScrub'); if (+sc.value !== F.cur) sc.value = F.cur;
-  var row = a.row;
-  artColor(a, function (rgb) { var g = document.getElementById('flGlow'); if (g && FLOW.list[FLOW.cur] && FLOW.list[FLOW.cur].row === row) g.style.backgroundColor = 'rgb(' + rgb + ')'; });
   if (F.flip >= 0 && F.flip !== F.cur) flowUnflip();
+  if (!F.glide && !F.drag) flowGlowSoon();
 }
-/* Glides to wherever target is, easing out; also grows/shrinks a flipped cover. */
-function flowTick(t) {
-  var F = FLOW; F.raf = 0;
-  if (!flowOpen || !F.items) return;
-  var dt = F.last ? Math.min(50, t - F.last) : 16; F.last = t;
-  var k = calm() ? 1 : 1 - Math.pow(0.82, dt / 16.7), more = false;
-  if (!F.drag) {
-    var d = F.target - F.pos;
-    if (Math.abs(d) < 0.002) F.pos = F.target; else { F.pos += d * k; more = true; }
-  }
-  var fd = F.fzT - F.fz;
-  if (Math.abs(fd) < 0.003) F.fz = F.fzT; else { F.fz += fd * k; more = true; }
-  flowPaint();
-  if (more || F.drag) F.raf = requestAnimationFrame(flowTick); else F.last = 0;
-}
-function flowKick() { if (!FLOW.raf) { FLOW.last = 0; FLOW.raf = requestAnimationFrame(flowTick); } }
-function flowGo(i) {
-  var F = FLOW; if (!F || !F.list.length) return;
-  F.target = Math.max(0, Math.min(F.list.length - 1, Math.round(i)));
-  flowKick();
+/* Background glow in the cover's color. Changed only once the covers stop (repainting a full screen glow on every
+ * passing cover was the expensive part), and crossfaded between two layers so the change itself is cheap too. */
+function flowGlowSoon() {
+  var F = FLOW;
+  clearTimeout(F.glowT);
+  F.glowT = setTimeout(function () {
+    var a = F.list && F.list[F.cur]; if (!a || !flowOpen || F.glide || F.drag || a.row === F.glowRow) return;
+    var row = a.row; F.glowRow = row;
+    artColor(a, function (rgb) {
+      if (F.glowRow !== row) return;
+      var next = document.getElementById(F.glow ? 'flGlowA' : 'flGlowB'), prev = document.getElementById(F.glow ? 'flGlowB' : 'flGlowA');
+      if (!next || !prev) return;
+      next.style.backgroundColor = 'rgb(' + rgb + ')';
+      next.classList.add('on'); prev.classList.remove('on');
+      F.glow = 1 - F.glow;
+    });
+  }, 120);
 }
 /* Tap the middle cover: it turns over to show the tracklist, like the iPod did. */
 function flowFlip(i) {
@@ -2881,74 +2976,112 @@ function flowFlip(i) {
       : '<div class="fl-none">Tracklist not loaded yet</div>') +
     '<button data-open="' + a.row + '">Ratings and comments ›</button>';
   var el = document.getElementById('flow');
-  F.flipScale = Math.max(1, Math.min(1.45, el.clientWidth * 0.86 / F.S, (el.clientHeight * 0.62) / F.S));
-  F.flip = i; F.fzT = 1;
+  var sc = Math.max(1, Math.min(1.45, el.clientWidth * 0.86 / F.S, (el.clientHeight * 0.62) / F.S));
+  F.flip = i;
   el.classList.add('flipped');
   it.classList.add('flip');
-  flowKick();
+  it.style.transition = 'transform .55s cubic-bezier(.3,.9,.3,1)';
+  it.style.transform = flowXf(i, i).replace('scale(1)', 'scale(' + sc.toFixed(3) + ')');
 }
 function flowUnflip() {
   var F = FLOW; if (F.flip < 0) return;
-  var it = F.items[F.flip]; if (it) it.classList.remove('flip');
+  var i = F.flip, it = F.items[i];
+  F.flip = -1;
   document.getElementById('flow').classList.remove('flipped');
-  F.fzT = 0;
-  if (F.flip !== F.cur) { F.fz = 0; F.flip = -1; flowPaint(); return; }
-  var was = F.flip;
-  setTimeout(function () { if (F.flip === was && F.fzT === 0) { F.flip = -1; flowPaint(); } }, 450);
-  flowKick();
+  if (!it) return;
+  it.classList.remove('flip');
+  it.style.transform = flowXf(i, F.glide ? flowNow().p : F.pos);
+  setTimeout(function () { if (F.flip !== i) it.style.transition = ''; }, 560);
 }
-/* Dragging, flicking and tapping on the covers. */
+/* Dragging, flicking and tapping on the covers. While the finger is down the covers follow it directly
+ * (smoothed a touch, since touch input arrives at 60Hz and the screen may draw at 120Hz). */
 function flowWire(stage) {
   var F = FLOW;
   stage.addEventListener('pointerdown', function (e) {
-    if (e.button > 0 || !F.list.length) return;
-    if (e.target.closest('.fl-back ol')) return; // scrolling the tracklist, not the covers
+    if (e.button > 0 || !F.items) return;
+    if (e.target.closest('.fl-back ol')) { // the tracklist scrolls up and down; a sideways swipe turns the cover back
+      F.drag = { list: true, x: e.clientX, y: e.clientY, id: e.pointerId };
+      return;
+    }
     flowStop();
-    F.drag = { x: e.clientX, p0: F.pos, moved: false, hist: [[e.timeStamp, e.clientX]], id: e.pointerId, el: e.target };
+    var gliding = !!F.glide;
+    flowHalt();
+    F.vel = 0;
+    F.drag = { x: e.clientX, p0: F.pos, want: F.pos, moved: false, hist: [[e.timeStamp, e.clientX]], id: e.pointerId, el: e.target, caught: gliding, last: 0 };
     try { stage.setPointerCapture(e.pointerId); } catch (er) {}
-    flowKick();
   });
   stage.addEventListener('pointermove', function (e) {
     var g = F.drag; if (!g || e.pointerId !== g.id) return;
+    if (g.list) {
+      var lx = Math.abs(e.clientX - g.x), ly = Math.abs(e.clientY - g.y);
+      if (lx > 24 && lx > ly * 1.5) { F.drag = null; flowUnflip(); }
+      return;
+    }
+    var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
+    (evs && evs.length ? evs : [e]).forEach(function (ev) { g.hist.push([ev.timeStamp, ev.clientX]); });
+    while (g.hist.length > 12) g.hist.shift();
     var dx = e.clientX - g.x;
-    if (!g.moved && Math.abs(dx) > 6) { g.moved = true; if (F.flip >= 0) flowUnflip(); }
+    if (!g.moved && Math.abs(dx) > 6) {
+      if (F.flip >= 0) { flowUnflip(); F.drag = null; return; } // first swipe just turns the cover back over
+      g.moved = true;
+      g.x = e.clientX; dx = 0; // start from here so the covers don't jump by the 6px
+      flowDragLoop();
+    }
     if (!g.moved) return;
-    var p = g.p0 - dx / (F.S * 0.36), max = F.list.length - 1;
+    var p = g.p0 - dx / (F.S * 0.36), max = F.items.length - 1;
     if (p < 0) p = p / 3; else if (p > max) p = max + (p - max) / 3; // rubber band at the ends
-    F.pos = p;
-    g.hist.push([e.timeStamp, e.clientX]); if (g.hist.length > 6) g.hist.shift();
+    g.want = p;
   });
   function up(e) {
     var g = F.drag; if (!g || e.pointerId !== g.id) return;
     F.drag = null;
+    if (g.list) return;
     if (!g.moved) {
       var b = g.el.closest('[data-open]');
       if (b) { openAlbum(+b.dataset.open); return; }
-      var it = g.el.closest('.fl-item'); if (!it) { flowKick(); return; }
+      var it = g.el.closest('.fl-item');
+      if (!it || g.caught) { flowGlide(Math.round(F.pos), 0); return; } // a tap that caught a glide just settles it
       var i = +it.dataset.i;
-      if (i === F.cur && Math.abs(F.pos - i) < 0.3) flowFlip(i); else flowGo(i);
+      if (i === Math.round(F.pos) && Math.abs(F.pos - i) < 0.3) flowFlip(i); else flowGlide(i, 0);
       return;
     }
-    var h = g.hist, a = h[0], z = h[h.length - 1], v = 0;
-    if (z[0] - a[0] > 0 && e.timeStamp - z[0] < 80) v = -(z[1] - a[1]) / (z[0] - a[0]) / (F.S * 0.36); // covers per ms
-    flowGo(F.pos + v * 260);
+    /* Release speed from the last ~100ms of finger movement, in albums per second. */
+    var h = g.hist, z = h[h.length - 1], a = h[0];
+    for (var k = h.length - 1; k >= 0; k--) { if (z[0] - h[k][0] > 100) break; a = h[k]; }
+    var v = 0;
+    if (z[0] - a[0] > 8 && e.timeStamp - z[0] < 60) v = -(z[1] - a[1]) / (z[0] - a[0]) * 1000 / (F.S * 0.36);
+    v = Math.max(-60, Math.min(60, v));
+    flowGlide(g.want + v * 0.26, v); // starts from where the covers are drawn, so there's no jump on release
   }
   stage.addEventListener('pointerup', up);
   stage.addEventListener('pointercancel', up);
   stage.addEventListener('wheel', function (e) { // trackpads and mouse wheels on a computer
     e.preventDefault(); flowStop();
     F.wheel = (F.wheel || 0) + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
-    if (Math.abs(F.wheel) > 40) { flowGo(F.target + (F.wheel > 0 ? 1 : -1)); F.wheel = 0; }
+    if (Math.abs(F.wheel) > 40) { flowGo(flowTarget() + (F.wheel > 0 ? 1 : -1)); F.wheel = 0; }
   }, { passive: false });
+}
+function flowDragLoop() {
+  var F = FLOW;
+  requestAnimationFrame(function tick(t) {
+    var g = F.drag; if (!g || !flowOpen || !F.items) return;
+    var dt = g.last ? Math.min(40, t - g.last) : 16; g.last = t;
+    var k = 1 - Math.exp(-dt / 14); // ~14ms of smoothing: fills in the frames between touch events
+    var p = F.pos + (g.want - F.pos) * k;
+    if (Math.abs(g.want - p) < 0.0005) p = g.want;
+    flowPlace(p);
+    requestAnimationFrame(tick);
+  });
 }
 /* Play: moves to the next album every few seconds, for showing it on a TV or laptop. */
 function flowPlay() {
-  var F = FLOW;
+  var F = FLOW; if (!F.items) return;
   if (F.play) { flowStop(); return; }
   if (F.cur >= F.list.length - 1) flowGo(0);
   F.play = setInterval(function () {
     if (!flowOpen) { flowStop(); return; }
-    flowGo(F.target >= F.list.length - 1 ? 0 : F.target + 1);
+    var t = flowTarget();
+    flowGo(t >= F.list.length - 1 ? 0 : t + 1);
   }, 3500);
   var b = document.getElementById('flPlay'); if (b) { b.textContent = '❚❚'; b.setAttribute('aria-label', 'Pause'); }
 }
@@ -2962,19 +3095,23 @@ function flowFull() {
   if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
   else if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
 }
-window.addEventListener('resize', function () { if (flowOpen && FLOW && FLOW.items) { flowSize(); flowPaint(); } });
-document.addEventListener('fullscreenchange', function () { if (flowOpen && FLOW && FLOW.items) setTimeout(function () { flowSize(); flowPaint(); }, 60); });
+function flowResized() {
+  if (!flowOpen || !FLOW || !FLOW.items) return;
+  flowUnflip(); flowHalt(); flowSize(); flowPlace(Math.round(FLOW.pos));
+}
+window.addEventListener('resize', flowResized);
+document.addEventListener('fullscreenchange', function () { setTimeout(flowResized, 60); });
 document.addEventListener('keydown', function (e) {
   if (!flowOpen || popupOpen || !FLOW.list || /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || '')) && e.target.type !== 'range') return;
   var F = FLOW, k = e.key;
   if (k === 'Escape') { closeFlow(); return; }
-  if (!F.list.length) return;
-  if (k === 'ArrowRight' || k === 'ArrowDown') { flowStop(); flowGo(F.target + 1); }
-  else if (k === 'ArrowLeft' || k === 'ArrowUp') { flowStop(); flowGo(F.target - 1); }
+  if (!F.items) return;
+  if (k === 'ArrowRight' || k === 'ArrowDown') { flowStop(); flowGo(flowTarget() + 1); }
+  else if (k === 'ArrowLeft' || k === 'ArrowUp') { flowStop(); flowGo(flowTarget() - 1); }
   else if (k === 'Home') { flowStop(); flowGo(0); }
   else if (k === 'End') { flowStop(); flowGo(F.list.length - 1); }
   else if (k === ' ') flowPlay();
-  else if (k === 'Enter') flowFlip(F.cur);
+  else if (k === 'Enter') { if (!F.glide) flowFlip(F.cur); }
   else return;
   e.preventDefault();
 });
