@@ -113,15 +113,41 @@ export async function findCover(album: string, artist: string): Promise<string> 
 
 /* ---------- tracklist ---------- */
 
+/**
+ * Songs on an album, in order. Prefers the explicit edition (a clean edition can leave
+ * songs out entirely), and when Apple hands back fewer songs than the album lists,
+ * tries the other editions that match just as well and keeps the fullest list.
+ */
 export async function findTracks(album: string, artist: string): Promise<string[]> {
   const results = (await itunes(`search?entity=album&limit=25&country=us&term=${encodeURIComponent(album + " " + (artist || ""))}`)).results || [];
-  let pick = bestMatch(results, album, artist, { explicit: false, extras: EXTRAS_TRACKS });
-  if (!pick && artist) {
+  let cands = trackCandidates(results, album, artist);
+  if (!cands.length && artist) {
     const by = (await itunes(`search?entity=album&attribute=artistTerm&limit=100&country=us&term=${encodeURIComponent(artist)}`)).results || [];
-    pick = bestMatch(by, album, artist, { explicit: false, extras: EXTRAS_TRACKS });
+    cands = trackCandidates(by, album, artist);
   }
-  if (!pick) return [];
-  const songs = ((await itunes(`lookup?entity=song&limit=200&country=us&id=${pick.collectionId}`)).results || [])
+  let best: string[] = [];
+  for (const pick of cands.slice(0, 3)) {
+    const songs = await albumSongs(pick.collectionId);
+    if (songs.length > best.length) best = songs;
+    if (best.length && best.length >= (pick.trackCount || 0)) break;   // nothing missing
+  }
+  return best;
+}
+
+/** Editions that match the title and artist best, explicit first, then the most songs. */
+export function trackCandidates(items: Item[], album: string, artist: string): Item[] {
+  const a = norm(album), ar = norm(artist), seen = new Set<unknown>();
+  const scored = items
+    .filter((it) => it.collectionId && !seen.has(it.collectionId) && seen.add(it.collectionId))
+    .map((it) => ({ it, s: score(norm(it.collectionName), norm(it.artistName), a, ar, EXTRAS_TRACKS) }));
+  const top = Math.max(-1, ...scored.map((x) => x.s));
+  if (top < 5) return [];
+  return scored.filter((x) => x.s === top).map((x) => x.it)
+    .sort((x, y) => (explicitBonus(y) - explicitBonus(x)) || ((y.trackCount || 0) - (x.trackCount || 0)));
+}
+
+async function albumSongs(id: unknown): Promise<string[]> {
+  const songs = ((await itunes(`lookup?entity=song&limit=200&country=us&id=${id}`)).results || [])
     .filter((r: Item) => r.wrapperType === "track" && r.kind === "song")
     .sort((a: Item, b: Item) => (a.discNumber - b.discNumber) || (a.trackNumber - b.trackNumber));
   const out: string[] = [];

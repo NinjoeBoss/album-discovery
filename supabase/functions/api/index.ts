@@ -235,6 +235,7 @@ async function kvSet(key: string, value: unknown, hours?: number) {
 async function fillLookups(rows: any[], budgetMs = LOOKUP_MS) {
   const deadline = Date.now() + budgetMs;
   const misses = new Set((await sql`select key from club.kv where key like 'miss|%' and expires > now()`).map((r) => r.key));
+  const rechecked = new Set((await sql`select key from club.kv where key like 'tracks2|%'`).map((r) => r.key));
   const jobs: (() => Promise<void>)[] = [];
   const field = (r: any, col: string, find: () => Promise<any>, empty = (v: any) => v == null) => {
     if (!empty(r[col]) || misses.has(`miss|${col}|${r.id}`)) return;
@@ -253,6 +254,19 @@ async function fillLookups(rows: any[], budgetMs = LOOKUP_MS) {
     field(r, "apple", () => L.appleAlbumLink(r.album, r.artist));
     if (L.spotifyReady()) field(r, "spotify", () => L.spotifyAlbumLink(r.album, r.artist));
     field(r, "tracks", () => L.findTracks(r.album, r.artist));
+    // Lists saved before the Nov 19 lookup fix could be a clean edition with songs missing
+    // (The Mollusk). Look each one up once more and keep whichever list is longer.
+    if (Array.isArray(r.tracks) && r.tracks.length && !rechecked.has(`tracks2|${r.id}`)) {
+      jobs.push(async () => {
+        let v: string[] = [];
+        try { v = await L.findTracks(r.album, r.artist); } catch { return; }   // try again next load
+        if (v.length > r.tracks.length) {
+          r.tracks = v;
+          await sql`update club.albums set tracks = ${sql.json(v)} where id = ${r.id}`;
+        }
+        await kvSet(`tracks2|${r.id}`, true);
+      });
+    }
     field(r, "apple_artist", () => L.artistLink("apple", r.artist));
     if (L.spotifyReady()) field(r, "spotify_artist", () => L.artistLink("spotify", r.artist));
   }
