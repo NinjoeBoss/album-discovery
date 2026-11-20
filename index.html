@@ -2768,7 +2768,7 @@ function flowLandscape() {
   if (typeof window.orientation === 'number') return Math.abs(window.orientation) === 90;
   return window.innerWidth > window.innerHeight;
 }
-function flowTyping() { var ae = document.activeElement; return !!(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)); }
+function flowTyping() { var ae = document.activeElement; return !!(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName) && !/checkbox|radio/.test(ae.type || '')); }
 function flowWanted() { return flowPhone() && !flowDismissed && !!D && !!storeGet('ad.session') && !popupOpen && !flowTyping(); }
 /* html.flowauto: turning sideways right now would bring up Cover Flow. With it, CSS shows Cover Flow's black
  * backdrop in the very same frame the phone turns (and hides it the moment it turns back), before any script
@@ -3080,13 +3080,30 @@ function flowCur(p) {
     F.cur = cur; flowInfo();
   }
 }
-/* A tiny buzz as each cover passes the middle, like a detent. Android only: iPhone Safari doesn't let pages vibrate. */
+/* A tiny buzz as each cover passes the middle, like a detent. */
 function flowTick() {
-  if (!navigator.vibrate || calm()) return;
   var t = performance.now();
   if (t - (flowTick.t || 0) < 40) return; // a fast flick would otherwise be one long buzz
   flowTick.t = t;
-  try { navigator.vibrate(8); } catch (e) {}
+  flowHaptic(8);
+}
+/* Android: the vibrate API. iPhone has no vibrate for web pages, but iOS 18 and later give a haptic tap whenever
+ * a switch style toggle flips, so a hidden one is flipped instead. Older iPhones just stay quiet. */
+function flowHaptic(ms) {
+  if (navigator.vibrate) { try { if (navigator.vibrate(ms)) return; } catch (e) {} }
+  if (!/iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return;
+  var h = flowHaptic;
+  if (!h.lb) {
+    var lb = document.createElement('label'), cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.setAttribute('switch', ''); cb.tabIndex = -1;
+    lb.setAttribute('aria-hidden', 'true'); lb.style.display = 'none';
+    lb.appendChild(cb);
+    lb.addEventListener('click', function (e) { e.stopPropagation(); }); // keep these clicks away from the app's own click handlers
+    document.body.appendChild(lb);
+    h.lb = lb; h.cb = cb;
+  }
+  try { h.lb.click(); } catch (e) {}
+  if (document.activeElement === h.cb) h.cb.blur();
 }
 function flowSettle() { flowGlowSoon(); }
 function flowTarget() { var F = FLOW; return F.glide ? F.glide.T : Math.round(F.pos); }
@@ -3272,7 +3289,7 @@ function flowPreview(i, song, hold) {
   var F = FLOW, a = F.list[i]; if (!a || a.divider) return;
   if (F.pv && F.pv.i === i && (!song || flowNorm(song) === flowNorm(F.pv.song))) { flowStop(); return; } // again: stop
   flowStop(true);
-  if (hold && navigator.vibrate && !calm()) { try { navigator.vibrate(15); } catch (e) {} }
+  if (hold) flowHaptic(15);
   if (+storeGet('ad.flowHints') < 9) storeSet('ad.flowHints', '9'); // they found it: no more hint
   F.hint = false;
   var pv = F.pv = { i: i, row: a.row, song: song || '', state: 'load', url: '', who: a.pickedBy };
