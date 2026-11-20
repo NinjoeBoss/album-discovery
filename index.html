@@ -780,6 +780,67 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   html.kb header nav button { padding-top: 6px; padding-bottom: 8px; }
   html.kb .gifgrid { height: min(252px, calc(var(--vvh, 600px) * .3)); }
   nav button .dot { display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--gold); margin-left: 5px; vertical-align: 2px; pointer-events: none; }
+  /* ---------- Cover Flow (full screen carousel of every album, opened from Albums) ---------- */
+  .flowbtn { display: flex; align-items: center; gap: 14px; width: 100%; margin: 0 0 14px; padding: 12px 16px; border: 0; border-radius: 14px; cursor: pointer; text-align: left;
+    background: linear-gradient(135deg, #1e1b2e, #3d3557); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
+  .flowbtn b { display: block; font-size: 16px; }
+  .flowbtn small { display: block; font-size: 13px; opacity: .75; margin-top: 2px; }
+  .flowbtn .chev { margin-left: auto; font-size: 22px; opacity: .7; }
+  .fb-stack { position: relative; width: 74px; height: 44px; flex: none; perspective: 200px; }
+  .fb-stack i { position: absolute; top: 2px; width: 40px; height: 40px; border-radius: 3px; background: #6c5c9d center / cover no-repeat; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .fb-stack i:nth-child(1) { left: 0; transform: rotateY(55deg); }
+  .fb-stack i:nth-child(2) { right: 0; transform: rotateY(-55deg); }
+  .fb-stack i:nth-child(3) { left: 17px; z-index: 1; }
+  .flow { position: fixed; inset: 0; z-index: 18; background: #050407; color: #fff; overflow: hidden; display: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; }
+  .flow.on { display: block; }
+  .fl-glow { position: absolute; left: -20%; right: -20%; top: -10%; height: 85%; opacity: .42; pointer-events: none; transition: background-color .8s ease;
+    -webkit-mask-image: radial-gradient(closest-side, #000, transparent); mask-image: radial-gradient(closest-side, #000, transparent); }
+  .fl-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px;
+    padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left)); }
+  .fl-x, .fl-fs, .fl-play { flex: none; width: 38px; height: 38px; border-radius: 99px; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; }
+  .fl-sp { width: 38px; flex: none; }
+  .fl-seg { flex: 1; display: flex; justify-content: center; gap: 6px; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
+  .fl-seg::-webkit-scrollbar { display: none; }
+  .fl-seg button { flex: none; border: 0; border-radius: 99px; padding: 7px 13px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); font-size: 13px; font-weight: 700; cursor: pointer; }
+  .fl-seg button.on { background: #fff; color: #1e1b2e; }
+  .fl-stage { position: absolute; left: 0; right: 0; top: var(--st); height: var(--s); cursor: grab; }
+  .fl-stage:active { cursor: grabbing; }
+  .fl-item { position: absolute; left: 50%; top: 0; width: var(--s); height: var(--s); margin-left: calc(var(--s) / -2); perspective: 1400px; will-change: transform;
+    -webkit-box-reflect: below 2px linear-gradient(transparent 62%, rgba(255,255,255,.28)); }
+  .fl-card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3,.9,.3,1); }
+  .fl-item.flip .fl-card { transform: rotateY(180deg); }
+  .fl-front, .fl-back { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 3px; overflow: hidden; }
+  .fl-front img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .fl-front::after { content: ''; position: absolute; inset: 0; background: #000; opacity: var(--dim, 0); pointer-events: none; }
+  .fl-blank { width: 100%; height: 100%; display: grid; place-items: center; padding: 12%; text-align: center; font-weight: 900; font-size: calc(var(--s) / 9); color: #1e1b2e; }
+  .fl-back { transform: rotateY(180deg); background: linear-gradient(160deg, #2a2540, #141221); display: flex; flex-direction: column; padding: 10px 10px 8px; border: 1px solid rgba(255,255,255,.12); }
+  .fl-back h4 { margin: 0 0 6px; font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-back ol { flex: 1; margin: 0; padding: 0; list-style: none; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; font-size: 12px; }
+  .fl-back li { display: flex; gap: 8px; padding: 5px 2px; border-top: 1px solid rgba(255,255,255,.08); }
+  .fl-back li span { opacity: .5; width: 18px; text-align: right; flex: none; }
+  .fl-back li em { font-style: normal; flex: 1; }
+  .fl-back li b { color: #f46a9b; font-weight: 700; flex: none; }
+  .fl-back .fl-none { flex: 1; display: grid; place-items: center; opacity: .6; font-size: 13px; text-align: center; }
+  .fl-back button { margin-top: 8px; border: 0; border-radius: 99px; padding: 8px; background: #fff; color: #1e1b2e; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .fl-info { position: absolute; left: 0; right: 0; top: var(--it); z-index: 2; text-align: center; padding: 0 20px; pointer-events: none; }
+  .fl-info.in { animation: flInfo .35s ease both; }
+  .fl-info { transition: opacity .25s ease; }
+  .flow.flipped .fl-info { opacity: 0; }
+  @keyframes flInfo { from { opacity: 0; transform: translateY(6px); } }
+  .fl-t { font-size: clamp(18px, 4.6vw, 28px); font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-a { margin-top: 3px; font-size: clamp(14px, 3.4vw, 18px); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-m { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; font-size: 13px; color: rgba(255,255,255,.75); }
+  .fl-who { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; color: #1e1b2e; font-weight: 700; }
+  .fl-who .mini { width: 22px; height: 22px; }
+  .fl-score { color: #ffd76a; font-weight: 900; }
+  .fl-tag { padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.14); font-weight: 700; font-size: 12px; }
+  .fl-bot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 12px;
+    padding: 8px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); touch-action: pan-x; }
+  .fl-bot input { flex: 1; accent-color: #fff; touch-action: pan-x; }
+  .fl-n { flex: none; min-width: 58px; text-align: right; font-size: 13px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+  .fl-empty { position: absolute; inset: 0; display: grid; place-items: center; opacity: .7; }
+  @media (prefers-reduced-motion: reduce) { .fl-card { transition: none; } .fl-info.in { animation: none; } }
 </style>
 </head>
 <body>
@@ -796,6 +857,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   <div class="syncing" id="syncing" role="status">Updating…</div>
 </header>
 <main id="app"><div class="loading">Loading this week's album…</div></main>
+<div class="flow" id="flow" role="dialog" aria-label="Cover Flow"></div>
 <div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
 
 <script>
@@ -1943,7 +2005,7 @@ function renderAlbums() {
     h += '<div class="shead upnext"><div class="section-title">Upcoming</div><div class="t2">' + later.length + (later.length === 1 ? ' album' : ' albums') + ' lined up</div></div>';
     h += albumCards(later);
   }
-  return seasonBar() + '<div class="sswap">' + h + '</div>';
+  return seasonBar() + flowBtn() + '<div class="sswap">' + h + '</div>';
 }
 
 /* Members section at the bottom of Stats. Always covers every album; the season switch doesn't apply.
@@ -2319,7 +2381,7 @@ function openScrim(isAlbum) {
 /* Popup slides away, then hides. swipedMs: a swipe is already sliding it off, so just hide it after that long. */
 function closeAlbum(swipedMs) {
   var s = document.getElementById('scrim');
-  document.body.classList.remove('locked');
+  if (!flowOpen) document.body.classList.remove('locked'); // Cover Flow underneath keeps the page still
   if (popupOpen) { popupOpen = false; syncBack(); }
   if (!s.classList.contains('on')) return;
   if (typeof swipedMs === 'number') {
@@ -2418,7 +2480,7 @@ document.getElementById('scrim').addEventListener('click', function (e) { if (e.
  * one more while Rate or Add Album is open over a tab other than Home, and one more while a popup is open. So back closes the popup, then returns to Home,
  * and only leaves the app from Home. */
 var popupOpen = false, backTimer = null, backWaiting = false;
-function backWanted() { return (D && view !== 'home' ? 1 : 0) + (D && SUBS[view] && subFrom !== 'home' ? 1 : 0) + (popupOpen ? 1 : 0); }
+function backWanted() { return (D && view !== 'home' ? 1 : 0) + (D && SUBS[view] && subFrom !== 'home' ? 1 : 0) + (flowOpen ? 1 : 0) + (popupOpen ? 1 : 0); }
 function backHave() { var st = history.state; return st && st.adLvl ? st.adLvl : 0; }
 /* Called after anything that changes the tab or opens/closes a popup. Batched, so
  * "close popup then switch tab" in one tap settles to one history change. */
@@ -2437,6 +2499,7 @@ function syncBack() {
 window.addEventListener('popstate', function () {
   if (backWaiting) { backWaiting = false; syncBack(); return; } // our own cleanup, not the user
   if (popupOpen) closeAlbum();
+  else if (flowOpen) closeFlow();
   else if (D && SUBS[view]) show(subFrom);
   else if (D && view !== 'home') show('home');
   syncBack();
@@ -2591,6 +2654,273 @@ function pairStats(list) {
 }
 
 /* ---------- actions ---------- */
+
+/* ---------- Cover Flow ----------
+ * Full screen carousel of every album the club has picked or shared, like the old iPod.
+ * Drag or flick sideways (it keeps gliding), tap a side cover to jump to it, tap the middle one to flip it
+ * over for the tracklist (♥ = someone's favorite song). The scrubber, arrow keys and Play (auto advance) work too.
+ * Opens from the button at the top of Albums. The season pills narrow it down; All is the default. */
+var FLOW = null, flowOpen = false;
+function flowList(season) {
+  var inS = function (a) { return season === 'all' || a.season === season; };
+  var list = D.albums.filter(inS).concat((D.shared || []).filter(function (a) { return shareOut(a) && inS(a); }));
+  return list.sort(function (x, y) {
+    var dx = x.date || '', dy = y.date || '';
+    return dx < dy ? -1 : dx > dy ? 1 : ((x.shared ? 1 : 0) - (y.shared ? 1 : 0)) || (x.row - y.row);
+  });
+}
+function flowBtn() {
+  var last = D.albums.filter(function (a) { return a.cover && !isSoon(a); }).slice(-3);
+  var n = D.albums.length + (D.shared || []).filter(shareOut).length;
+  if (!n) return '';
+  return '<button class="flowbtn" onclick="openFlow()"><span class="fb-stack" aria-hidden="true">' +
+    [last[0], last[2], last[1]].map(function (a) { return '<i' + (a ? ' style="background-image:url(\'' + esc(a.cover) + '\')"' : '') + '></i>'; }).join('') +
+    '</span><span><b>Cover Flow</b><small>Swipe through all ' + n + ' albums we\'ve suggested</small></span><span class="chev">›</span></button>';
+}
+function openFlow() {
+  if (!D) return;
+  if (!FLOW) FLOW = { season: 'all' };
+  var el = document.getElementById('flow');
+  flowOpen = true;
+  el.classList.add('on');
+  document.body.classList.add('locked');
+  flowBuild(true);
+  syncBack();
+}
+function closeFlow() {
+  if (!flowOpen) return;
+  flowOpen = false;
+  flowStop();
+  if (FLOW && FLOW.raf) { cancelAnimationFrame(FLOW.raf); FLOW.raf = 0; }
+  document.getElementById('flow').classList.remove('on');
+  if (!popupOpen) document.body.classList.remove('locked');
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+  syncBack();
+}
+function flowSeason(i) {
+  var segs = ['all'].concat(seasonNames());
+  if (!segs[i] || segs[i] === FLOW.season) return;
+  FLOW.season = segs[i];
+  flowStop();
+  flowBuild(true);
+}
+function flowBuild(jump) {
+  var F = FLOW, el = document.getElementById('flow');
+  F.list = flowList(F.season);
+  F.flip = -1; F.fz = F.fzT = 0; F.cur = -1; F.drag = null;
+  el.classList.remove('flipped');
+  if (jump) {
+    var k = 0;
+    F.list.forEach(function (a, i) { if (!isSoon(a)) k = i; }); // land on this week's album
+    F.pos = F.target = k;
+  }
+  var segs = ['all'].concat(seasonNames());
+  var fsOK = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled) && !adStandalone();
+  var n = F.list.length;
+  var h = '<div class="fl-glow" id="flGlow"></div>' +
+    '<div class="fl-top" id="flTop"><button class="fl-x" onclick="closeFlow()" aria-label="Close Cover Flow">×</button><div class="fl-seg">' +
+    segs.map(function (s, i) { return '<button class="' + (s === F.season ? 'on' : '') + '" onclick="flowSeason(' + i + ')">' + (s === 'all' ? 'All' : esc(s)) + '</button>'; }).join('') +
+    '</div>' + (fsOK ? '<button class="fl-fs" onclick="flowFull()" aria-label="Full screen">⤢</button>' : '<span class="fl-sp"></span>') + '</div>';
+  if (!n) {
+    el.innerHTML = h + '<div class="fl-empty">No albums in ' + esc(F.season) + ' yet</div>';
+    return;
+  }
+  h += '<div class="fl-stage" id="flStage">' + F.list.map(function (a, i) {
+    return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' +
+      (a.cover ? '<img src="' + esc(a.cover) + '" alt="' + esc(a.album) + '" draggable="false">'
+        : '<div class="fl-blank" style="background:' + color(a.pickedBy) + '">' + esc(a.album) + '</div>') +
+      '</div><div class="fl-back"></div></div></div>';
+  }).join('') + '</div><div class="fl-info" id="flInfo"></div>' +
+    '<div class="fl-bot" id="flBot"><button class="fl-play" id="flPlay" onclick="flowPlay()" aria-label="Play">▶</button>' +
+    '<input type="range" id="flScrub" min="0" max="' + (n - 1) + '" step="1" value="' + Math.round(F.pos) + '" aria-label="Scrub through albums" oninput="flowStop();flowGo(+this.value)">' +
+    '<span class="fl-n" id="flN"></span></div>';
+  el.innerHTML = h;
+  F.items = [].slice.call(el.querySelectorAll('.fl-item'));
+  flowWire(document.getElementById('flStage'));
+  flowSize();
+  flowPaint();
+}
+/* Sizes the covers to the screen: big in landscape or on a computer, about half the width on a phone held upright. */
+function flowSize() {
+  var F = FLOW, el = document.getElementById('flow'); if (!F || !F.items) return;
+  var W = el.clientWidth, H = el.clientHeight;
+  var top = document.getElementById('flTop').getBoundingClientRect().bottom;
+  var bot = H - document.getElementById('flBot').getBoundingClientRect().top;
+  var info = 96, gap = 22, avail = H - top - bot;
+  var S = Math.round(Math.max(110, Math.min(W * (W > H ? 0.34 : 0.5), avail - info - gap - 16, 380)));
+  var st = Math.round(top + Math.max(8, (avail - S - gap - info) * 0.45));
+  F.S = S; F.W = W;
+  F.reach = Math.min(16, Math.ceil((W / 2 - S * 0.6) / (S * 0.2)) + 2);
+  el.style.setProperty('--s', S + 'px');
+  el.style.setProperty('--st', st + 'px');
+  el.style.setProperty('--it', (st + S + gap) + 'px');
+}
+/* Puts every cover in place for the current scroll position (a fraction while gliding). */
+function flowPaint() {
+  var F = FLOW, S = F.S, p = F.pos;
+  for (var i = 0; i < F.items.length; i++) {
+    var it = F.items[i], d = i - p, ad = Math.abs(d);
+    if (ad > F.reach) { if (!it.hid) { it.style.visibility = 'hidden'; it.hid = true; } continue; }
+    if (it.hid) { it.style.visibility = ''; it.hid = false; }
+    var c = Math.min(ad, 1), sg = d < 0 ? -1 : 1;
+    var x = sg * (c * S * 0.62 + Math.max(0, ad - 1) * S * 0.2);
+    var z = -c * S * 0.55, ry = -sg * c * 72;
+    var sc = i === F.flip ? 1 + (F.fz || 0) * (F.flipScale - 1) : 1;
+    it.style.transform = 'perspective(' + Math.round(S * 3.2) + 'px) translate3d(' + x.toFixed(1) + 'px,0,' + z.toFixed(1) + 'px) rotateY(' + ry.toFixed(1) + 'deg) scale(' + sc.toFixed(3) + ')';
+    it.style.zIndex = 1000 - Math.round(ad * 10);
+    it.style.setProperty('--dim', (c * 0.28 + Math.max(0, ad - F.reach + 2) * 0.35).toFixed(2));
+  }
+  var cur = Math.max(0, Math.min(F.items.length - 1, Math.round(p)));
+  if (cur !== F.cur) { F.cur = cur; flowInfo(); }
+}
+function flowInfo() {
+  var F = FLOW, a = F.list[F.cur]; if (!a) return;
+  var soon = isSoon(a);
+  var m = '<span class="fl-who" style="background:' + color(a.pickedBy) + '">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span>' +
+    '<span>' + (a.shared ? 'Shared ' : soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date)) + '</span>' +
+    (F.season === 'all' ? '<span>' + esc(a.season) + '</span>' : '') +
+    (a.shared ? '<span class="fl-tag">Heard it before</span>' : '') +
+    (soon ? '<span class="fl-tag">Up next</span>' : a.avg != null ? '<span class="fl-score">' + fmt(a.avg) + ' ' + stars(a.avg) + '</span>' : '');
+  var el = document.getElementById('flInfo');
+  el.innerHTML = '<div class="fl-t">' + esc(a.album) + '</div><div class="fl-a">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div><div class="fl-m">' + m + '</div>';
+  el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
+  document.getElementById('flN').textContent = (F.cur + 1) + ' of ' + F.list.length;
+  var sc = document.getElementById('flScrub'); if (+sc.value !== F.cur) sc.value = F.cur;
+  var row = a.row;
+  artColor(a, function (rgb) { var g = document.getElementById('flGlow'); if (g && FLOW.list[FLOW.cur] && FLOW.list[FLOW.cur].row === row) g.style.backgroundColor = 'rgb(' + rgb + ')'; });
+  if (F.flip >= 0 && F.flip !== F.cur) flowUnflip();
+}
+/* Glides to wherever target is, easing out; also grows/shrinks a flipped cover. */
+function flowTick(t) {
+  var F = FLOW; F.raf = 0;
+  if (!flowOpen || !F.items) return;
+  var dt = F.last ? Math.min(50, t - F.last) : 16; F.last = t;
+  var k = calm() ? 1 : 1 - Math.pow(0.82, dt / 16.7), more = false;
+  if (!F.drag) {
+    var d = F.target - F.pos;
+    if (Math.abs(d) < 0.002) F.pos = F.target; else { F.pos += d * k; more = true; }
+  }
+  var fd = F.fzT - F.fz;
+  if (Math.abs(fd) < 0.003) F.fz = F.fzT; else { F.fz += fd * k; more = true; }
+  flowPaint();
+  if (more || F.drag) F.raf = requestAnimationFrame(flowTick); else F.last = 0;
+}
+function flowKick() { if (!FLOW.raf) { FLOW.last = 0; FLOW.raf = requestAnimationFrame(flowTick); } }
+function flowGo(i) {
+  var F = FLOW; if (!F || !F.list.length) return;
+  F.target = Math.max(0, Math.min(F.list.length - 1, Math.round(i)));
+  flowKick();
+}
+/* Tap the middle cover: it turns over to show the tracklist, like the iPod did. */
+function flowFlip(i) {
+  var F = FLOW, a = F.list[i], it = F.items[i]; if (!a || !it) return;
+  if (F.flip === i) { flowUnflip(); return; }
+  if (F.flip >= 0) flowUnflip();
+  var love = {};
+  D.members.forEach(function (m) { var s = a.fav && a.fav[m]; if (s) love[s] = (love[s] || 0) + 1; });
+  var tr = a.tracks || [];
+  it.querySelector('.fl-back').innerHTML = '<h4>' + esc(a.album) + '</h4>' +
+    (tr.length ? '<ol>' + tr.map(function (s, n) { return '<li><span>' + (n + 1) + '</span><em>' + esc(s) + '</em>' + (love[s] ? '<b>♥' + (love[s] > 1 ? love[s] : '') + '</b>' : '') + '</li>'; }).join('') + '</ol>'
+      : '<div class="fl-none">Tracklist not loaded yet</div>') +
+    '<button data-open="' + a.row + '">Ratings and comments ›</button>';
+  var el = document.getElementById('flow');
+  F.flipScale = Math.max(1, Math.min(1.45, el.clientWidth * 0.86 / F.S, (el.clientHeight * 0.62) / F.S));
+  F.flip = i; F.fzT = 1;
+  el.classList.add('flipped');
+  it.classList.add('flip');
+  flowKick();
+}
+function flowUnflip() {
+  var F = FLOW; if (F.flip < 0) return;
+  var it = F.items[F.flip]; if (it) it.classList.remove('flip');
+  document.getElementById('flow').classList.remove('flipped');
+  F.fzT = 0;
+  if (F.flip !== F.cur) { F.fz = 0; F.flip = -1; flowPaint(); return; }
+  var was = F.flip;
+  setTimeout(function () { if (F.flip === was && F.fzT === 0) { F.flip = -1; flowPaint(); } }, 450);
+  flowKick();
+}
+/* Dragging, flicking and tapping on the covers. */
+function flowWire(stage) {
+  var F = FLOW;
+  stage.addEventListener('pointerdown', function (e) {
+    if (e.button > 0 || !F.list.length) return;
+    if (e.target.closest('.fl-back ol')) return; // scrolling the tracklist, not the covers
+    flowStop();
+    F.drag = { x: e.clientX, p0: F.pos, moved: false, hist: [[e.timeStamp, e.clientX]], id: e.pointerId, el: e.target };
+    try { stage.setPointerCapture(e.pointerId); } catch (er) {}
+    flowKick();
+  });
+  stage.addEventListener('pointermove', function (e) {
+    var g = F.drag; if (!g || e.pointerId !== g.id) return;
+    var dx = e.clientX - g.x;
+    if (!g.moved && Math.abs(dx) > 6) { g.moved = true; if (F.flip >= 0) flowUnflip(); }
+    if (!g.moved) return;
+    var p = g.p0 - dx / (F.S * 0.36), max = F.list.length - 1;
+    if (p < 0) p = p / 3; else if (p > max) p = max + (p - max) / 3; // rubber band at the ends
+    F.pos = p;
+    g.hist.push([e.timeStamp, e.clientX]); if (g.hist.length > 6) g.hist.shift();
+  });
+  function up(e) {
+    var g = F.drag; if (!g || e.pointerId !== g.id) return;
+    F.drag = null;
+    if (!g.moved) {
+      var b = g.el.closest('[data-open]');
+      if (b) { openAlbum(+b.dataset.open); return; }
+      var it = g.el.closest('.fl-item'); if (!it) { flowKick(); return; }
+      var i = +it.dataset.i;
+      if (i === F.cur && Math.abs(F.pos - i) < 0.3) flowFlip(i); else flowGo(i);
+      return;
+    }
+    var h = g.hist, a = h[0], z = h[h.length - 1], v = 0;
+    if (z[0] - a[0] > 0 && e.timeStamp - z[0] < 80) v = -(z[1] - a[1]) / (z[0] - a[0]) / (F.S * 0.36); // covers per ms
+    flowGo(F.pos + v * 260);
+  }
+  stage.addEventListener('pointerup', up);
+  stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', function (e) { // trackpads and mouse wheels on a computer
+    e.preventDefault(); flowStop();
+    F.wheel = (F.wheel || 0) + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
+    if (Math.abs(F.wheel) > 40) { flowGo(F.target + (F.wheel > 0 ? 1 : -1)); F.wheel = 0; }
+  }, { passive: false });
+}
+/* Play: moves to the next album every few seconds, for showing it on a TV or laptop. */
+function flowPlay() {
+  var F = FLOW;
+  if (F.play) { flowStop(); return; }
+  if (F.cur >= F.list.length - 1) flowGo(0);
+  F.play = setInterval(function () {
+    if (!flowOpen) { flowStop(); return; }
+    flowGo(F.target >= F.list.length - 1 ? 0 : F.target + 1);
+  }, 3500);
+  var b = document.getElementById('flPlay'); if (b) { b.textContent = '❚❚'; b.setAttribute('aria-label', 'Pause'); }
+}
+function flowStop() {
+  var F = FLOW; if (!F || !F.play) return;
+  clearInterval(F.play); F.play = 0;
+  var b = document.getElementById('flPlay'); if (b) { b.textContent = '▶'; b.setAttribute('aria-label', 'Play'); }
+}
+function flowFull() {
+  var el = document.getElementById('flow');
+  if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+  else if (el.requestFullscreen) el.requestFullscreen().catch(function () {});
+}
+window.addEventListener('resize', function () { if (flowOpen && FLOW && FLOW.items) { flowSize(); flowPaint(); } });
+document.addEventListener('fullscreenchange', function () { if (flowOpen && FLOW && FLOW.items) setTimeout(function () { flowSize(); flowPaint(); }, 60); });
+document.addEventListener('keydown', function (e) {
+  if (!flowOpen || popupOpen || !FLOW.list || /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || '')) && e.target.type !== 'range') return;
+  var F = FLOW, k = e.key;
+  if (k === 'Escape') { closeFlow(); return; }
+  if (!F.list.length) return;
+  if (k === 'ArrowRight' || k === 'ArrowDown') { flowStop(); flowGo(F.target + 1); }
+  else if (k === 'ArrowLeft' || k === 'ArrowUp') { flowStop(); flowGo(F.target - 1); }
+  else if (k === 'Home') { flowStop(); flowGo(0); }
+  else if (k === 'End') { flowStop(); flowGo(F.list.length - 1); }
+  else if (k === ' ') flowPlay();
+  else if (k === 'Enter') flowFlip(F.cur);
+  else return;
+  e.preventDefault();
+});
 
 var shownView = null;
 /* Rate and Add Album aren't tabs: they open over the tab you came from, with a Back button (and the phone's back). */
