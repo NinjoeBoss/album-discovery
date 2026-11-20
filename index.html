@@ -887,8 +887,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     background: linear-gradient(170deg, #c9a273, #a87d4f 60%, #8c6640); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15), inset 0 0 2.4em rgba(60,35,10,.35); }
   .fl-dv::before { content: ''; position: absolute; inset: 0; opacity: .25; border-radius: inherit;
     background: repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 2px, transparent 2px 7px); }
-  .fl-dv-tab { position: absolute; left: 8%; top: 7%; padding: .35em .9em; border-radius: .3em; background: #f3e4c6; font-weight: 900; font-size: .9em;
-    text-transform: uppercase; letter-spacing: .1em; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fl-dv b { position: relative; font-size: 2.6em; font-weight: 900; line-height: 1.05; letter-spacing: -.01em; }
   .fl-dv small { position: relative; font-size: 1.1em; font-weight: 700; opacity: .7; }
   .fl-div .fl-refl::after { background: linear-gradient(rgba(5,4,7,.72), rgba(5,4,7,.92) 26%, #050407 46%); }
@@ -2747,9 +2745,9 @@ function pairStats(list) {
  * over for the tracklist (♥ = someone's favorite song). Arrow keys work too.
  * Opens from the button at the top of Albums. The season pills narrow it down; All is the default. */
 var FLOW = null, flowOpen = false;
-function flowList(season) {
-  var inS = function (a) { return season === 'all' || a.season === season; };
-  var list = D.albums.filter(inS).concat((D.shared || []).filter(function (a) { return shareOut(a) && inS(a); }));
+function flowList(season, heard) {
+  var inS = function (a) { return season === 'all' || season === 'heard' || a.season === season; };
+  var list = heard ? (D.shared || []).filter(function (a) { return shareOut(a) && inS(a); }) : D.albums.filter(inS);
   return list.sort(function (x, y) {
     var dx = x.date || '', dy = y.date || '';
     return dx < dy ? -1 : dx > dy ? 1 : ((x.shared ? 1 : 0) - (y.shared ? 1 : 0)) || (x.row - y.row);
@@ -2878,8 +2876,14 @@ function closeFlow() {
   syncBack();
   flowArm();
 }
-function flowSeason(i) {
+/* Pills: All, each season, and Heard it before (only once a share is out). */
+function flowSegs() {
   var segs = ['all'].concat(seasonNames());
+  if (flowList('all', true).length) segs.push('heard');
+  return segs;
+}
+function flowSeason(i) {
+  var segs = flowSegs();
   if (!segs[i] || segs[i] === FLOW.season) return;
   FLOW.season = segs[i];
   
@@ -2888,27 +2892,31 @@ function flowSeason(i) {
 function flowBuild(jump) {
   var F = FLOW, el = document.getElementById('flow');
   flowHalt();
-  F.list = flowDividers(flowList(F.season), F.season === 'all');
+  if (flowSegs().indexOf(F.season) < 0) F.season = 'all';
+  F.list = flowSections(F.season);
   flowStop(true);
   F.builtD = D; F.builtKey = storeGet('ad.data') || '';
   F.flip = -1; F.cur = -1; F.drag = null;
   el.classList.remove('flipped');
   if (jump) {
-    var k = 0;
-    F.list.forEach(function (a, i) { if (!a.divider && !isSoon(a)) k = i; }); // land on this week's album
-    F.pos = k;
+    var k = -1, last = 0;
+    F.list.forEach(function (a, i) {
+      if (a.divider) return;
+      if (!isSoon(a)) { last = i; if (!a.shared) k = i; } // land on this week's album (the newest share in Heard it before)
+    });
+    F.pos = k < 0 ? last : k;
   }
-  var segs = ['all'].concat(seasonNames());
+  var segs = flowSegs();
   var fsOK = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled) && !adStandalone();
   var n = F.list.length;
   el.classList.remove('resting'); F.resting = false;
   var h = '<div class="fl-glow" id="flGlowA"></div><div class="fl-glow" id="flGlowB"></div><div class="fl-spot"></div><div class="fl-grain"></div>' +
     '<div class="fl-rest" onclick="flowRest(false)"><span class="fr-phone"><i></i></span><b>Turn your phone upright</b><small>Tap to go back to Cover Flow</small></div>' +
     '<div class="fl-top" id="flTop"><button class="fl-x" onclick="closeFlow()" aria-label="Close Cover Flow">×</button><div class="fl-seg">' +
-    segs.map(function (s, i) { return '<button class="' + (s === F.season ? 'on' : '') + '" onclick="flowSeason(' + i + ')">' + (s === 'all' ? 'All' : esc(s)) + '</button>'; }).join('') +
+    segs.map(function (s, i) { return '<button class="' + (s === F.season ? 'on' : '') + '" onclick="flowSeason(' + i + ')">' + (s === 'all' ? 'All' : s === 'heard' ? 'Heard it before' : esc(s)) + '</button>'; }).join('') +
     '</div>' + (fsOK ? '<button class="fl-fs" onclick="flowFull()" aria-label="Full screen">⤢</button>' : '<span class="fl-sp"></span>') + '</div>';
   if (!n) {
-    el.innerHTML = h + '<div class="fl-empty">No albums in ' + esc(F.season) + ' yet</div>';
+    el.innerHTML = h + '<div class="fl-empty">No albums in ' + (F.season === 'heard' ? 'Heard it before' : esc(F.season)) + ' yet</div>';
     F.items = null;
     return;
   }
@@ -2934,6 +2942,15 @@ function flowBuild(jump) {
   flowSize();
   flowPlace(F.pos);
 }
+/* The club's picks first (with season dividers in All), then the Heard it before shares in their own section
+ * behind a divider of their own. The Heard it before pill shows just the shares. */
+function flowSections(season) {
+  var heard = flowList(season, true);
+  if (season === 'heard') return heard;
+  var out = flowDividers(flowList(season, false), season === 'all');
+  if (heard.length) out = out.concat([{ divider: true, heard: true, season: 'Heard it before', row: 'div|heard', count: heard.length }], heard);
+  return out;
+}
 /* "All" gets a crate divider card in front of each season, like the tabs in a record bin. */
 function flowDividers(list, on) {
   if (!on) return list;
@@ -2948,7 +2965,7 @@ function flowDividers(list, on) {
   return out;
 }
 function flowDivArt(a) {
-  return '<div class="fl-dv"><span class="fl-dv-tab">' + esc(a.season) + '</span><b>' + esc(a.season) + '</b><small>' + a.count + ' album' + (a.count === 1 ? '' : 's') + '</small></div>';
+  return '<div class="fl-dv"><b>' + esc(a.season) + '</b><small>' + a.count + ' album' + (a.count === 1 ? '' : 's') + '</small></div>';
 }
 /* Sizes the covers to the screen: big in landscape or on a computer, about half the width on a phone held upright. */
 function flowSize() {
@@ -3105,7 +3122,7 @@ function flowInfo() {
     var soon = isSoon(a);
     var m = '<span class="fl-who" style="background:' + color(a.pickedBy) + '">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span>' +
       '<span>' + (a.shared ? 'Shared ' : soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date)) + '</span>' +
-      (F.season === 'all' ? '<span>' + esc(a.season) + '</span>' : '') +
+      (F.season === 'all' || F.season === 'heard' ? '<span>' + esc(a.season) + '</span>' : '') +
       (a.shared ? '<span class="fl-tag">Heard it before</span>' : '') +
       (soon ? '<span class="fl-tag">Up next</span>' : a.avg != null ? '<span class="fl-score">' + fmt(a.avg) + ' ' + stars(a.avg) + '</span>' : '');
     el.innerHTML = '<div class="fl-t">' + esc(a.album) + '</div><div class="fl-a">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div><div class="fl-m">' + m + '</div>';
