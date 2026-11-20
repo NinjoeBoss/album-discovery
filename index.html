@@ -2918,7 +2918,7 @@ function flowXf(i, p) {
 }
 function flowShow(i, on) {
   var F = FLOW;
-  if (!!F.shown[i] === on) return;
+  if (F.shown[i] === on) return; // undefined (never set yet) must fall through, or far covers stay visible, stacked in the middle
   F.shown[i] = on;
   F.items[i].style.visibility = on ? '' : 'hidden';
 }
