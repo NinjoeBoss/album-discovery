@@ -3076,7 +3076,7 @@ function flowUnflip() {
   if (!it) return;
   it.classList.remove('flip');
   it.style.transform = flowXf(i, F.glide ? flowNow().p : F.pos);
-  setTimeout(function () { if (F.flip !== i) it.style.transition = ''; }, 560);
+  setTimeout(function () { if (F.flip !== i) { it.style.transition = ''; it.querySelector('.fl-back').innerHTML = ''; } }, 560);
 }
 /* Dragging, flicking and tapping on the covers. While the finger is down the covers follow it directly
  * (smoothed a touch, since touch input arrives at 60Hz and the screen may draw at 120Hz). */
@@ -3091,6 +3091,9 @@ function flowWire(stage) {
     
     var gliding = !!F.glide;
     flowHalt();
+    // A cover that just turned back over still has its turn animation; drop it so it follows the finger
+    // with the rest instead of trailing behind (looked like a cover stuck in place).
+    if (F.flip < 0) F.items.forEach(function (it) { if (it.style.transition) it.style.transition = ''; });
     F.vel = 0;
     F.drag = { x: e.clientX, p0: F.pos, want: F.pos, moved: false, hist: [[e.timeStamp, e.clientX]], id: e.pointerId, el: e.target, caught: gliding, last: 0 };
     try { stage.setPointerCapture(e.pointerId); } catch (er) {}
