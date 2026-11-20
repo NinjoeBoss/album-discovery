@@ -872,6 +872,64 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   @media (orientation: landscape) and (max-height: 500px) { html.flowauto #flow { display: block; visibility: visible; pointer-events: auto; } }
   @media (orientation: portrait) { html.flowauto #flow { visibility: hidden; pointer-events: none; } }
   #flow > :not(.fl-glow) { transition: opacity .25s ease; }
+  #flow { -webkit-touch-callout: none; }
+  /* Dim room: faint film grain, and a soft spotlight on the middle cover (brighter while a preview plays). */
+  .fl-grain { position: absolute; inset: 0; pointer-events: none; opacity: .07;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.35'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .fl-spot { position: absolute; left: 50%; top: calc(var(--st) - var(--s) * .55); width: calc(var(--s) * 2.6); height: calc(var(--s) * 2.5); margin-left: calc(var(--s) * -1.3);
+    pointer-events: none; opacity: .75; transition: opacity .8s ease;
+    background: radial-gradient(ellipse 30% 46% at 50% 40%, rgba(255,244,226,.15), rgba(255,244,226,.05) 60%, transparent 100%),
+      radial-gradient(ellipse 36% 9% at 50% 82%, rgba(255,244,226,.07), transparent 100%); }
+  #flow.playing .fl-spot { opacity: 1; }
+  /* Record store stickers on the sleeve */
+  .fl-stk { position: absolute; inset: 0; pointer-events: none; font-size: calc(var(--s) * .05); }
+  .fl-stk > * { position: absolute; box-shadow: 0 .15em .4em rgba(0,0,0,.35); }
+  .fl-dot { right: 5%; top: 5%; width: 4.4em; height: 4.4em; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #fff4d6; color: #1e1b2e; transform: rotate(-9deg); line-height: 1; border: .14em dashed rgba(30,27,46,.25); }
+  .fl-dot b { font-size: 1.5em; font-weight: 900; letter-spacing: -.02em; }
+  .fl-dot i { font-style: normal; font-size: .62em; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-top: .18em; opacity: .7; }
+  .fl-dot.gold { background: radial-gradient(circle at 35% 30%, #fff1a8, #f2c230 55%, #c8901a); border-color: rgba(120,70,0,.35); }
+  .fl-dot.new { background: #8ff0c4; }
+  .fl-tagp { left: 4%; bottom: 5%; padding: .32em .7em .32em 1.2em; border-radius: .25em; background: #fffaf0; color: #1e1b2e; font-weight: 900; font-size: 1.05em;
+    line-height: 1.1; transform: rotate(-3deg); max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: .5em solid var(--c, #aaa); }
+  .fl-tagp::before { content: ''; position: absolute; left: .32em; top: 50%; width: .4em; height: .4em; margin-top: -.2em; border-radius: 50%; background: #050407; opacity: .5; }
+  .fl-tagp i { display: block; font-style: normal; font-size: .58em; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; opacity: .55; }
+  .fl-heard, .fl-classic { left: 4%; top: 5%; padding: .3em .65em; border-radius: .2em; font-weight: 900; font-size: .78em; text-transform: uppercase; letter-spacing: .08em; transform: rotate(-4deg); }
+  .fl-heard { background: #c9b8ff; color: #1e1b2e; }
+  .fl-classic { background: transparent; color: #f6e7c8; border: .16em solid #f6e7c8; box-shadow: none; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .fl-refl .fl-stk { display: none; }
+  /* Season divider: a cardboard crate tab */
+  .fl-dv { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3em; text-align: center; padding: 10%;
+    font-size: calc(var(--s) * .05); color: #3a2a17; border-radius: 3px;
+    background: linear-gradient(170deg, #c9a273, #a87d4f 60%, #8c6640); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15), inset 0 0 2.4em rgba(60,35,10,.35); }
+  .fl-dv::before { content: ''; position: absolute; inset: 0; opacity: .25; border-radius: inherit;
+    background: repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 2px, transparent 2px 7px); }
+  .fl-dv-tab { position: absolute; left: 8%; top: 7%; padding: .35em .9em; border-radius: .3em; background: #f3e4c6; font-weight: 900; font-size: .9em;
+    text-transform: uppercase; letter-spacing: .1em; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-dv b { position: relative; font-size: 2.6em; font-weight: 900; line-height: 1.05; letter-spacing: -.01em; }
+  .fl-dv small { position: relative; font-size: 1.1em; font-weight: 700; opacity: .7; }
+  .fl-div .fl-refl::after { background: linear-gradient(rgba(5,4,7,.72), rgba(5,4,7,.92) 26%, #050407 46%); }
+  .fl-n i { font-style: normal; opacity: .65; }
+  /* The little player that takes the counter's place while a preview plays */
+  .fl-np { position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(8px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 8px; max-width: min(36vw, 300px); height: 28px; padding: 0 12px 0 4px; border: 0; border-radius: 99px;
+    background: rgba(255,255,255,.12); color: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+  .fl-np b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-np.none b { font-weight: 600; opacity: .7; }
+  .fl-rec { flex: none; width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle, #050407 0 7%, var(--lab, #f46a9b) 8% 30%, #111 31% 33%, transparent 34%), repeating-radial-gradient(circle, #1a1a1a 0 1px, #2b2b2b 1px 2px);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.15); animation: flSpin 1.8s linear infinite; }
+  .fl-np.load .fl-rec { animation-duration: .7s; }
+  .fl-np.none .fl-rec, .fl-np.tap .fl-rec { animation: none; }
+  @keyframes flSpin { to { transform: rotate(360deg); } }
+  .fl-eq { flex: none; display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+  .fl-eq i { width: 3px; height: 100%; border-radius: 1px; background: #8ff0c4; transform-origin: bottom; animation: flEq .9s ease-in-out infinite alternate; }
+  .fl-eq i:nth-child(2) { animation-delay: -.3s; } .fl-eq i:nth-child(3) { animation-delay: -.6s; }
+  @keyframes flEq { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
+  .fl-back li.pv em { color: #8ff0c4; }
+  .fl-back li.pv span { opacity: 1; color: #8ff0c4; }
+  .fl-back li { cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { .fl-rec, .fl-eq i { animation: none; } }
+  @media (max-height: 500px) { .fl-np { height: 24px; font-size: 12px; bottom: max(4px, calc(env(safe-area-inset-bottom) - 2px)); } .fl-rec { width: 18px; height: 18px; } }
   #flow.resting > :not(.fl-rest) { opacity: 0; pointer-events: none; }
   .fl-rest { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
     text-align: center; opacity: 0; pointer-events: none; cursor: pointer; }
@@ -2783,7 +2841,7 @@ function flowOrient() {
     try { var p = screen.orientation.lock('any'); if (p && p.catch) p.catch(function () {}); } catch (e) {}
   }
   unlock();
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) unlock(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) unlock(); else flowStop(); });
 })();
 function flowBtn() {
   if (flowPhone()) return '<div class="flowhint" aria-hidden="true"><span class="fh-phone"><i></i></span><span><b>Cover Flow</b><small>Turn your phone sideways to flip through all our albums</small></span></div>';
@@ -2800,12 +2858,14 @@ function openFlow() {
   var el = document.getElementById('flow');
   var ready = FLOW.items && el.classList.contains('pre') && FLOW.builtD === D;
   flowOpen = true;
+  var seen = +storeGet('ad.flowHints') || 0;
+  FLOW.hint = seen < 4; if (seen < 9) storeSet('ad.flowHints', String(seen + 1));
   clearTimeout(flowArm.t);
   el.classList.remove('pre');
   el.classList.add('on');
   document.body.classList.add('locked');
   flowRest(false);
-  if (ready) { flowSize(); flowPlace(Math.round(FLOW.pos)); } // already built and waiting: nothing to fade in
+  if (ready) { flowSize(); flowPlace(Math.round(FLOW.pos)); flowBot(); } // already built and waiting: nothing to fade in
   else flowBuild(true);
   syncBack();
   flowArm();
@@ -2815,7 +2875,7 @@ function openFlow() {
  * a tap on that screen brings the covers back. */
 function flowRest(on) {
   var F = FLOW, el = document.getElementById('flow'); if (!F) return;
-  if (on) { flowHalt(); flowUnflip(); F.drag = null; }
+  if (on) { flowHalt(); flowUnflip(); F.drag = null; flowStop(); }
   F.resting = !!on;
   el.classList.toggle('resting', !!on);
 }
@@ -2824,7 +2884,8 @@ function closeFlow() {
   if (flowPhone() && flowLandscape()) { flowRest(true); syncBack(); return; }
   flowOpen = false;
   flowRest(false);
-  
+  flowStop();
+
   if (FLOW) { FLOW.drag = null; flowHalt(); clearTimeout(FLOW.glowT); }
   var el = document.getElementById('flow');
   el.classList.remove('on');
@@ -2844,20 +2905,21 @@ function flowSeason(i) {
 function flowBuild(jump) {
   var F = FLOW, el = document.getElementById('flow');
   flowHalt();
-  F.list = flowList(F.season);
+  F.list = flowDividers(flowList(F.season), F.season === 'all');
+  flowStop(true);
   F.builtD = D; F.builtKey = storeGet('ad.data') || '';
   F.flip = -1; F.cur = -1; F.drag = null;
   el.classList.remove('flipped');
   if (jump) {
     var k = 0;
-    F.list.forEach(function (a, i) { if (!isSoon(a)) k = i; }); // land on this week's album
+    F.list.forEach(function (a, i) { if (!a.divider && !isSoon(a)) k = i; }); // land on this week's album
     F.pos = k;
   }
   var segs = ['all'].concat(seasonNames());
   var fsOK = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled) && !adStandalone();
   var n = F.list.length;
   el.classList.remove('resting'); F.resting = false;
-  var h = '<div class="fl-glow" id="flGlowA"></div><div class="fl-glow" id="flGlowB"></div>' +
+  var h = '<div class="fl-glow" id="flGlowA"></div><div class="fl-glow" id="flGlowB"></div><div class="fl-spot"></div><div class="fl-grain"></div>' +
     '<div class="fl-rest" onclick="flowRest(false)"><span class="fr-phone"><i></i></span><b>Turn your phone upright</b><small>Tap to go back to Cover Flow</small></div>' +
     '<div class="fl-top" id="flTop"><button class="fl-x" onclick="closeFlow()" aria-label="Close Cover Flow">×</button><div class="fl-seg">' +
     segs.map(function (s, i) { return '<button class="' + (s === F.season ? 'on' : '') + '" onclick="flowSeason(' + i + ')">' + (s === 'all' ? 'All' : esc(s)) + '</button>'; }).join('') +
@@ -2868,10 +2930,15 @@ function flowBuild(jump) {
     return;
   }
   /* Each cover carries its own mirror image underneath (part of the same layer, so it costs nothing while moving). */
+  var top = 0, nAlb = 0;
+  F.num = F.list.map(function (a) { if (a.divider) return 0; if (!isSoon(a) && a.avg != null && a.avg > top) top = a.avg; return ++nAlb; });
+  F.nAlb = nAlb;
   h += '<div class="fl-stage" id="flStage">' + F.list.map(function (a, i) {
+    if (a.divider) return '<div class="fl-item fl-div" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + flowDivArt(a) + '</div><div class="fl-back"></div></div>' +
+      '<div class="fl-refl" aria-hidden="true">' + flowDivArt(a) + '</div></div>';
     var art = a.cover ? '<img src="' + esc(a.cover) + '" alt="" draggable="false" decoding="async">'
       : '<div class="fl-blank" style="background:' + color(a.pickedBy) + '">' + esc(a.album) + '</div>';
-    return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + art.replace('alt=""', 'alt="' + esc(a.album) + '"') +
+    return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + art.replace('alt=""', 'alt="' + esc(a.album) + '"') + flowStickers(a, top) +
       '</div><div class="fl-back"></div></div><div class="fl-refl" aria-hidden="true">' + art + '</div></div>';
   }).join('') + '</div><div class="fl-info" id="flInfo"></div>' +
     '<div class="fl-bot" id="flBot">' +
@@ -2883,6 +2950,33 @@ function flowBuild(jump) {
   flowWire(document.getElementById('flStage'));
   flowSize();
   flowPlace(F.pos);
+}
+/* "All" gets a crate divider card in front of each season, like the tabs in a record bin. */
+function flowDividers(list, on) {
+  if (!on) return list;
+  var out = [], last = null;
+  list.forEach(function (a) {
+    if (a.season && a.season !== last) {
+      last = a.season;
+      out.push({ divider: true, season: a.season, row: 'div|' + a.season, count: list.filter(function (b) { return b.season === a.season; }).length });
+    }
+    out.push(a);
+  });
+  return out;
+}
+function flowDivArt(a) {
+  return '<div class="fl-dv"><span class="fl-dv-tab">' + esc(a.season) + '</span><b>' + esc(a.season) + '</b><small>' + a.count + ' album' + (a.count === 1 ? '' : 's') + '</small></div>';
+}
+/* Record store stickers on the sleeve: the club's average (gold for the club's top album), who picked it,
+ * Up next / Heard it before, and a Classic stamp on anything from before 1990. */
+function flowStickers(a, top) {
+  var soon = isSoon(a), h = '';
+  if (soon) h += '<span class="fl-dot new"><b>Up</b><i>next</i></span>';
+  else if (a.avg != null) h += '<span class="fl-dot' + (top && a.avg === top ? ' gold' : '') + '"><b>' + a.avg.toFixed(1) + '</b><i>' + (top && a.avg === top ? 'No. 1' : 'club') + '</i></span>';
+  if (a.shared) h += '<span class="fl-heard">Heard it before</span>';
+  else if (+a.year && +a.year < 1990) h += '<span class="fl-classic">Classic</span>';
+  if (a.pickedBy) h += '<span class="fl-tagp" style="--c:' + color(a.pickedBy) + '"><i>' + (a.shared ? 'shared by' : 'picked by') + '</i>' + esc(a.pickedBy) + '</span>';
+  return '<div class="fl-stk" aria-hidden="true">' + h + '</div>';
 }
 /* Sizes the covers to the screen: big in landscape or on a computer, about half the width on a phone held upright. */
 function flowSize() {
@@ -3009,7 +3103,18 @@ function flowWatch() {
 }
 function flowCur(p) {
   var F = FLOW, cur = Math.max(0, Math.min(F.items.length - 1, Math.round(p)));
-  if (cur !== F.cur) { F.cur = cur; flowInfo(); }
+  if (cur !== F.cur) {
+    if (F.cur >= 0 && (F.drag || F.glide)) flowTick();
+    F.cur = cur; flowInfo();
+  }
+}
+/* A tiny buzz as each cover passes the middle, like a detent. Android only: iPhone Safari doesn't let pages vibrate. */
+function flowTick() {
+  if (!navigator.vibrate || calm()) return;
+  var t = performance.now();
+  if (t - (flowTick.t || 0) < 40) return; // a fast flick would otherwise be one long buzz
+  flowTick.t = t;
+  try { navigator.vibrate(8); } catch (e) {}
 }
 function flowSettle() { flowGlowSoon(); }
 function flowTarget() { var F = FLOW; return F.glide ? F.glide.T : Math.round(F.pos); }
@@ -3017,16 +3122,19 @@ function flowGo(i) { if (FLOW && FLOW.items) flowGlide(i); }
 
 function flowInfo() {
   var F = FLOW, a = F.list[F.cur]; if (!a) return;
-  var soon = isSoon(a);
-  var m = '<span class="fl-who" style="background:' + color(a.pickedBy) + '">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span>' +
-    '<span>' + (a.shared ? 'Shared ' : soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date)) + '</span>' +
-    (F.season === 'all' ? '<span>' + esc(a.season) + '</span>' : '') +
-    (a.shared ? '<span class="fl-tag">Heard it before</span>' : '') +
-    (soon ? '<span class="fl-tag">Up next</span>' : a.avg != null ? '<span class="fl-score">' + fmt(a.avg) + ' ' + stars(a.avg) + '</span>' : '');
+  if (F.pv && F.pv.i !== F.cur) flowStop();
   var el = document.getElementById('flInfo');
-  el.innerHTML = '<div class="fl-t">' + esc(a.album) + '</div><div class="fl-a">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div><div class="fl-m">' + m + '</div>';
+  if (a.divider) {
+    el.innerHTML = '<div class="fl-t">' + esc(a.season) + '</div><div class="fl-a">' + a.count + ' album' + (a.count === 1 ? '' : 's') + '</div>';
+  } else {
+    var soon = isSoon(a);
+    var m = '<span>' + (a.shared ? 'Shared ' : soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date)) + '</span>' +
+      (F.season === 'all' ? '<span>' + esc(a.season) + '</span>' : '') +
+      (!soon && a.avg != null ? '<span class="fl-score">' + stars(a.avg) + '</span>' : '');
+    el.innerHTML = '<div class="fl-t">' + esc(a.album) + '</div><div class="fl-a">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div><div class="fl-m">' + m + '</div>';
+  }
   if (el.animate && !calm()) el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
-  document.getElementById('flN').textContent = (F.cur + 1) + ' of ' + F.list.length;
+  flowBot();
   if (F.flip >= 0 && F.flip !== F.cur) flowUnflip();
   if (!F.glide && !F.drag) flowGlowSoon();
 }
@@ -3038,7 +3146,7 @@ function flowGlowSoon() {
   F.glowT = setTimeout(function () {
     var a = F.list && F.list[F.cur]; if (!a || !F.items || F.glide || F.drag || a.row === F.glowRow) return;
     var row = a.row; F.glowRow = row;
-    artColor(a, function (rgb) {
+    (a.divider ? function (cb) { cb('150 112 70'); } : function (cb) { artColor(a, cb); })(function (rgb) {
       if (F.glowRow !== row) return;
       var next = document.getElementById(F.glow ? 'flGlowA' : 'flGlowB'), prev = document.getElementById(F.glow ? 'flGlowB' : 'flGlowA');
       if (!next || !prev) return;
@@ -3050,14 +3158,14 @@ function flowGlowSoon() {
 }
 /* Tap the middle cover: it turns over to show the tracklist, like the iPod did. */
 function flowFlip(i) {
-  var F = FLOW, a = F.list[i], it = F.items[i]; if (!a || !it) return;
+  var F = FLOW, a = F.list[i], it = F.items[i]; if (!a || !it || a.divider) return;
   if (F.flip === i) { flowUnflip(); return; }
   if (F.flip >= 0) flowUnflip();
   var love = {};
   D.members.forEach(function (m) { var s = a.fav && a.fav[m]; if (s) love[s] = (love[s] || 0) + 1; });
   var tr = a.tracks || [];
   it.querySelector('.fl-back').innerHTML = '<h4>' + esc(a.album) + '</h4>' +
-    (tr.length ? '<ol>' + tr.map(function (s, n) { return '<li><span>' + (n + 1) + '</span><em>' + esc(s) + '</em>' + (love[s] ? '<b>♥' + (love[s] > 1 ? love[s] : '') + '</b>' : '') + '</li>'; }).join('') + '</ol>'
+    (tr.length ? '<ol>' + tr.map(function (s, n) { return '<li data-song="' + esc(s) + '"' + (F.pv && F.pv.i === i && F.pv.song && flowNorm(F.pv.song) === flowNorm(s) ? ' class="pv"' : '') + '><span>' + (n + 1) + '</span><em>' + esc(s) + '</em>' + (love[s] ? '<b>♥' + (love[s] > 1 ? love[s] : '') + '</b>' : '') + '</li>'; }).join('') + '</ol>'
       : '<div class="fl-none">Tracklist not loaded yet</div>') +
     '<button data-open="' + a.row + '">Ratings and comments ›</button>';
   var el = document.getElementById('flow');
@@ -3096,6 +3204,10 @@ function flowWire(stage) {
     if (F.flip < 0) F.items.forEach(function (it) { if (it.style.transition) it.style.transition = ''; });
     F.vel = 0;
     F.drag = { x: e.clientX, p0: F.pos, want: F.pos, moved: false, hist: [[e.timeStamp, e.clientX]], id: e.pointerId, el: e.target, caught: gliding, last: 0 };
+    /* Hold the middle cover to hear a preview. */
+    var hit = e.target.closest('.fl-item'), hi = hit ? +hit.dataset.i : -1, d0 = F.drag;
+    if (hit && !gliding && F.flip < 0 && hi === Math.round(F.pos) && Math.abs(F.pos - hi) < 0.3 && !F.list[hi].divider)
+      d0.hold = setTimeout(function () { if (F.drag !== d0 || d0.moved) return; d0.held = true; flowPreview(hi, null, true); }, 450);
     try { stage.setPointerCapture(e.pointerId); } catch (er) {}
   });
   stage.addEventListener('pointermove', function (e) {
@@ -3110,6 +3222,7 @@ function flowWire(stage) {
     while (g.hist.length > 12) g.hist.shift();
     var dx = e.clientX - g.x;
     if (!g.moved && Math.abs(dx) > 6) {
+      clearTimeout(g.hold);
       if (F.flip >= 0) { flowUnflip(); F.drag = null; return; } // first swipe just turns the cover back over
       g.moved = true;
       g.x = e.clientX; dx = 0; // start from here so the covers don't jump by the 6px
@@ -3123,7 +3236,14 @@ function flowWire(stage) {
   function up(e) {
     var g = F.drag; if (!g || e.pointerId !== g.id) return;
     F.drag = null;
-    if (g.list) return;
+    clearTimeout(g.hold);
+    if (e.type === 'pointerup') flowUnlock(g.held);
+    if (g.list) { // tap a song on the tracklist to hear it
+      var li = e.type === 'pointerup' && Math.abs(e.clientX - g.x) < 10 && Math.abs(e.clientY - g.y) < 10 && e.target.closest('li[data-song]');
+      if (li && F.flip >= 0) flowPreview(F.flip, li.dataset.song);
+      return;
+    }
+    if (g.held) { flowPlayNow(); return; } // the hold already started the preview; letting go isn't a tap
     if (!g.moved) {
       var b = g.el.closest('[data-open]');
       if (b) { openAlbum(+b.dataset.open); return; }
@@ -3143,11 +3263,136 @@ function flowWire(stage) {
   }
   stage.addEventListener('pointerup', up);
   stage.addEventListener('pointercancel', up);
+  stage.addEventListener('contextmenu', function (e) { e.preventDefault(); }); // a long press is ours, not the browser's menu
   stage.addEventListener('wheel', function (e) { // trackpads and mouse wheels on a computer
     e.preventDefault(); 
     F.wheel = (F.wheel || 0) + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
     if (Math.abs(F.wheel) > 40) { flowGo(flowTarget() + (F.wheel > 0 ? 1 : -1)); F.wheel = 0; }
   }, { passive: false });
+}
+/* ---- previews ----
+ * Hold the middle cover (or tap a song on its tracklist) to hear Apple's 30 second clip. It keeps playing until
+ * you move to another album, tap the player at the bottom, or close Cover Flow. The song: the club's most loved
+ * favorite on that album, else the first track. */
+var FLOW_PV = {}, FLOW_AU = null, flowAuOK = false;
+var FLOW_SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+function flowNorm(s) { return String(s || '').toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+function flowAudio() {
+  if (!FLOW_AU) {
+    FLOW_AU = new Audio();
+    FLOW_AU.preload = 'auto';
+    FLOW_AU.addEventListener('ended', function () { var F = FLOW; if (F && F.pv && F.pv.url && FLOW_AU.src === F.pv.url) flowStop(); });
+  }
+  return FLOW_AU;
+}
+/* iPhone only lets a page start sound from a tap. The first tap or swipe in Cover Flow plays a silent clip,
+ * which unlocks the player, so holding a cover can start its preview right away. */
+function flowUnlock(force) {
+  if (flowAuOK || (FLOW && FLOW.pv && !force)) return;
+  var au = flowAudio();
+  if (FLOW && FLOW.pv && FLOW.pv.url) return; // the real clip is already loaded; flowPlayNow starts it
+  au.src = FLOW_SILENT;
+  try { var p = au.play(); if (p && p.then) p.then(function () { flowAuOK = true; }, function () {}); else flowAuOK = true; } catch (e) {}
+}
+function flowPreview(i, song, hold) {
+  var F = FLOW, a = F.list[i]; if (!a || a.divider) return;
+  if (F.pv && F.pv.i === i && (!song || flowNorm(song) === flowNorm(F.pv.song))) { flowStop(); return; } // again: stop
+  flowStop(true);
+  if (hold && navigator.vibrate && !calm()) { try { navigator.vibrate(15); } catch (e) {} }
+  if (+storeGet('ad.flowHints') < 9) storeSet('ad.flowHints', '9'); // they found it: no more hint
+  F.hint = false;
+  var pv = F.pv = { i: i, row: a.row, song: song || '', state: 'load', url: '', who: a.pickedBy };
+  document.getElementById('flow').classList.add('playing');
+  flowBot();
+  var cached = FLOW_PV[a.row];
+  (cached ? Promise.resolve(cached) : api('previews', [a.row], 15000)).then(function (list) {
+    list = FLOW_PV[a.row] = Array.isArray(list) ? list : [];
+    if (F.pv !== pv) return;
+    var by = {}; list.forEach(function (x) { if (!by[flowNorm(x.name)]) by[flowNorm(x.name)] = x; });
+    var pick = null;
+    if (song) pick = by[flowNorm(song)] || null;
+    else {
+      var best = 0;
+      D.members.forEach(function (m) {
+        var s = a.fav && a.fav[m], x = s && by[flowNorm(s)]; if (!x) return;
+        var n = D.members.filter(function (o) { return a.fav[o] && flowNorm(a.fav[o]) === flowNorm(s); }).length;
+        if (n > best) { best = n; pick = x; }
+      });
+      if (!pick) pick = list[0] || null;
+    }
+    if (!pick) return flowNone(pv);
+    pv.song = pick.name; pv.url = pick.url;
+    var au = flowAudio();
+    au.src = pick.url;
+    flowFadeIn(au);
+    var p = au.play();
+    if (p && p.then) p.then(function () { flowPlaying(pv); }, function (e) {
+      if (F.pv !== pv) return;
+      if (e && e.name === 'NotAllowedError') { pv.state = 'tap'; flowBot(); } else flowNone(pv);
+    });
+    else flowPlaying(pv);
+  }, function () { if (F.pv === pv) flowNone(pv); });
+}
+function flowPlaying(pv) {
+  var F = FLOW; if (F.pv !== pv) return;
+  flowAuOK = true;
+  pv.state = 'play'; flowBot(); flowMarkSong();
+}
+function flowNone(pv) {
+  var F = FLOW; if (F.pv !== pv) return;
+  pv.state = 'none'; flowBot();
+  setTimeout(function () { if (F.pv === pv) flowStop(); }, 2200);
+}
+/* Called from a tap or the end of a hold, which iPhone counts as permission to play. */
+function flowPlayNow() {
+  var F = FLOW, pv = F && F.pv; if (!pv || !pv.url || pv.state === 'play') return;
+  var au = flowAudio();
+  if (au.src !== pv.url) au.src = pv.url;
+  var p = au.play();
+  if (p && p.then) p.then(function () { flowPlaying(pv); }, function () { if (F.pv === pv) flowNone(pv); }); else flowPlaying(pv);
+}
+function flowFadeIn(au) {
+  if (calm()) { au.volume = 1; return; }
+  try { au.volume = 0; } catch (e) { return; } // iPhone: volume is the phone's, so no fade
+  var t0 = performance.now(), tok = au.fadeTok = (au.fadeTok || 0) + 1;
+  requestAnimationFrame(function step(t) {
+    if (au.fadeTok !== tok) return;
+    var k = Math.min(1, (t - t0) / 600);
+    try { au.volume = k * k; } catch (e) {}
+    if (k < 1) requestAnimationFrame(step);
+  });
+}
+function flowStop(quiet) {
+  var F = FLOW; if (!F || !F.pv) return;
+  F.pv = null;
+  if (FLOW_AU) { FLOW_AU.fadeTok = (FLOW_AU.fadeTok || 0) + 1; try { FLOW_AU.pause(); } catch (e) {} }
+  var el = document.getElementById('flow');
+  if (el) { el.classList.remove('playing'); [].forEach.call(el.querySelectorAll('li.pv'), function (li) { li.classList.remove('pv'); }); }
+  if (!quiet) flowBot();
+}
+function flowMarkSong() {
+  var F = FLOW, pv = F.pv; if (!pv || F.flip !== pv.i || !F.items[pv.i]) return;
+  [].forEach.call(F.items[pv.i].querySelectorAll('li[data-song]'), function (li) { li.classList.toggle('pv', flowNorm(li.dataset.song) === flowNorm(pv.song)); });
+}
+function flowNp() {
+  var pv = FLOW && FLOW.pv; if (!pv) return;
+  if (pv.state === 'tap') flowPlayNow(); else flowStop();
+}
+/* Bottom bar: the "N of M" counter, or the little player while a preview is on. */
+function flowBot() {
+  var F = FLOW, b = document.getElementById('flBot'); if (!b || !F || !F.list || !F.num) return;
+  var pv = F.pv;
+  if (pv) {
+    var t = pv.state === 'load' ? 'Finding a preview' : pv.state === 'none' ? 'No preview for this one' : pv.state === 'tap' ? 'Tap to play ' + pv.song : pv.song;
+    var c = F.list[F.cur];
+    b.innerHTML = '<span class="fl-n" id="flN">' + (c && !c.divider ? F.num[F.cur] + ' of ' + F.nAlb : '') + '</span>' +
+      '<button class="fl-np ' + pv.state + '" onclick="flowNp()" style="--lab:' + color(pv.who) + '"><span class="fl-rec"></span><b>' + esc(t) + '</b>' +
+      (pv.state === 'play' ? '<span class="fl-eq"><i></i><i></i><i></i></span>' : '') + '</button>';
+    return;
+  }
+  var a = F.list[F.cur];
+  b.innerHTML = '<span class="fl-n" id="flN">' + (a && a.divider ? esc(a.season) : F.num[F.cur] + ' of ' + F.nAlb) +
+    (F.hint ? '<i> · Hold a cover to hear it</i>' : '') + '</span>';
 }
 function flowDragLoop() {
   var F = FLOW;
@@ -3182,6 +3427,7 @@ document.addEventListener('keydown', function (e) {
   else if (k === 'Home') { flowGo(0); }
   else if (k === 'End') { flowGo(F.list.length - 1); }
   else if (k === 'Enter') { if (!F.glide) flowFlip(F.cur); }
+  else if (k === ' ') { if (!F.glide) flowPreview(F.cur); }
   else return;
   e.preventDefault();
 });

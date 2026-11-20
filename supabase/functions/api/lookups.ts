@@ -302,3 +302,16 @@ export async function findSong(service: string, tracks: Track[], song: string, a
   }
   return "";
 }
+
+/** Apple's 30 second preview clips for an album: from its Apple Music link, or a title search if it has none. */
+export async function albumPreviews(albumUrl: string, album: string, artist: string): Promise<Track[]> {
+  let id = (String(albumUrl || "").match(/music\.apple\.com\/.*\/album\/(?:[^\/?]+\/)?(\d+)/) || [])[1] || "";
+  if (!id) {
+    const results = (await itunes(`search?entity=album&limit=10&country=us&term=${encodeURIComponent(album + " " + (artist || ""))}`)).results || [];
+    id = String(bestMatch(results, album, artist)?.collectionId || "");
+  }
+  if (!id) return [];
+  return ((await itunes(`lookup?entity=song&limit=200&country=us&id=${id}`)).results || [])
+    .filter((r: Item) => r.wrapperType === "track" && /^https:\/\/[a-z0-9.-]+\.apple\.com\//.test(String(r.previewUrl || "")))
+    .map((r: Item) => ({ name: String(r.trackName || "").trim(), url: String(r.previewUrl) }));
+}

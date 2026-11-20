@@ -593,6 +593,21 @@ async function songLinks(row: unknown, platform: unknown, songs: unknown) {
   return out;
 }
 
+/* ---------- previews (hold a cover in Cover Flow) ---------- */
+
+async function previews(row: unknown) {
+  const [a] = await sql`select id, album, artist, apple from club.albums where id = ${Number(row)} and album is not null`;
+  if (!a) fail("That album could not be found.");
+  const key = `preview|${a.id}|${(await sha256([a.album, a.artist, a.apple || ""].join("|").toLowerCase())).slice(0, 16)}`;
+  const saved = await kvGet(key);
+  if (Array.isArray(saved)) return saved;
+  await rateLimit("preview|" + a.id, 6, 600, "Apple is busy. Try that preview again in a few minutes.");
+  let list: { name: string; url: string }[] = [];
+  try { list = (await L.albumPreviews(a.apple || "", a.album, a.artist || "")).slice(0, 60); } catch { list = []; }
+  await kvSet(key, list, list.length ? 72 : 6); // Apple's clip links last a while; misses retried after 6 hours
+  return list;
+}
+
 /* ---------- chat ---------- */
 
 async function chatGen() { return String((await kvGet("chat|gen")) ?? "1"); }
@@ -836,6 +851,7 @@ async function dispatch(req: any) {
       return p;
     }
     case "songLinks": return songLinks(a[0], a[1], a[2]);
+    case "previews": return previews(a[0]);
     case "appKey": return appKey(s);
     case "pushSubscribe": return pushSubscribe(s, a[0]);
     case "pushUnsubscribe":
