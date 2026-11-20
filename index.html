@@ -839,6 +839,29 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     padding: 8px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); touch-action: pan-x; }
   .fl-bot input { flex: 1; accent-color: #fff; touch-action: pan-x; }
   .fl-n { flex: none; min-width: 58px; text-align: right; font-size: 13px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+  .flowhint { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 16px; border-radius: 14px;
+    background: linear-gradient(135deg, #1e1b2e, #3d3557); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
+  .flowhint b { display: block; font-size: 16px; }
+  .flowhint small { display: block; font-size: 13px; opacity: .75; margin-top: 2px; }
+  .fh-phone { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
+  .fh-phone i { width: 20px; height: 34px; border: 2.5px solid #fff; border-radius: 5px; position: relative; animation: fhTurn 3.2s ease-in-out infinite; }
+  .fh-phone i::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 6px; height: 2px; margin-left: -3px; border-radius: 2px; background: #fff; }
+  @keyframes fhTurn { 0%, 30% { transform: rotate(0); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+  @media (prefers-reduced-motion: reduce) { .fh-phone i { animation: none; transform: rotate(-90deg); } }
+  /* Sideways phone: everything slimmer so the covers get the height. */
+  @media (max-height: 500px) {
+    .fl-top { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 4px; }
+    .fl-x, .fl-fs, .fl-play { width: 32px; height: 32px; font-size: 17px; }
+    .fl-sp { width: 32px; }
+    .fl-seg button { padding: 5px 11px; font-size: 12px; }
+    .fl-info { padding: 0 calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left)); }
+    .fl-t { font-size: 18px; }
+    .fl-a { font-size: 13px; margin-top: 1px; }
+    .fl-m { margin-top: 5px; flex-wrap: nowrap; white-space: nowrap; font-size: 12px; }
+    .fl-who { padding: 2px 8px 2px 2px; }
+    .fl-who .mini { width: 18px; height: 18px; }
+    .fl-bot { padding-top: 4px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  }
   .fl-empty { position: absolute; inset: 0; display: grid; place-items: center; opacity: .7; }
   @media (prefers-reduced-motion: reduce) { .fl-card { transition: none; } .fl-info.in { animation: none; } }
 </style>
@@ -2669,7 +2692,40 @@ function flowList(season) {
     return dx < dy ? -1 : dx > dy ? 1 : ((x.shared ? 1 : 0) - (y.shared ? 1 : 0)) || (x.row - y.row);
   });
 }
+/* Phones: Cover Flow comes up by itself when the phone is turned sideways and goes away when it's turned back,
+ * like the iPod. Computers and tablets get the button instead. Closing it with × keeps it closed until the phone
+ * has been upright again. Uses the screen's orientation, not the page size, so an Android keyboard doesn't trip it. */
+var flowDismissed = false;
+function flowPhone() {
+  return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) && Math.min(screen.width, screen.height) <= 600;
+}
+function flowLandscape() {
+  var t = screen.orientation && screen.orientation.type;
+  if (t) return t.indexOf('landscape') === 0;
+  if (typeof window.orientation === 'number') return Math.abs(window.orientation) === 90;
+  return window.innerWidth > window.innerHeight;
+}
+function flowOrient() {
+  if (!flowPhone()) return;
+  if (flowLandscape()) {
+    if (flowOpen || flowDismissed || !D || !storeGet('ad.session') || popupOpen) return;
+    var ae = document.activeElement;
+    if (ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return; // typing: leave the keyboard alone
+    openFlow();
+  } else {
+    if (flowOpen) closeFlow();
+    flowDismissed = false;
+  }
+}
+(function () {
+  var timer = null;
+  function later() { clearTimeout(timer); timer = setTimeout(flowOrient, 120); } // let the rotation settle first
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', later);
+  window.addEventListener('orientationchange', later);
+  window.addEventListener('resize', later);
+})();
 function flowBtn() {
+  if (flowPhone()) return '<div class="flowhint" aria-hidden="true"><span class="fh-phone"><i></i></span><span><b>Cover Flow</b><small>Turn your phone sideways to flip through all our albums</small></span></div>';
   var last = D.albums.filter(function (a) { return a.cover && !isSoon(a); }).slice(-3);
   var n = D.albums.length + (D.shared || []).filter(shareOut).length;
   if (!n) return '';
@@ -2690,6 +2746,7 @@ function openFlow() {
 function closeFlow() {
   if (!flowOpen) return;
   flowOpen = false;
+  if (flowPhone() && flowLandscape()) flowDismissed = true; // closed while sideways: stay closed until upright again
   flowStop();
   if (FLOW && FLOW.raf) { cancelAnimationFrame(FLOW.raf); FLOW.raf = 0; }
   document.getElementById('flow').classList.remove('on');
@@ -2746,9 +2803,9 @@ function flowSize() {
   var W = el.clientWidth, H = el.clientHeight;
   var top = document.getElementById('flTop').getBoundingClientRect().bottom;
   var bot = H - document.getElementById('flBot').getBoundingClientRect().top;
-  var info = 96, gap = 22, avail = H - top - bot;
-  var S = Math.round(Math.max(110, Math.min(W * (W > H ? 0.34 : 0.5), avail - info - gap - 16, 380)));
-  var st = Math.round(top + Math.max(8, (avail - S - gap - info) * 0.45));
+  var short = H < 500, info = short ? 68 : 96, gap = short ? 12 : 22, avail = H - top - bot;
+  var S = Math.round(Math.max(110, Math.min(W * (W > H ? 0.34 : 0.5), avail - info - gap - (short ? 6 : 16), 380)));
+  var st = Math.round(top + Math.max(short ? 4 : 8, (avail - S - gap - info) * 0.45));
   F.S = S; F.W = W;
   F.reach = Math.min(16, Math.ceil((W / 2 - S * 0.6) / (S * 0.2)) + 2);
   el.style.setProperty('--s', S + 'px');
@@ -3872,6 +3929,7 @@ function refresh(first) {
     if (!first && before && storeGet('ad.data') === before) { runPendingGo(); return; }
     if (first || safeToRedraw()) show(view);
     runPendingGo();
+    if (first) setTimeout(flowOrient, 0); // opened the app already sideways
   }, function (e) {
     clearTimeout(slow); badge.classList.remove('on');
     if (!storeGet('ad.session')) return; // signed out: sign in screen is up
