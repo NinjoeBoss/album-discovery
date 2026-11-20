@@ -840,8 +840,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fl-tag { padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.14); font-weight: 700; font-size: 12px; }
   .fl-bot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 12px;
     padding: 8px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); touch-action: pan-x; }
-  .fl-bot input { flex: 1; accent-color: #fff; touch-action: pan-x; }
-  .fl-n { flex: none; min-width: 58px; text-align: right; font-size: 13px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+  .fl-n { flex: none; min-width: 58px; margin-left: auto; text-align: right; font-size: 13px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
   .flowhint { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 16px; border-radius: 14px;
     background: linear-gradient(135deg, #1e1b2e, #3d3557); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
   .flowhint b { display: block; font-size: 16px; }
@@ -865,6 +864,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .fl-who .mini { width: 18px; height: 18px; }
     .fl-bot { padding-top: 4px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   }
+  /* Phone turned sideways with Cover Flow wanted: show its backdrop at once; upright: hide it at once. */
+  @media (orientation: landscape) and (max-height: 500px) { html.flowauto .flow { display: block; } }
+  @media (orientation: portrait) { html.flowauto .flow { display: none; } }
   .fl-empty { position: absolute; inset: 0; display: grid; place-items: center; opacity: .7; }
   @media (prefers-reduced-motion: reduce) { .fl-card, .fl-refl, .fl-glow { transition: none; } }
 </style>
@@ -2513,6 +2515,7 @@ function backHave() { var st = history.state; return st && st.adLvl ? st.adLvl :
 // The app sets its own scroll spot on every tab change; don't let back/forward put an old one back afterwards.
 try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (e) {}
 function syncBack() {
+  if (typeof flowArm === 'function') flowArm(); // a popup opening or closing changes whether sideways shows Cover Flow
   if (!window.history || !history.pushState) return;
   clearTimeout(backTimer);
   backTimer = setTimeout(function () {
@@ -2684,7 +2687,7 @@ function pairStats(list) {
 /* ---------- Cover Flow ----------
  * Full screen carousel of every album the club has picked or shared, like the old iPod.
  * Drag or flick sideways (it keeps gliding), tap a side cover to jump to it, tap the middle one to flip it
- * over for the tracklist (♥ = someone's favorite song). The scrubber, arrow keys and Play (auto advance) work too.
+ * over for the tracklist (♥ = someone's favorite song). Arrow keys and Play (auto advance) work too.
  * Opens from the button at the top of Albums. The season pills narrow it down; All is the default. */
 var FLOW = null, flowOpen = false;
 function flowList(season) {
@@ -2708,24 +2711,40 @@ function flowLandscape() {
   if (typeof window.orientation === 'number') return Math.abs(window.orientation) === 90;
   return window.innerWidth > window.innerHeight;
 }
+function flowTyping() { var ae = document.activeElement; return !!(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)); }
+function flowWanted() { return flowPhone() && !flowDismissed && !!D && !!storeGet('ad.session') && !popupOpen && !flowTyping(); }
+/* html.flowauto: turning sideways right now would bring up Cover Flow. With it, CSS shows Cover Flow's black
+ * backdrop in the very same frame the phone turns (and hides it the moment it turns back), before any script
+ * runs, so the half rotated page never flashes. The covers then fade in once they're built. */
+function flowArm() {
+  var on = flowWanted() || (flowOpen && flowPhone());
+  // Page wider than tall while the phone itself is upright (split screen): don't blank the page.
+  if (on && !flowOpen && !flowLandscape() && window.innerWidth > window.innerHeight) on = false;
+  document.documentElement.classList.toggle('flowauto', on);
+}
 function flowOrient() {
   if (!flowPhone()) return;
   if (flowLandscape()) {
-    if (flowOpen || flowDismissed || !D || !storeGet('ad.session') || popupOpen) return;
-    var ae = document.activeElement;
-    if (ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return; // typing: leave the keyboard alone
-    openFlow();
+    if (!flowOpen && flowWanted()) openFlow();
   } else {
-    if (flowOpen) closeFlow();
+    if (flowOpen) {
+      closeFlow();
+      if (!calm()) ['nav', 'app'].forEach(function (id) { // the page comes back with a quick fade rather than a pop
+        var el = document.getElementById(id); if (el && el.animate) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
+      });
+    }
     flowDismissed = false;
   }
+  flowArm();
 }
 (function () {
   var timer = null;
-  function later() { clearTimeout(timer); timer = setTimeout(flowOrient, 120); } // let the rotation settle first
-  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', later);
-  window.addEventListener('orientationchange', later);
-  window.addEventListener('resize', later);
+  function now() { flowOrient(); clearTimeout(timer); timer = setTimeout(flowOrient, 150); } // right away, and again once sizes settle
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', now);
+  window.addEventListener('orientationchange', now);
+  window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(flowOrient, 150); });
+  document.addEventListener('focusin', function () { flowArm(); });
+  document.addEventListener('focusout', function () { setTimeout(flowArm, 0); });
 })();
 function flowBtn() {
   if (flowPhone()) return '<div class="flowhint" aria-hidden="true"><span class="fh-phone"><i></i></span><span><b>Cover Flow</b><small>Turn your phone sideways to flip through all our albums</small></span></div>';
@@ -2744,7 +2763,13 @@ function openFlow() {
   el.classList.add('on');
   document.body.classList.add('locked');
   flowBuild(true);
+  var kids = el.querySelectorAll('.fl-top, .fl-stage, .fl-info, .fl-bot'); // fade the covers in over the backdrop
+  if (!calm()) [].forEach.call(kids, function (k, n) {
+    if (k.animate) k.animate(n === 1 ? [{ opacity: 0, transform: 'scale(.94)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 0 }, { opacity: 1 }],
+      { duration: n === 1 ? 420 : 300, delay: n === 1 ? 0 : 80, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+  });
   syncBack();
+  flowArm();
 }
 function closeFlow() {
   if (!flowOpen) return;
@@ -2756,6 +2781,7 @@ function closeFlow() {
   if (!popupOpen) document.body.classList.remove('locked');
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
   syncBack();
+  flowArm();
 }
 function flowSeason(i) {
   var segs = ['all'].concat(seasonNames());
@@ -2795,7 +2821,6 @@ function flowBuild(jump) {
       '</div><div class="fl-back"></div></div><div class="fl-refl" aria-hidden="true">' + art + '</div></div>';
   }).join('') + '</div><div class="fl-info" id="flInfo"></div>' +
     '<div class="fl-bot" id="flBot"><button class="fl-play" id="flPlay" onclick="flowPlay()" aria-label="Play">▶</button>' +
-    '<input type="range" id="flScrub" min="0" max="' + (n - 1) + '" step="1" value="' + Math.round(F.pos) + '" aria-label="Scrub through albums" oninput="flowStop();flowGo(+this.value)">' +
     '<span class="fl-n" id="flN"></span></div>';
   el.innerHTML = h;
   F.items = [].slice.call(el.querySelectorAll('.fl-item'));
@@ -2911,7 +2936,7 @@ function flowGlide(T, v0) {
   };
   flowWatch();
 }
-/* While gliding, keeps the title, counter and scrubber in step with whichever cover is passing the middle. */
+/* While gliding, keeps the title and counter in step with whichever cover is passing the middle. */
 function flowWatch() {
   var F = FLOW; if (F.watch) return;
   F.watch = requestAnimationFrame(function tick() {
@@ -2941,7 +2966,6 @@ function flowInfo() {
   el.innerHTML = '<div class="fl-t">' + esc(a.album) + '</div><div class="fl-a">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div><div class="fl-m">' + m + '</div>';
   if (el.animate && !calm()) el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
   document.getElementById('flN').textContent = (F.cur + 1) + ' of ' + F.list.length;
-  var sc = document.getElementById('flScrub'); if (+sc.value !== F.cur) sc.value = F.cur;
   if (F.flip >= 0 && F.flip !== F.cur) flowUnflip();
   if (!F.glide && !F.drag) flowGlowSoon();
 }
