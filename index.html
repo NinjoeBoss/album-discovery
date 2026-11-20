@@ -80,7 +80,7 @@ function adApplyAppKey() {
         name: 'Club Music', short_name: 'Club Music',
         description: 'Our weekly album club: rate this week\'s pick, add yours, see the leaderboard.',
         id: base, start_url: base + '?k=' + key, scope: base,
-        display: 'standalone', orientation: 'portrait', background_color: '#1e1b2e', theme_color: '#1e1b2e',
+        display: 'standalone', orientation: 'any', background_color: '#1e1b2e', theme_color: '#1e1b2e',
         icons: [icon('icon-192.png', '192x192', 'any'), icon('icon-512.png', '512x512', 'any'), icon('maskable-512.png', '512x512', 'maskable')]
       };
       link.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(man)));
@@ -2774,6 +2774,16 @@ function flowOrient() {
   window.addEventListener('resize', function () { clearTimeout(timer); timer = setTimeout(flowOrient, 150); });
   document.addEventListener('focusin', function () { flowArm(); });
   document.addEventListener('focusout', function () { setTimeout(flowArm, 0); });
+  /* Android home screen app: anyone who installed it before Cover Flow still has "portrait only" baked in from the
+   * old manifest, and Android only picks up the new one when Chrome gets around to refreshing the install (or it's
+   * reinstalled). Installed apps may set their own rotation, so ask for "any" straight away. Browsers that
+   * don't allow it (iPhone, a normal browser tab, tablets) just refuse, which is fine. */
+  function unlock() {
+    if (AD_IOS || !adStandalone() || !flowPhone() || !screen.orientation || !screen.orientation.lock) return;
+    try { var p = screen.orientation.lock('any'); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+  }
+  unlock();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) unlock(); });
 })();
 function flowBtn() {
   if (flowPhone()) return '<div class="flowhint" aria-hidden="true"><span class="fh-phone"><i></i></span><span><b>Cover Flow</b><small>Turn your phone sideways to flip through all our albums</small></span></div>';
