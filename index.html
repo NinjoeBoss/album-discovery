@@ -791,14 +791,16 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fb-stack i:nth-child(1) { left: 0; transform: rotateY(55deg); }
   .fb-stack i:nth-child(2) { right: 0; transform: rotateY(-55deg); }
   .fb-stack i:nth-child(3) { left: 17px; z-index: 1; }
-  .flow { position: fixed; inset: 0; z-index: 18; background: #050407; color: #fff; overflow: hidden; display: none; touch-action: none;
+  #flow { position: fixed; inset: 0; z-index: 18; background: #050407; color: #fff; overflow: hidden; display: none; touch-action: none;
     -webkit-user-select: none; user-select: none; }
-  .flow.on { display: block; }
+  #flow.on { display: block; }
+  /* Built ahead of time while a phone is upright, so turning it sideways shows the covers on the very first frame. */
+  #flow.pre { display: block; visibility: hidden; pointer-events: none; }
   .fl-glow { position: absolute; left: -20%; right: -20%; top: -10%; height: 85%; opacity: 0; pointer-events: none; transition: opacity .9s ease; will-change: opacity;
     -webkit-mask-image: radial-gradient(closest-side, #000, transparent); mask-image: radial-gradient(closest-side, #000, transparent); }
   .fl-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px;
     padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left)); }
-  .fl-x, .fl-fs, .fl-play { flex: none; width: 38px; height: 38px; border-radius: 99px; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; }
+  .fl-x, .fl-fs { flex: none; width: 38px; height: 38px; border-radius: 99px; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; }
   .fl-sp { width: 38px; flex: none; }
   .fl-seg { flex: 1; display: flex; justify-content: center; gap: 6px; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
   .fl-seg::-webkit-scrollbar { display: none; }
@@ -830,7 +832,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fl-back button { margin-top: 8px; border: 0; border-radius: 99px; padding: 8px; background: #fff; color: #1e1b2e; font-weight: 700; font-size: 13px; cursor: pointer; }
   .fl-info { position: absolute; left: 0; right: 0; top: var(--it); z-index: 2; text-align: center; padding: 0 20px; pointer-events: none; contain: layout style; }
   .fl-info { transition: opacity .25s ease; }
-  .flow.flipped .fl-info { opacity: 0; }
+  #flow.flipped .fl-info { opacity: 0; }
   .fl-t { font-size: clamp(18px, 4.6vw, 28px); font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fl-a { margin-top: 3px; font-size: clamp(14px, 3.4vw, 18px); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fl-m { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; font-size: 13px; color: rgba(255,255,255,.75); }
@@ -840,7 +842,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fl-tag { padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.14); font-weight: 700; font-size: 12px; }
   .fl-bot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 12px;
     padding: 8px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); touch-action: pan-x; }
-  .fl-n { flex: none; min-width: 58px; margin-left: auto; text-align: right; font-size: 13px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+  .fl-n { flex: none; margin: 0 auto; text-align: center; font-size: 13px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
   .flowhint { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 16px; border-radius: 14px;
     background: linear-gradient(135deg, #1e1b2e, #3d3557); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
   .flowhint b { display: block; font-size: 16px; }
@@ -853,7 +855,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* Sideways phone: everything slimmer so the covers get the height. */
   @media (max-height: 500px) {
     .fl-top { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 4px; }
-    .fl-x, .fl-fs, .fl-play { width: 32px; height: 32px; font-size: 17px; }
+    .fl-x, .fl-fs { width: 32px; height: 32px; font-size: 17px; }
     .fl-sp { width: 32px; }
     .fl-seg button { padding: 5px 11px; font-size: 12px; }
     .fl-info { padding: 0 calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left)); }
@@ -865,8 +867,20 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .fl-bot { padding-top: 4px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   }
   /* Phone turned sideways with Cover Flow wanted: show its backdrop at once; upright: hide it at once. */
-  @media (orientation: landscape) and (max-height: 500px) { html.flowauto .flow { display: block; } }
-  @media (orientation: portrait) { html.flowauto .flow { display: none; } }
+  @media (orientation: landscape) and (max-height: 500px) { html.flowauto #flow { display: block; visibility: visible; pointer-events: auto; } }
+  @media (orientation: portrait) { html.flowauto #flow { visibility: hidden; pointer-events: none; } }
+  #flow > :not(.fl-glow) { transition: opacity .25s ease; }
+  #flow.resting > :not(.fl-rest) { opacity: 0; pointer-events: none; }
+  .fl-rest { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    text-align: center; opacity: 0; pointer-events: none; cursor: pointer; }
+  #flow.resting .fl-rest { opacity: 1; pointer-events: auto; }
+  .fl-rest b { font-size: 18px; margin-top: 14px; }
+  .fl-rest small { font-size: 13px; color: rgba(255,255,255,.6); }
+  .fr-phone { width: 64px; height: 64px; display: grid; place-items: center; }
+  .fr-phone i { width: 30px; height: 50px; border: 3px solid #fff; border-radius: 7px; position: relative; animation: frTurn 2.6s ease-in-out infinite; }
+  .fr-phone i::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 8px; height: 2px; margin-left: -4px; border-radius: 2px; background: #fff; }
+  @keyframes frTurn { 0%, 25% { transform: rotate(-90deg); } 55%, 100% { transform: rotate(0); } }
+  @media (prefers-reduced-motion: reduce) { .fr-phone i { animation: none; } }
   .fl-empty { position: absolute; inset: 0; display: grid; place-items: center; opacity: .7; }
   @media (prefers-reduced-motion: reduce) { .fl-card, .fl-refl, .fl-glow { transition: none; } }
 </style>
@@ -2687,7 +2701,7 @@ function pairStats(list) {
 /* ---------- Cover Flow ----------
  * Full screen carousel of every album the club has picked or shared, like the old iPod.
  * Drag or flick sideways (it keeps gliding), tap a side cover to jump to it, tap the middle one to flip it
- * over for the tracklist (♥ = someone's favorite song). Arrow keys and Play (auto advance) work too.
+ * over for the tracklist (♥ = someone's favorite song). Arrow keys work too.
  * Opens from the button at the top of Albums. The season pills narrow it down; All is the default. */
 var FLOW = null, flowOpen = false;
 function flowList(season) {
@@ -2721,6 +2735,19 @@ function flowArm() {
   // Page wider than tall while the phone itself is upright (split screen): don't blank the page.
   if (on && !flowOpen && !flowLandscape() && window.innerWidth > window.innerHeight) on = false;
   document.documentElement.classList.toggle('flowauto', on);
+  if (on && !flowOpen) { clearTimeout(flowArm.t); flowArm.t = setTimeout(flowPrep, 60); }
+}
+/* Builds Cover Flow hidden (#flow.pre) while the phone is upright, sized for sideways, so the turn shows it at once.
+ * Rebuilt only when the club's data has actually changed. */
+function flowPrep() {
+  if (flowOpen || !flowWanted()) return;
+  if (!FLOW) FLOW = { season: 'all' };
+  var el = document.getElementById('flow'), F = FLOW;
+  if (F.items && el.classList.contains('pre') && F.builtD === D) return;
+  var key = storeGet('ad.data') || '';
+  if (F.items && el.classList.contains('pre') && F.builtKey === key) { F.builtD = D; return; }
+  el.classList.add('pre');
+  flowBuild(true);
 }
 function flowOrient() {
   if (!flowPhone()) return;
@@ -2759,25 +2786,37 @@ function openFlow() {
   if (!D) return;
   if (!FLOW) FLOW = { season: 'all' };
   var el = document.getElementById('flow');
+  var ready = FLOW.items && el.classList.contains('pre') && FLOW.builtD === D;
   flowOpen = true;
+  clearTimeout(flowArm.t);
+  el.classList.remove('pre');
   el.classList.add('on');
   document.body.classList.add('locked');
-  flowBuild(true);
-  var kids = el.querySelectorAll('.fl-top, .fl-stage, .fl-info, .fl-bot'); // fade the covers in over the backdrop
-  if (!calm()) [].forEach.call(kids, function (k, n) {
-    if (k.animate) k.animate(n === 1 ? [{ opacity: 0, transform: 'scale(.94)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 0 }, { opacity: 1 }],
-      { duration: n === 1 ? 420 : 300, delay: n === 1 ? 0 : 80, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
-  });
+  flowRest(false);
+  if (ready) { flowSize(); flowPlace(Math.round(FLOW.pos)); } // already built and waiting: nothing to fade in
+  else flowBuild(true);
   syncBack();
   flowArm();
 }
+/* Phones can't be switched to portrait by a web page, so × (or back) while sideways swaps the covers for a
+ * "turn your phone upright" screen instead of showing the stretched sideways page. Turning upright closes it as usual;
+ * a tap on that screen brings the covers back. */
+function flowRest(on) {
+  var F = FLOW, el = document.getElementById('flow'); if (!F) return;
+  if (on) { flowHalt(); flowUnflip(); F.drag = null; }
+  F.resting = !!on;
+  el.classList.toggle('resting', !!on);
+}
 function closeFlow() {
   if (!flowOpen) return;
+  if (flowPhone() && flowLandscape()) { flowRest(true); syncBack(); return; }
   flowOpen = false;
-  if (flowPhone() && flowLandscape()) flowDismissed = true; // closed while sideways: stay closed until upright again
-  flowStop();
+  flowRest(false);
+  
   if (FLOW) { FLOW.drag = null; flowHalt(); clearTimeout(FLOW.glowT); }
-  document.getElementById('flow').classList.remove('on');
+  var el = document.getElementById('flow');
+  el.classList.remove('on');
+  if (flowPhone() && FLOW && FLOW.items) { el.classList.add('pre'); flowUnflip(); } // keep it built for next time
   if (!popupOpen) document.body.classList.remove('locked');
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
   syncBack();
@@ -2787,13 +2826,14 @@ function flowSeason(i) {
   var segs = ['all'].concat(seasonNames());
   if (!segs[i] || segs[i] === FLOW.season) return;
   FLOW.season = segs[i];
-  flowStop();
+  
   flowBuild(true);
 }
 function flowBuild(jump) {
   var F = FLOW, el = document.getElementById('flow');
   flowHalt();
   F.list = flowList(F.season);
+  F.builtD = D; F.builtKey = storeGet('ad.data') || '';
   F.flip = -1; F.cur = -1; F.drag = null;
   el.classList.remove('flipped');
   if (jump) {
@@ -2804,7 +2844,9 @@ function flowBuild(jump) {
   var segs = ['all'].concat(seasonNames());
   var fsOK = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled) && !adStandalone();
   var n = F.list.length;
+  el.classList.remove('resting'); F.resting = false;
   var h = '<div class="fl-glow" id="flGlowA"></div><div class="fl-glow" id="flGlowB"></div>' +
+    '<div class="fl-rest" onclick="flowRest(false)"><span class="fr-phone"><i></i></span><b>Turn your phone upright</b><small>Tap to go back to Cover Flow</small></div>' +
     '<div class="fl-top" id="flTop"><button class="fl-x" onclick="closeFlow()" aria-label="Close Cover Flow">×</button><div class="fl-seg">' +
     segs.map(function (s, i) { return '<button class="' + (s === F.season ? 'on' : '') + '" onclick="flowSeason(' + i + ')">' + (s === 'all' ? 'All' : esc(s)) + '</button>'; }).join('') +
     '</div>' + (fsOK ? '<button class="fl-fs" onclick="flowFull()" aria-label="Full screen">⤢</button>' : '<span class="fl-sp"></span>') + '</div>';
@@ -2820,7 +2862,7 @@ function flowBuild(jump) {
     return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + art.replace('alt=""', 'alt="' + esc(a.album) + '"') +
       '</div><div class="fl-back"></div></div><div class="fl-refl" aria-hidden="true">' + art + '</div></div>';
   }).join('') + '</div><div class="fl-info" id="flInfo"></div>' +
-    '<div class="fl-bot" id="flBot"><button class="fl-play" id="flPlay" onclick="flowPlay()" aria-label="Play">▶</button>' +
+    '<div class="fl-bot" id="flBot">' +
     '<span class="fl-n" id="flN"></span></div>';
   el.innerHTML = h;
   F.items = [].slice.call(el.querySelectorAll('.fl-item'));
@@ -2833,9 +2875,16 @@ function flowBuild(jump) {
 /* Sizes the covers to the screen: big in landscape or on a computer, about half the width on a phone held upright. */
 function flowSize() {
   var F = FLOW, el = document.getElementById('flow'); if (!F || !F.items) return;
-  var W = el.clientWidth, H = el.clientHeight;
-  var top = document.getElementById('flTop').getBoundingClientRect().bottom;
-  var bot = H - document.getElementById('flBot').getBoundingClientRect().top;
+  var W = el.clientWidth, H = el.clientHeight, top, bot;
+  if (flowPhone() && W < H) {
+    /* Upright, getting ready for sideways: size for the sideways screen. Close enough that the first frame after
+       the turn is right; the resize that follows fine tunes it. */
+    W = Math.max(screen.width, screen.height); H = Math.min(screen.width, screen.height) - (adStandalone() ? 0 : 50);
+    top = 42; bot = 20 + (adStandalone() ? 21 : 6); // slim top bar; counter row plus the home bar strip
+  } else {
+    top = document.getElementById('flTop').getBoundingClientRect().bottom;
+    bot = H - document.getElementById('flBot').getBoundingClientRect().top;
+  }
   var short = H < 500, info = short ? 68 : 96, gap = short ? 12 : 22, avail = H - top - bot;
   var S = Math.round(Math.max(110, Math.min(W * (W > H ? 0.34 : 0.5), avail - info - gap - (short ? 6 : 16), 380)));
   var st = Math.round(top + Math.max(short ? 4 : 8, (avail - S - gap - info) * 0.45));
@@ -2975,7 +3024,7 @@ function flowGlowSoon() {
   var F = FLOW;
   clearTimeout(F.glowT);
   F.glowT = setTimeout(function () {
-    var a = F.list && F.list[F.cur]; if (!a || !flowOpen || F.glide || F.drag || a.row === F.glowRow) return;
+    var a = F.list && F.list[F.cur]; if (!a || !F.items || F.glide || F.drag || a.row === F.glowRow) return;
     var row = a.row; F.glowRow = row;
     artColor(a, function (rgb) {
       if (F.glowRow !== row) return;
@@ -3027,7 +3076,7 @@ function flowWire(stage) {
       F.drag = { list: true, x: e.clientX, y: e.clientY, id: e.pointerId };
       return;
     }
-    flowStop();
+    
     var gliding = !!F.glide;
     flowHalt();
     F.vel = 0;
@@ -3080,7 +3129,7 @@ function flowWire(stage) {
   stage.addEventListener('pointerup', up);
   stage.addEventListener('pointercancel', up);
   stage.addEventListener('wheel', function (e) { // trackpads and mouse wheels on a computer
-    e.preventDefault(); flowStop();
+    e.preventDefault(); 
     F.wheel = (F.wheel || 0) + (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
     if (Math.abs(F.wheel) > 40) { flowGo(flowTarget() + (F.wheel > 0 ? 1 : -1)); F.wheel = 0; }
   }, { passive: false });
@@ -3097,23 +3146,6 @@ function flowDragLoop() {
     requestAnimationFrame(tick);
   });
 }
-/* Play: moves to the next album every few seconds, for showing it on a TV or laptop. */
-function flowPlay() {
-  var F = FLOW; if (!F.items) return;
-  if (F.play) { flowStop(); return; }
-  if (F.cur >= F.list.length - 1) flowGo(0);
-  F.play = setInterval(function () {
-    if (!flowOpen) { flowStop(); return; }
-    var t = flowTarget();
-    flowGo(t >= F.list.length - 1 ? 0 : t + 1);
-  }, 3500);
-  var b = document.getElementById('flPlay'); if (b) { b.textContent = '❚❚'; b.setAttribute('aria-label', 'Pause'); }
-}
-function flowStop() {
-  var F = FLOW; if (!F || !F.play) return;
-  clearInterval(F.play); F.play = 0;
-  var b = document.getElementById('flPlay'); if (b) { b.textContent = '▶'; b.setAttribute('aria-label', 'Play'); }
-}
 function flowFull() {
   var el = document.getElementById('flow');
   if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
@@ -3129,12 +3161,11 @@ document.addEventListener('keydown', function (e) {
   if (!flowOpen || popupOpen || !FLOW.list || /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || '')) && e.target.type !== 'range') return;
   var F = FLOW, k = e.key;
   if (k === 'Escape') { closeFlow(); return; }
-  if (!F.items) return;
-  if (k === 'ArrowRight' || k === 'ArrowDown') { flowStop(); flowGo(flowTarget() + 1); }
-  else if (k === 'ArrowLeft' || k === 'ArrowUp') { flowStop(); flowGo(flowTarget() - 1); }
-  else if (k === 'Home') { flowStop(); flowGo(0); }
-  else if (k === 'End') { flowStop(); flowGo(F.list.length - 1); }
-  else if (k === ' ') flowPlay();
+  if (!F.items || F.resting) return;
+  if (k === 'ArrowRight' || k === 'ArrowDown') { flowGo(flowTarget() + 1); }
+  else if (k === 'ArrowLeft' || k === 'ArrowUp') { flowGo(flowTarget() - 1); }
+  else if (k === 'Home') { flowGo(0); }
+  else if (k === 'End') { flowGo(F.list.length - 1); }
   else if (k === 'Enter') { if (!F.glide) flowFlip(F.cur); }
   else return;
   e.preventDefault();
