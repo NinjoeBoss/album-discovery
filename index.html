@@ -881,23 +881,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     background: radial-gradient(ellipse 30% 46% at 50% 40%, rgba(255,244,226,.15), rgba(255,244,226,.05) 60%, transparent 100%),
       radial-gradient(ellipse 36% 9% at 50% 82%, rgba(255,244,226,.07), transparent 100%); }
   #flow.playing .fl-spot { opacity: 1; }
-  /* Record store stickers on the sleeve */
-  .fl-stk { position: absolute; inset: 0; pointer-events: none; font-size: calc(var(--s) * .05); }
-  .fl-stk > * { position: absolute; box-shadow: 0 .15em .4em rgba(0,0,0,.35); }
-  .fl-dot { right: 5%; top: 5%; width: 4.4em; height: 4.4em; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: #fff4d6; color: #1e1b2e; transform: rotate(-9deg); line-height: 1; border: .14em dashed rgba(30,27,46,.25); }
-  .fl-dot b { font-size: 1.5em; font-weight: 900; letter-spacing: -.02em; }
-  .fl-dot i { font-style: normal; font-size: .62em; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-top: .18em; opacity: .7; }
-  .fl-dot.gold { background: radial-gradient(circle at 35% 30%, #fff1a8, #f2c230 55%, #c8901a); border-color: rgba(120,70,0,.35); }
-  .fl-dot.new { background: #8ff0c4; }
-  .fl-tagp { left: 4%; bottom: 5%; padding: .32em .7em .32em 1.2em; border-radius: .25em; background: #fffaf0; color: #1e1b2e; font-weight: 900; font-size: 1.05em;
-    line-height: 1.1; transform: rotate(-3deg); max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: .5em solid var(--c, #aaa); }
-  .fl-tagp::before { content: ''; position: absolute; left: .32em; top: 50%; width: .4em; height: .4em; margin-top: -.2em; border-radius: 50%; background: #050407; opacity: .5; }
-  .fl-tagp i { display: block; font-style: normal; font-size: .58em; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; opacity: .55; }
-  .fl-heard, .fl-classic { left: 4%; top: 5%; padding: .3em .65em; border-radius: .2em; font-weight: 900; font-size: .78em; text-transform: uppercase; letter-spacing: .08em; transform: rotate(-4deg); }
-  .fl-heard { background: #c9b8ff; color: #1e1b2e; }
-  .fl-classic { background: transparent; color: #f6e7c8; border: .16em solid #f6e7c8; box-shadow: none; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
-  .fl-refl .fl-stk { display: none; }
   /* Season divider: a cardboard crate tab */
   .fl-dv { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3em; text-align: center; padding: 10%;
     font-size: calc(var(--s) * .05); color: #3a2a17; border-radius: 3px;
@@ -2930,15 +2913,15 @@ function flowBuild(jump) {
     return;
   }
   /* Each cover carries its own mirror image underneath (part of the same layer, so it costs nothing while moving). */
-  var top = 0, nAlb = 0;
-  F.num = F.list.map(function (a) { if (a.divider) return 0; if (!isSoon(a) && a.avg != null && a.avg > top) top = a.avg; return ++nAlb; });
+  var nAlb = 0;
+  F.num = F.list.map(function (a) { return a.divider ? 0 : ++nAlb; });
   F.nAlb = nAlb;
   h += '<div class="fl-stage" id="flStage">' + F.list.map(function (a, i) {
     if (a.divider) return '<div class="fl-item fl-div" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + flowDivArt(a) + '</div><div class="fl-back"></div></div>' +
       '<div class="fl-refl" aria-hidden="true">' + flowDivArt(a) + '</div></div>';
     var art = a.cover ? '<img src="' + esc(a.cover) + '" alt="" draggable="false" decoding="async">'
       : '<div class="fl-blank" style="background:' + color(a.pickedBy) + '">' + esc(a.album) + '</div>';
-    return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + art.replace('alt=""', 'alt="' + esc(a.album) + '"') + flowStickers(a, top) +
+    return '<div class="fl-item" data-i="' + i + '"><div class="fl-card"><div class="fl-front">' + art.replace('alt=""', 'alt="' + esc(a.album) + '"') +
       '</div><div class="fl-back"></div></div><div class="fl-refl" aria-hidden="true">' + art + '</div></div>';
   }).join('') + '</div><div class="fl-info" id="flInfo"></div>' +
     '<div class="fl-bot" id="flBot">' +
@@ -2966,17 +2949,6 @@ function flowDividers(list, on) {
 }
 function flowDivArt(a) {
   return '<div class="fl-dv"><span class="fl-dv-tab">' + esc(a.season) + '</span><b>' + esc(a.season) + '</b><small>' + a.count + ' album' + (a.count === 1 ? '' : 's') + '</small></div>';
-}
-/* Record store stickers on the sleeve: the club's average (gold for the club's top album), who picked it,
- * Up next / Heard it before, and a Classic stamp on anything from before 1990. */
-function flowStickers(a, top) {
-  var soon = isSoon(a), h = '';
-  if (soon) h += '<span class="fl-dot new"><b>Up</b><i>next</i></span>';
-  else if (a.avg != null) h += '<span class="fl-dot' + (top && a.avg === top ? ' gold' : '') + '"><b>' + a.avg.toFixed(1) + '</b><i>' + (top && a.avg === top ? 'No. 1' : 'club') + '</i></span>';
-  if (a.shared) h += '<span class="fl-heard">Heard it before</span>';
-  else if (+a.year && +a.year < 1990) h += '<span class="fl-classic">Classic</span>';
-  if (a.pickedBy) h += '<span class="fl-tagp" style="--c:' + color(a.pickedBy) + '"><i>' + (a.shared ? 'shared by' : 'picked by') + '</i>' + esc(a.pickedBy) + '</span>';
-  return '<div class="fl-stk" aria-hidden="true">' + h + '</div>';
 }
 /* Sizes the covers to the screen: big in landscape or on a computer, about half the width on a phone held upright. */
 function flowSize() {
@@ -3128,9 +3100,11 @@ function flowInfo() {
     el.innerHTML = '<div class="fl-t">' + esc(a.season) + '</div><div class="fl-a">' + a.count + ' album' + (a.count === 1 ? '' : 's') + '</div>';
   } else {
     var soon = isSoon(a);
-    var m = '<span>' + (a.shared ? 'Shared ' : soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date)) + '</span>' +
+    var m = '<span class="fl-who" style="background:' + color(a.pickedBy) + '">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span>' +
+      '<span>' + (a.shared ? 'Shared ' : soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date)) + '</span>' +
       (F.season === 'all' ? '<span>' + esc(a.season) + '</span>' : '') +
-      (!soon && a.avg != null ? '<span class="fl-score">' + stars(a.avg) + '</span>' : '');
+      (a.shared ? '<span class="fl-tag">Heard it before</span>' : '') +
+      (soon ? '<span class="fl-tag">Up next</span>' : a.avg != null ? '<span class="fl-score">' + fmt(a.avg) + ' ' + stars(a.avg) + '</span>' : '');
     el.innerHTML = '<div class="fl-t">' + esc(a.album) + '</div><div class="fl-a">' + esc(a.artist) + (a.year ? ' · ' + esc(a.year) : '') + '</div><div class="fl-m">' + m + '</div>';
   }
   if (el.animate && !calm()) el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'ease-out' });
