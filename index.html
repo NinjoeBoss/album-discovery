@@ -3087,23 +3087,9 @@ function flowTick() {
   flowTick.t = t;
   flowHaptic(8);
 }
-/* Android: the vibrate API. iPhone has no vibrate for web pages, but iOS 18 and later give a haptic tap whenever
- * a switch style toggle flips, so a hidden one is flipped instead. Older iPhones just stay quiet. */
+/* Android only: iPhone gives web pages no way to vibrate (the hidden switch trick was patched in iOS 26.5). */
 function flowHaptic(ms) {
-  if (navigator.vibrate) { try { if (navigator.vibrate(ms)) return; } catch (e) {} }
-  if (!/iP(hone|ad|od)/.test(navigator.userAgent) && !(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return;
-  var h = flowHaptic;
-  if (!h.lb) {
-    var lb = document.createElement('label'), cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.setAttribute('switch', ''); cb.tabIndex = -1;
-    lb.setAttribute('aria-hidden', 'true'); lb.style.display = 'none';
-    lb.appendChild(cb);
-    lb.addEventListener('click', function (e) { e.stopPropagation(); }); // keep these clicks away from the app's own click handlers
-    document.body.appendChild(lb);
-    h.lb = lb; h.cb = cb;
-  }
-  try { h.lb.click(); } catch (e) {}
-  if (document.activeElement === h.cb) h.cb.blur();
+  if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) {} }
 }
 function flowSettle() { flowGlowSoon(); }
 function flowTarget() { var F = FLOW; return F.glide ? F.glide.T : Math.round(F.pos); }
