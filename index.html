@@ -459,7 +459,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   table.rt td { padding: 9px 8px; border-top: 1px solid var(--band); font-size: 14px; vertical-align: top; }
   table.rt td.n { font-weight: 700; border-radius: 6px; white-space: nowrap; }
   .take { font-size: 13px; color: var(--muted); margin-top: 3px; }
-  .take q { font-style: italic; color: var(--ink); }
+  .take .said { font-style: italic; color: var(--ink); }
   .songs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
   .songs div { background: var(--band); border-radius: 10px; padding: 9px 12px; font-size: 14px; }
   .songs b { display: block; font-size: 10px; letter-spacing: .8px; color: var(--plum2); text-transform: uppercase; margin-bottom: 3px; }
@@ -2312,7 +2312,7 @@ function openAlbum(row) {
     D.members.forEach(function (m) {
       var v = a.ratings[m];
       var extra = '';
-      if (a.comments[m]) extra += '<div class="take"><q>' + esc(a.comments[m]) + '</q></div>';
+      if (a.comments[m]) extra += '<div class="take"><span class="said">' + esc(a.comments[m]) + '</span></div>';
       h += '<tr><td class="n" style="background:' + color(m) + '"><span class="nm">' + face(m, 'tiny') + esc(m) + '</span></td><td><b>' + (v == null ? '<span class="muted">Not rated</span>' : num(v)) + '</b> <span class="stars">' + stars(v) + '</span>' +
         (v != null && a.avg != null ? ' <span class="muted">' + (v - a.avg >= 0 ? '+' : '') + (v - a.avg).toFixed(1) + ' vs group</span>' : '') + extra + '</td></tr>';
     });
