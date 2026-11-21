@@ -74,30 +74,68 @@ const big = (u: string) => u.replace("100x100bb", "600x600bb");
 
 /* ---------- album search (Add Album page) ---------- */
 
+/** Album title with edition notes like "(Deluxe)" or "[Remastered]" and " - EP" taken off, for grouping editions. */
+const baseTitle = (name: string) =>
+  norm(String(name || "").replace(/\s-\s(Single|EP)$/i, "").replace(/\s*[\(\[][^\)\]]*[\)\]]/g, "").replace(/\s-\s.*$/, ""));
+
 export async function searchAlbums(query: string) {
   query = String(query || "").trim();
   if (query.length < 2) return [];
   let items: Item[];
   try {
-    items = (await itunes(`search?entity=album&limit=25&country=us&term=${encodeURIComponent(query)}`)).results || [];
+    items = (await itunes(`search?entity=album&limit=50&country=us&term=${encodeURIComponent(query)}`)).results || [];
   } catch {
     throw new Error("Album search is busy right now. Try again in a minute, or type the album in by hand.");
   }
-  const seen = new Set<string>(), out: Item[] = [];
+
+  // Plain search only returns Apple's top hits, so deluxe and other editions of an album often get crowded out
+  // by other artists' albums with similar names. Pull the full catalog of the top artists that matched and add
+  // every edition that shares a title with an album already found (or contains the search words).
+  const q = norm(query);
+  const artistIds: number[] = [];
   for (const it of items) {
-    if (!it.collectionName) continue;
+    if (it.artistId && !artistIds.includes(it.artistId)) artistIds.push(it.artistId);
+    if (artistIds.length >= 3) break;
+  }
+  const bases = new Set(items.map((it) => baseTitle(it.collectionName)).filter(Boolean));
+  try {
+    const lists = await Promise.all(artistIds.map((id) =>
+      itunes(`lookup?entity=album&limit=200&country=us&id=${id}`).then((r) => r.results || []).catch(() => [])));
+    const have = new Set(items.map((it) => it.collectionId));
+    const extra: Item[] = [];
+    for (const list of lists) for (const it of list) {
+      if (it.wrapperType !== "collection" || have.has(it.collectionId)) continue;
+      const b = baseTitle(it.collectionName), n = norm(it.collectionName);
+      if (!bases.has(b) && !(q && (n.includes(q) || q.includes(b) && b.length >= 3))) continue;
+      have.add(it.collectionId);
+      extra.push(it);
+    }
+    items = [...items, ...extra];
+  } catch { /* keep the plain results */ }
+
+  const seen = new Set<string>(), out: (Item & { _base: string; _i: number })[] = [];
+  items.forEach((it, i) => {
+    if (!it.collectionName) return;
     const raw = String(it.collectionName);
     const kind = /\s-\sSingle$/i.test(raw) ? "Single" : /\s-\sEP$/i.test(raw) ? "EP" : "Album";
     const name = raw.replace(/\s-\s(Single|EP)$/i, "").trim();
     const key = norm(name) + "|" + norm(it.artistName);
-    if (seen.has(key)) continue;
+    if (seen.has(key)) return;
     seen.add(key);
     out.push({
       album: name, artist: String(it.artistName || ""), year: String(it.releaseDate || "").slice(0, 4),
       cover: it.artworkUrl100 ? big(it.artworkUrl100) : "", tracks: it.trackCount || 0, kind,
+      _base: baseTitle(raw) + "|" + norm(it.artistName), _i: i,
     });
-  }
-  return [...out.filter((x) => x.kind === "Album"), ...out.filter((x) => x.kind !== "Album")].slice(0, 12);
+  });
+
+  // Keep each album's editions together, in the order the first one was found, original first.
+  const firstAt = new Map<string, number>();
+  out.forEach((x, i) => { if (!firstAt.has(x._base)) firstAt.set(x._base, i); });
+  const rank = (x: Item) => (x.kind === "Album" ? 0 : 1);
+  out.sort((x, y) => rank(x) - rank(y) || firstAt.get(x._base)! - firstAt.get(y._base)! ||
+    (EXTRAS.test(norm(x.album)) ? 1 : 0) - (EXTRAS.test(norm(y.album)) ? 1 : 0) || x._i - y._i);
+  return out.slice(0, 20).map(({ _base, _i, ...x }) => x);
 }
 
 /* ---------- cover ---------- */
