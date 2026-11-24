@@ -735,12 +735,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   main.chatting { background: var(--chat-bg); }
   .peek main:has(> .chat) { background: var(--chat-bg); } /* own rule: older phones without :has still get the line above */
   .chat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 8px; overflow-x: hidden; overflow-x: clip; --sx: 0px; }
-  .chathead { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 8px; margin: 0 -14px; border-bottom: .5px solid var(--line); background: var(--chat-bg); }
-  .chathead .ch-faces { display: flex; }
-  .chathead .ch-faces .mini { width: 30px; height: 30px; margin: 0 0 0 -8px; font-size: var(--t-sm); box-shadow: 0 0 0 2px var(--chat-bg); }
-  .chathead .ch-faces .mini:first-child { margin-left: 0; }
-  .chathead .ch-name { font-size: var(--t-xs); color: var(--ink); font-weight: 500; }
-  .chathead .ch-name span { color: var(--muted); }
   .chat .day { align-self: center; font-size: var(--t-xs); font-weight: 400; color: var(--muted); margin: 14px 0 6px; text-align: center; }
   .chat .day b { font-weight: 600; }
   .chat .msg-row { position: relative; display: flex; align-items: flex-end; gap: 8px; width: 100%; }
@@ -820,7 +814,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* keyboard open: no home bar gap under the box, a slimmer header (just the tabs), a shorter GIF grid */
   html.kb .composer { padding-bottom: 8px; padding-top: 8px; }
   html.kb header { padding-top: calc(6px + env(safe-area-inset-top)); }
-  html.kb header .brand, html.kb .chathead { display: none; }
+  html.kb header .brand { display: none; }
   html.kb header nav { margin-top: 0; }
   html.kb header nav button { padding-top: 6px; padding-bottom: 8px; }
   html.kb .gifgrid { height: min(252px, calc(var(--vvh, 600px) * .3)); }
@@ -4163,17 +4157,10 @@ function chatListHtml() {
   return h;
 }
 
-function chatHead() {
-  var ms = D && D.members ? D.members : [];
-  if (!ms.length) return '';
-  var me = chatMe(), order = ms.filter(function (n) { return n !== me; }).concat(ms.indexOf(me) >= 0 ? [me] : []);
-  return '<div class="chathead"><div class="ch-faces">' + order.slice(0, 5).map(function (n) { return face(n, 'mini'); }).join('') +
-    '</div><div class="ch-name">Club Chat <span>· ' + ms.length + ' people</span></div></div>';
-}
 var SEND_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>';
 function renderChat() {
   GIF.open = false;
-  return chatHead() + '<div class="chat" id="chatList">' + chatListHtml() + '</div>' +
+  return '<div class="chat" id="chatList">' + chatListHtml() + '</div>' +
     '<div class="composer"><div id="gifPanel" class="gifpanel" hidden></div><div class="crow">' +
     '<button class="btn gifbtn" id="gifBtn" onclick="gifToggle()" aria-label="Send a GIF" aria-expanded="false">GIF</button>' +
     '<div class="field' + (CHAT.draft.trim() ? ' has' : '') + '" id="chatField">' +
