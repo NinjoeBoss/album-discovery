@@ -726,30 +726,70 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .mbody .listen .btn { flex: 1; text-align: center; }
   }
 
-  /* ---------- club chat ---------- */
-  .chat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 8px; }
-  .chat .day { align-self: center; font-size: var(--t-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
-  .chat .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 86%; }
-  .chat .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
+  /* ---------- club chat ----------
+     Laid out like Messages: a white (dark: near black) page, grey bubbles for everyone else and plum for yours,
+     a tail on the last bubble of each run, times shown in the middle only after a pause of an hour, and each
+     message's own time revealed by dragging the list to the left. */
+  :root { --chat-bg: var(--card); --bub-them: #e9e7ef; --bub-them-ink: var(--ink); }
+  html[data-theme="dark"] { --chat-bg: #0c0a12; --bub-them: #26232f; --bub-them-ink: #f1eff7; }
+  main.chatting { background: var(--chat-bg); }
+  .peek main:has(> .chat) { background: var(--chat-bg); } /* own rule: older phones without :has still get the line above */
+  .chat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 8px; overflow-x: hidden; overflow-x: clip; --sx: 0px; }
+  .chathead { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 8px; margin: 0 -14px; border-bottom: .5px solid var(--line); background: var(--chat-bg); }
+  .chathead .ch-faces { display: flex; }
+  .chathead .ch-faces .mini { width: 30px; height: 30px; margin: 0 0 0 -8px; font-size: var(--t-sm); box-shadow: 0 0 0 2px var(--chat-bg); }
+  .chathead .ch-faces .mini:first-child { margin-left: 0; }
+  .chathead .ch-name { font-size: var(--t-xs); color: var(--ink); font-weight: 500; }
+  .chathead .ch-name span { color: var(--muted); }
+  .chat .day { align-self: center; font-size: var(--t-xs); font-weight: 400; color: var(--muted); margin: 14px 0 6px; text-align: center; }
+  .chat .day b { font-weight: 600; }
+  .chat .msg-row { position: relative; display: flex; align-items: flex-end; gap: 8px; width: 100%; }
+  .chat .msg-row.me { flex-direction: row-reverse; }
+  .chat .msg-row > .min0 { max-width: 75%; display: flex; flex-direction: column; align-items: flex-start; }
+  .chat .msg-row.me > .min0 { align-items: flex-end; }
   .chat .msg-row .mini { margin-right: 0; width: 28px; height: 28px; font-size: var(--t-sm); }
   .chat .msg-row .gap { width: 28px; flex: none; }
-  .chat .msg-row.first { margin-top: 8px; }
-  .chat .bub { background: var(--card); color: var(--ink); border-radius: var(--r-lg); padding: 8px 12px; box-shadow: 0 1px 2px var(--shadow); font-size: var(--t-lg); line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+  .chat .msg-row.first { margin-top: 10px; }
+  .chat .msg-row.first.me { margin-top: 12px; }
+  .chat .day + .msg-row.first { margin-top: 0; }
+  .chat .bub { position: relative; background: var(--bub-them); color: var(--bub-them-ink); border-radius: 18px; padding: 7px 12px; font-size: var(--t-lg); line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; max-width: 100%; box-sizing: border-box; }
   .chat .msg-row.me .bub { background: var(--plum2-bg); color: #fff; }
-  .chat .msg-row.me .bub a { color: #fff; }
-  .chat .bub a { color: var(--plum2); font-weight: 500; }
-  .chat .who2 { font-size: var(--t-sm); font-weight: 700; color: var(--muted); margin: 0 0 2px 2px; }
-  .chat .when { font-size: var(--t-xs); color: var(--muted); margin: 0 4px 4px; white-space: nowrap; flex: none; }
+  .chat .msg-row.me .bub a { color: #fff; text-decoration: underline; }
+  .chat .bub a { color: inherit; text-decoration: underline; font-weight: 400; }
+  /* the little tail, drawn with two curves; the second one is painted in the page color to carve the hook */
+  .chat .bub.tail { z-index: 0; }
+  .chat .bub.tail::before, .chat .bub.tail::after { content: ""; position: absolute; z-index: -1; bottom: 0; height: 20px; pointer-events: none; }
+  .chat .bub.tail::before { left: -7px; width: 20px; background: inherit; border-bottom-right-radius: 15px; }
+  .chat .bub.tail::after { left: -10px; width: 10px; background: var(--chat-bg); border-bottom-right-radius: 10px; }
+  .chat .msg-row.me .bub.tail::before { left: auto; right: -8px; border-bottom-right-radius: 0; border-bottom-left-radius: 15px; }
+  .chat .msg-row.me .bub.tail::after { left: auto; right: -10px; border-bottom-right-radius: 0; border-bottom-left-radius: 10px; }
+  .chat .msg-row.me > .min0 { margin-right: 4px; }
+  .chat .msg-row:not(.me) { gap: 10px; } /* room for the tail's hook so it never nicks the face */
+  .chat .bub.big { background: none !important; padding: 0 2px; font-size: 44px; line-height: 1.15; }
+  .chat .who2 { font-size: var(--t-xs); font-weight: 400; color: var(--muted); margin: 0 0 2px 12px; }
+  .chat .rcpt { align-self: flex-end; font-size: var(--t-xs); font-weight: 500; color: var(--muted); margin: 3px 6px 0 0; }
+  .chat .rcpt.c-err { color: var(--err-text); }
+  /* each message's time sits just past the right edge; dragging the list left slides it (and your bubbles) in */
+  .chat .ts { position: absolute; right: -64px; bottom: 6px; width: 56px; text-align: left; font-size: var(--t-xs); color: var(--muted); white-space: nowrap; pointer-events: none; }
+  .chat .msg-row.me > .min0, .chat .msg-row.me > .bang, .chat .ts { transform: translateX(var(--sx)); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .chat.peekts .msg-row.me > .min0, .chat.peekts .msg-row.me > .bang, .chat.peekts .ts { transition: none; }
+  .chat .bang { flex: none; width: 22px; height: 22px; border-radius: 99px; border: 0; padding: 0; background: var(--err-text); color: #fff; font-weight: 800; font-size: var(--t-sm); line-height: 22px; margin-bottom: 6px; cursor: pointer; }
   .chat .pending .bub { opacity: .6; }
-  .chat .failed .bub { box-shadow: 0 0 0 2px var(--err-text); }
   .chat .del { display: none; border: 0; background: none; color: var(--err-text); font-size: var(--t-sm); font-weight: 700; cursor: pointer; padding: 0 4px 6px; flex: none; }
   .chat .msg-row.sel .del { display: inline-block; }
   .chat .msg-row.me .bub { cursor: pointer; }
+  .chat .msg-row.sel .bub { filter: brightness(.9); }
   .chat-empty { text-align: center; padding: 30px 10px; }
-  .composer { position: sticky; bottom: 0; z-index: 5; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--canvas); }
+  .composer { position: sticky; bottom: 0; z-index: 5; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: var(--chat-bg); }
   .composer .crow { display: flex; gap: 8px; align-items: flex-end; }
-  .composer .gifbtn { width: 42px; padding: 0; font-size: var(--t-sm); font-weight: 800; letter-spacing: 0; line-height: 1; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
-  .composer .gifbtn.on { background: var(--plum2-bg); color: #fff; box-shadow: none; }
+  .composer .gifbtn { width: 36px; height: 36px; padding: 0; font-size: var(--t-2xs); font-weight: 900; letter-spacing: 0; line-height: 1; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; background: var(--bub-them); color: var(--muted); box-shadow: none; flex: none; margin-bottom: 1px; }
+  .composer .gifbtn.on { background: var(--plum2-bg); color: #fff; }
+  .composer .field { position: relative; flex: 1; min-width: 0; display: flex; border: 1px solid var(--line); border-radius: 19px; background: var(--chat-bg); }
+  .composer .field textarea { flex: 1; min-width: 0; min-height: 36px; max-height: 140px; resize: none; border: 0; border-radius: 19px; background: transparent; padding: 7px 42px 7px 13px; font-size: var(--t-lg); line-height: 1.3; margin: 0; box-sizing: border-box; outline: none; }
+  .composer .field:focus-within { border-color: color-mix(in srgb, var(--plum2) 55%, var(--line)); }
+  .composer .send { position: absolute; right: 3px; bottom: 3px; width: 30px; height: 30px; border-radius: 99px; border: 0; padding: 0; background: var(--plum2-bg); color: #fff; display: none; align-items: center; justify-content: center; cursor: pointer; }
+  .composer .send svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .composer .field.has .send { display: inline-flex; }
   .gifpanel { background: var(--card); border-radius: var(--r-lg); box-shadow: 0 2px 10px var(--shadow); padding: 10px; margin-bottom: 10px; }
   .gifpanel input { width: 100%; margin: 0 0 8px; font-size: var(--t-lg); border-radius: var(--r-md); }
   .gifgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; height: 252px; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
@@ -758,11 +798,8 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .gifgrid .gifmsg { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: var(--t-base); padding: 40px 10px; }
   .gifpanel .giffoot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: var(--t-xs); color: var(--muted); }
   .gifpanel .giffoot button { border: 0; background: none; color: var(--muted); font-size: var(--t-sm); font-weight: 700; cursor: pointer; padding: 2px 4px; }
-  .chat .bub.gif { padding: 0; background: none; box-shadow: none; border-radius: var(--r-md); overflow: hidden; line-height: 0; }
-  .chat .msg-row.me .bub.gif { background: none; }
-  .chat .bub.gif img { display: block; width: 220px; max-width: 100%; height: auto; border-radius: var(--r-md); background: var(--card); }
-  .composer textarea { flex: 1; min-height: 42px; max-height: 140px; resize: none; border-radius: 99px; padding: 10px 14px; font-size: var(--t-lg); margin: 0; }
-  .composer .btn { height: 42px; padding: 0 18px; flex: none; }
+  .chat .bub.gif, .chat .msg-row.me .bub.gif { padding: 0; background: none; box-shadow: none; border-radius: 18px; overflow: hidden; line-height: 0; }
+  .chat .bub.gif img { display: block; width: 220px; max-width: 100%; height: auto; border-radius: 18px; background: var(--bub-them); }
   main.chatting { padding-bottom: 0; display: flex; flex-direction: column; }
   main.chatting .chat { flex: 1; justify-content: flex-end; }
   /* Chat screen works like a messaging app: the page itself never scrolls. The whole app is pinned to the part of
@@ -777,13 +814,13 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   html.chatmode.kb body { top: var(--vvt, 0px); bottom: auto; height: var(--vvh, 100%); }
   html.chatmode header { position: relative; flex: none; }
   html.chatmode main.chatting { flex: 1 1 auto; min-height: 0; width: 100%; box-sizing: border-box; padding-top: 0; }
-  html.chatmode main.chatting .chat { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; justify-content: flex-start; padding-top: 12px; }
+  html.chatmode main.chatting .chat { min-height: 0; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; justify-content: flex-start; padding-top: 12px; }
   html.chatmode main.chatting .chat > :first-child { margin-top: auto; } /* few messages: still sit at the bottom */
   html.chatmode .composer { position: relative; flex: none; padding-bottom: max(10px, calc(env(safe-area-inset-bottom) - 12px)); }
   /* keyboard open: no home bar gap under the box, a slimmer header (just the tabs), a shorter GIF grid */
   html.kb .composer { padding-bottom: 8px; padding-top: 8px; }
   html.kb header { padding-top: calc(6px + env(safe-area-inset-top)); }
-  html.kb header .brand { display: none; }
+  html.kb header .brand, html.kb .chathead { display: none; }
   html.kb header nav { margin-top: 0; }
   html.kb header nav button { padding-top: 6px; padding-bottom: 8px; }
   html.kb .gifgrid { height: min(252px, calc(var(--vvh, 600px) * .3)); }
@@ -3814,6 +3851,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
       t.mode = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
       // If the browser has already started scrolling, the touch can't be taken over; let the scroll win cleanly.
       if (t.mode === 'x' && e.cancelable === false) t.mode = 'y';
+      if (t.mode === 'x' && chatPeeksTimes(e.target, dx)) { t = null; return; } // that drag shows message times
       if (t.mode === 'y') return;
       app.classList.add('dragging');
     } else if (t.mode === 'y') {
@@ -3821,6 +3859,7 @@ document.getElementById('nav').addEventListener('click', function (e) { if (e.ta
       // take it over as a swipe instead of ignoring the rest of the touch.
       if (window.scrollY !== t.sy || e.cancelable === false) { t = null; return; }
       if (Math.abs(dx) < 18 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      if (chatPeeksTimes(e.target, dx)) { t = null; return; }
       t.mode = 'x'; t.x0 = p.clientX - (dx < 0 ? -10 : 10); dx = p.clientX - t.x0; // carry on from here, no jump
       t.pts = [{ x: p.clientX, at: e.timeStamp }];
       app.classList.add('dragging');
@@ -4078,6 +4117,18 @@ function chatLinkify(text) {
   return out + esc(text.slice(i));
 }
 
+/* The centered time between messages, like Messages: "Today 9:41 PM", "Monday 3:14 PM", "Tue, Nov 17 at 3:14 PM". */
+function chatStamp(t) {
+  var d = new Date(t), now = new Date(), day = chatDayLabel(t), time = chatTime(t);
+  if (day === 'Today' || day === 'Yesterday') return '<b>' + day + '</b> ' + esc(time);
+  if (now - d < 6 * 86400000) return '<b>' + esc(d.toLocaleDateString('en-US', { weekday: 'long' })) + '</b> ' + esc(time);
+  return '<b>' + esc(day) + '</b> at ' + esc(time);
+}
+/* One to three emoji and nothing else: shown big, without a bubble. */
+var CHAT_EMOJI_RE = null;
+try { CHAT_EMOJI_RE = new RegExp('^(?:[\\p{Extended_Pictographic}\\p{Regional_Indicator}](?:\\uFE0F|\\u20E3|[\\u{1F3FB}-\\u{1F3FF}]|\\u200D[\\p{Extended_Pictographic}\\u2640\\u2642\\u2695\\u2696\\u2708]\\uFE0F?|\\p{Regional_Indicator})*\\s*){1,3}$', 'u'); } catch (e) {}
+function chatIsEmoji(text) { return !!CHAT_EMOJI_RE && text.length <= 32 && CHAT_EMOJI_RE.test(text.trim()); }
+
 function chatListHtml() {
   var me = chatMe(), all = CHAT.msgs.concat(CHAT.pending), h = '';
   if (!all.length) {
@@ -4085,45 +4136,58 @@ function chatListHtml() {
       ? '<div class="t1">No messages yet</div><div class="mt4 t2">Start the conversation about this week\'s album.</div>'
       : skChat()) + '</div>';
   }
-  var GAP = 5 * 60000;
+  var PAUSE = 60 * 60000;   // a time line in the middle after an hour of quiet (and at the start of each day)
+  function stamped(i) { var p = all[i - 1], m = all[i]; return !p || chatDayKey(p.time) !== chatDayKey(m.time) || m.time - p.time > PAUSE; }
+  var lastI = all.length - 1;
   all.forEach(function (m, i) {
-    var prev = all[i - 1], next = all[i + 1];
-    var newDay = !prev || chatDayKey(prev.time) !== chatDayKey(m.time);
-    if (newDay) h += '<div class="day">' + esc(chatDayLabel(m.time)) + '</div>';
-    var first = newDay || prev.name !== m.name || m.time - prev.time > GAP;
-    var last = !next || next.name !== m.name || next.time - m.time > GAP || chatDayKey(next.time) !== chatDayKey(m.time);
-    var mine = m.name === me;
+    var next = all[i + 1], prev = all[i - 1], newStamp = stamped(i);
+    if (newStamp) h += '<div class="day">' + chatStamp(m.time) + '</div>';
+    var first = newStamp || prev.name !== m.name;
+    var last = !next || next.name !== m.name || stamped(i + 1);
+    var mine = m.name === me, big = !CHAT_GIF_RE.test(m.text) && chatIsEmoji(m.text);
     var cls = 'msg-row' + (mine ? ' me' : '') + (first ? ' first' : '') + (m.pending ? ' pending' : '') + (m.failed ? ' failed' : '');
     var tap = m.failed ? ' onclick="chatRetry(' + m.tmp + ')"' : (mine && m.id ? ' onclick="chatPick(this)"' : '');
     h += '<div class="' + cls + '"' + (m.id ? ' data-id="' + m.id + '"' : '') + '>';
     if (!mine) h += last ? face(m.name, 'mini') : '<span class="gap"></span>';
     h += '<div class="min0">' + (!mine && first ? '<div class="who2">' + esc(m.name) + '</div>' : '') +
-      chatBubble(m.text, tap) + '</div>';
-    if (m.failed) h += '<span class="c-err when">Didn\'t send · tap to retry</span>';
-    else if (m.pending) h += last ? '<span class="when">Sending…</span>' : '';
-    else if (last) h += '<span class="when">' + esc(chatTime(m.time)) + '</span>';
+      chatBubble(m.text, tap, last && !big, big) + '</div>';
+    if (m.failed) h += '<button class="bang" onclick="chatRetry(' + m.tmp + ')" aria-label="Didn\'t send. Tap to try again">!</button>';
+    h += '<time class="ts" aria-hidden="true">' + esc(chatTime(m.time)) + '</time>';
     if (mine && m.id) h += '<button class="del" onclick="chatDelete(' + m.id + ')">Delete</button>';
     h += '</div>';
+    // under your own message: Sending… / Not Delivered right away, and Delivered under the newest one if nobody has answered yet
+    if (mine && m.failed) h += '<div class="rcpt c-err">Not Delivered</div>';
+    else if (mine && m.pending && last) h += '<div class="rcpt">Sending…</div>';
+    else if (mine && i === lastI && m.id) h += '<div class="rcpt">Delivered</div>';
   });
   return h;
 }
 
+function chatHead() {
+  var ms = D && D.members ? D.members : [];
+  if (!ms.length) return '';
+  var me = chatMe(), order = ms.filter(function (n) { return n !== me; }).concat(ms.indexOf(me) >= 0 ? [me] : []);
+  return '<div class="chathead"><div class="ch-faces">' + order.slice(0, 5).map(function (n) { return face(n, 'mini'); }).join('') +
+    '</div><div class="ch-name">Club Chat <span>· ' + ms.length + ' people</span></div></div>';
+}
+var SEND_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>';
 function renderChat() {
   GIF.open = false;
-  return '<div class="chat" id="chatList">' + chatListHtml() + '</div>' +
+  return chatHead() + '<div class="chat" id="chatList">' + chatListHtml() + '</div>' +
     '<div class="composer"><div id="gifPanel" class="gifpanel" hidden></div><div class="crow">' +
     '<button class="btn gifbtn" id="gifBtn" onclick="gifToggle()" aria-label="Send a GIF" aria-expanded="false">GIF</button>' +
+    '<div class="field' + (CHAT.draft.trim() ? ' has' : '') + '" id="chatField">' +
     '<textarea id="chatBox" rows="1" maxlength="' + CHAT_MAX + '" placeholder="Message the club" aria-label="Message the club"' +
     ' oninput="chatTyped(this)" onkeydown="chatKey(event)">' + esc(CHAT.draft) + '</textarea>' +
-    '<button class="btn primary" onclick="chatSend()">Send</button></div></div>';
+    '<button class="send" onmousedown="event.preventDefault()" onclick="chatSend()" aria-label="Send">' + SEND_ICO + '</button></div></div></div>';
 }
 
 /* A GIF message is saved as "[GIF] <link>#<width>x<height>" so the sheet stays readable.
  * The size lets the bubble keep its space while the GIF loads, so the chat doesn't jump. */
 var CHAT_GIF_RE = /^\[GIF\] (https:\/\/[^\s#"'<>]+)(?:#(\d{1,4})x(\d{1,4}))?$/;
-function chatBubble(text, tap) {
+function chatBubble(text, tap, tail, big) {
   var g = CHAT_GIF_RE.exec(text);
-  if (!g) return '<div class="bub"' + tap + '>' + chatLinkify(text) + '</div>';
+  if (!g) return '<div class="bub' + (big ? ' big' : tail ? ' tail' : '') + '"' + tap + '>' + chatLinkify(text) + '</div>';
   var w = Number(g[2]) || 0, h = Number(g[3]) || 0;
   var size = w && h ? ' width="' + w + '" height="' + h + '" style="aspect-ratio:' + w + '/' + h + '"' : '';
   return '<div class="bub gif"' + tap + '><img src="' + esc(g[1]) + '" alt="GIF"' + size + ' loading="lazy" decoding="async"></div>';
@@ -4285,6 +4349,37 @@ document.addEventListener('touchstart', function (e) {
   function done() { l.removeEventListener('touchmove', mv); l.removeEventListener('touchend', done); }
   l.addEventListener('touchmove', mv, { passive: true }); l.addEventListener('touchend', done);
 }, { passive: true });
+/* Dragging the messages to the left slides each message's time in from the right edge, like Messages.
+ * Let go and everything springs back. (The tab swipe leaves leftward drags on the list alone; Chat is the last tab.) */
+(function () {
+  var g = null, MAX = 64;
+  document.addEventListener('touchstart', function (e) {
+    g = null;
+    var l = e.target.closest && e.target.closest('#chatList');
+    if (!l || e.touches.length !== 1 || view !== 'chat') return;
+    g = { l: l, x0: e.touches[0].clientX, y0: e.touches[0].clientY, mode: '?' };
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (!g) return;
+    var p = e.touches[0], dx = p.clientX - g.x0, dy = p.clientY - g.y0;
+    if (g.mode === '?') {
+      if (Math.hypot(dx, dy) < 10) return;
+      g.mode = dx < 0 && Math.abs(dx) > Math.abs(dy) && e.cancelable !== false ? 'x' : 'n';
+      if (g.mode === 'x') { g.l.classList.add('peekts'); g.x0 = p.clientX; dx = 0; }
+    }
+    if (g.mode !== 'x') return;
+    if (e.cancelable) e.preventDefault();
+    var x = Math.min(0, dx); if (x < -MAX) x = -MAX - (-x - MAX) * 0.15; // a little give past the end
+    g.l.style.setProperty('--sx', x + 'px');
+  }, { passive: false });
+  function up() {
+    if (!g) return;
+    if (g.mode === 'x') { var l = g.l; l.classList.remove('peekts'); l.style.setProperty('--sx', '0px'); }
+    g = null;
+  }
+  document.addEventListener('touchend', up); document.addEventListener('touchcancel', up);
+})();
+function chatPeeksTimes(target, dx) { return dx < 0 && view === 'chat' && !!(target && target.closest && target.closest('#chatList')); }
 function chatRedrawList(forceBottom) {
   var list = view === 'chat' && document.getElementById('chatList'); if (!list) return;
   var stick = forceBottom || chatNearBottom();
@@ -4404,6 +4499,7 @@ function chatTake(r) {
 
 function chatTyped(el) {
   CHAT.draft = el.value;
+  var f = el.parentNode; if (f && f.classList) f.classList.toggle('has', !!el.value.trim());
   el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight + 2, 140) + 'px';
 }
 /* Enter sends on a computer (Shift+Enter for a new line). On a phone, return makes a new line and Send sends. */
@@ -4418,7 +4514,7 @@ function chatSend() {
   if (!text) return;
   if (text.length > CHAT_MAX) { toast('Keep messages under ' + CHAT_MAX + ' characters.'); return; }
   CHAT.draft = '';
-  if (box) { box.value = ''; box.style.height = ''; box.focus(); }
+  if (box) { box.value = ''; box.style.height = ''; box.focus(); if (box.parentNode.classList) box.parentNode.classList.remove('has'); }
   chatSendText(text);
 }
 function chatSendText(text) {
