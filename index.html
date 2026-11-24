@@ -201,8 +201,10 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .pill { background: var(--plum2-bg); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; text-transform: uppercase; letter-spacing: .6px; }
   nav { display: flex; gap: 4px; margin-top: 14px; overflow-x: auto; position: relative; scrollbar-width: none; }
   nav::-webkit-scrollbar { display: none; }
-  nav button { background: none; border: 0; color: #b9b2cf; font-size: 14px; font-weight: 700; padding: 10px 12px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+  nav button { background: none; border: 0; color: #b9b2cf; font-size: 14px; font-weight: 700; padding: 10px 10px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
   nav button.on { color: #fff; border-bottom-color: var(--gold); }
+  nav button .ti { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  html.kb header nav button .ti { width: 14px; height: 14px; vertical-align: -2px; }
   main { max-width: 980px; margin: 0 auto; padding: 18px calc(14px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); background: var(--canvas); min-height: calc(100vh - 120px); }
   .card { background: var(--card); border: 0; border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: 0 1px 3px var(--shadow); }
   /* one small uppercase label style everywhere */
@@ -932,10 +934,10 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     <button class="avatar" id="avatar" style="display:none" onclick="openProfile()" aria-label="Your profile"></button></div>
   <nav id="nav" class="inked">
     <span class="ink" id="ink"></span>
-    <button data-v="home" class="on">Home</button>
-    <button data-v="albums">Albums</button>
-    <button data-v="stats">Stats</button>
-    <button data-v="chat" id="chatTab">Chat</button>
+    <button data-v="home" class="on"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/></svg>Home</button>
+    <button data-v="albums"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 5.5a6.5 6.5 0 0 1 6.5 6.5"/></svg>Albums</button>
+    <button data-v="stats"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 20v-6"/><path d="M12 20V8"/><path d="M17 20v-9"/></svg>Stats</button>
+    <button data-v="chat" id="chatTab"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a7.5 7.5 0 0 1-11 6.6L4 20l1.4-4.4A7.5 7.5 0 1 1 20 12z"/></svg>Chat</button>
   </nav>
   <div class="syncing" id="syncing" role="status">Updating…</div>
 </header>
@@ -3934,7 +3936,8 @@ function chatDot() {
   var b = document.getElementById('chatTab'); if (!b) return;
   var on = view !== 'chat' && chatUnread(), has = !!b.querySelector('.dot');
   if (on === has) return;
-  b.innerHTML = 'Chat' + (on ? '<span class="dot" aria-label="new messages"></span>' : '');
+  var ic = b.querySelector('.ti');
+  b.innerHTML = (ic ? ic.outerHTML : '') + 'Chat' + (on ? '<span class="dot" aria-label="new messages"></span>' : '');
   if (typeof moveInk === 'function') moveInk();
 }
 
