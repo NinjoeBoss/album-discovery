@@ -109,6 +109,15 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     --bar: #1e1b2e; --plum-text: #3d3557; --plum2-bg: #6c5c9d; --wait-edge: #f0e2a8; --warn-text: #8a6100;
     --ok-bg: #dff3e6; --ok-text: #1a6b3a; --err-bg: #fbe2e2; --err-text: #8a1f1f; --love: #c2185b; --shine: rgba(255,255,255,.6);
     --shadow: rgba(30,27,46,.14);
+    /* type scale: every text size in the app is one of these (big display numbers aside). 2xs is only for tiny uppercase badges */
+    --t-2xs: 10px; --t-xs: 11px; --t-sm: 12px; --t-md: 13px; --t-base: 14px; --t-lg: 16px; --t-xl: 18px; --t-2xl: 22px; --t-3xl: 28px;
+    /* corner scale: small tags, thumbnails, inputs and tiles, cards and popups; pills use 99px */
+    --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+    /* fixed colors (same in light and dark) */
+    --spotify: #1db954; --apple: #fa2d48; --danger: #a8323e; --deep: #1e1b2e; --deep2: #3d3557;
+    --on-bar-dim: #c4bdd9; --medal-gold-edge: #f1d35a; --medal-bronze-edge: #e7b88f;
+    --dark-love: #f46a9b; --dark-score: #ffd76a; --dark-live: #8ff0c4;
+    --scrim: rgba(30,27,46,.6); --lift: rgba(30,27,46,.26);
   }
   /* dark mode: same purple look, dimmed. The header bar stays the same deep plum in both. */
   html[data-theme="dark"] {
@@ -119,6 +128,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     --bar: #181524; --plum-text: #cbbff5; --plum2-bg: #6c5c9d; --wait-edge: #5c4d1e; --warn-text: #f0c35a;
     --ok-bg: #173a26; --ok-text: #8fe0ad; --err-bg: #44191e; --err-text: #ffb3b8; --love: #f46a9b; --shine: rgba(255,255,255,.14);
     --shadow: rgba(0,0,0,.45);
+    --scrim: rgba(8,7,12,.7); --lift: rgba(0,0,0,.5);
   }
   html.theming, html.theming * { transition: background-color .3s ease, color .3s ease, border-color .3s ease !important; }
   * { box-sizing: border-box; }
@@ -150,77 +160,76 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .brand { display: flex; align-items: center; gap: 10px; }
   /* signed out: no tab row under the title, so give the bar its own bottom space (else the title and theme button touch the edge) */
   header.bare { padding-bottom: 14px; }
-  .brand h1 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: .3px; }
-  .avatar { margin-left: auto; align-self: center; width: 38px; height: 38px; border-radius: 99px; border: 2px solid rgba(255,255,255,.85); font-weight: 900; font-size: 16px; color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: none; }
+  .brand h1 { margin: 0; font-size: var(--t-2xl); font-weight: 900; letter-spacing: .3px; }
+  .avatar { margin-left: auto; align-self: center; width: 38px; height: 38px; border-radius: 99px; border: 2px solid rgba(255,255,255,.85); font-weight: 900; font-size: var(--t-lg); color: var(--ink); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; flex: none; }
   .avatar:hover { box-shadow: 0 0 0 3px var(--plum2); }
   .avatar.guest { background: var(--plum); color: #fff; }
   .avatar img, .pbig img, .mini img { width: 100%; height: 100%; border-radius: 99px; object-fit: cover; display: block; }
   .avatar { overflow: hidden; }
-  .mini { width: 30px; height: 30px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; vertical-align: middle; margin-right: 8px; overflow: hidden; flex: none; }
+  .mini { width: 30px; height: 30px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: var(--t-md); vertical-align: middle; margin-right: 8px; overflow: hidden; flex: none; }
   .btn.danger { background: var(--err-bg); color: var(--err-text); }
-  .btn.danger.solid { background: #a8323e; color: #fff; }
+  .btn.danger.solid { background: var(--danger); color: #fff; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
-  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bar); color: #fff; border: 1px solid rgba(255,255,255,.12); padding: 12px 18px; border-radius: 99px; font-weight: 700; font-size: 14px; z-index: 30; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 90vw; text-align: center; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bar); color: #fff; border: 1px solid rgba(255,255,255,.12); padding: 12px 18px; border-radius: 99px; font-weight: 700; font-size: var(--t-base); z-index: 30; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 90vw; text-align: center; }
 
 
   /* season bar on Albums, Members, Stats */
   .sbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .sbar .t1 { font-size: 20px; font-weight: 900; }
+  .sbar .t1 { font-size: var(--t-2xl); font-weight: 900; }
   .bhead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin: 26px 4px 10px; }
   .bhead .section-title { margin: 0; }
-  .seg.sm button { padding: 5px 11px; font-size: 12px; }
+  .seg.sm button { padding: 5px 11px; font-size: var(--t-sm); }
   /* Rate and Add Album open as their own page with a way back, instead of being tabs */
   .subbar { display: flex; align-items: center; gap: 10px; margin: -4px 0 12px; }
-  .subbar .back { border: 0; background: var(--card); border: 1px solid var(--line); color: var(--plum-text); font-weight: 700; font-size: 14px; border-radius: 99px; padding: 7px 14px 7px 10px; cursor: pointer; }
-  .subbar .subt { font-size: 20px; font-weight: 900; }
+  .subbar .back { border: 0; background: var(--card); border: 1px solid var(--line); color: var(--plum-text); font-weight: 700; font-size: var(--t-base); border-radius: 99px; padding: 7px 14px 7px 10px; cursor: pointer; }
+  .subbar .subt { font-size: var(--t-2xl); font-weight: 900; }
   .more { margin-top: 2px; }
-  .more summary { cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; color: var(--plum-text); padding: 8px 0 2px; border-top: 1px solid var(--band); }
+  .more summary { cursor: pointer; list-style: none; font-size: var(--t-md); font-weight: 700; color: var(--plum-text); padding: 8px 0 2px; border-top: 1px solid var(--band); }
   .more summary::-webkit-details-marker { display: none; }
   .more summary::after { content: ' ›'; }
   .more[open] summary::after { content: ' ‹'; }
   .turn { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
   .seg { display: inline-flex; background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 3px; gap: 2px; flex-wrap: wrap; }
-  .seg button { border: 0; background: none; border-radius: 99px; padding: 7px 14px; font-weight: 700; font-size: 13px; color: var(--plum-text); cursor: pointer; }
+  .seg button { border: 0; background: none; border-radius: 99px; padding: 7px 14px; font-weight: 700; font-size: var(--t-md); color: var(--plum-text); cursor: pointer; }
   .seg button.on { background: var(--plum); color: #fff; }
   /* switching seasons: a plum pill glides from the old choice to the new one (the buttons go see-through meanwhile) */
   .seg { position: relative; }
   .seg button { position: relative; z-index: 1; }
   .seg.pilled button.on { background: transparent; }
   .seg-pill { position: absolute; left: 0; top: 0; z-index: 0; border-radius: 99px; background: var(--plum); pointer-events: none;
-    box-shadow: 0 2px 8px -2px rgba(30,27,46,.35); will-change: transform; }
+    box-shadow: 0 2px 8px -2px var(--lift); will-change: transform; }
   .sswap.tween { overflow-y: clip; transition: height .36s cubic-bezier(.2,.8,.2,1); } /* height glides to the new season's size */
-  .seg button .now { font-size: 9px; letter-spacing: .6px; text-transform: uppercase; background: var(--gold); color: #fff; border-radius: 99px; padding: 1px 6px; margin-left: 5px; vertical-align: 1px; }
+  .seg button .now { font-size: var(--t-2xs); letter-spacing: .6px; text-transform: uppercase; background: var(--gold); color: #fff; border-radius: 99px; padding: 1px 6px; margin-left: 5px; vertical-align: 1px; }
   .shead { display: flex; align-items: baseline; gap: 10px; margin: 22px 4px 10px; }
   .shead .section-title { margin: 0; }
-  .shead .t2 { font-size: 12px; }
+  .shead .t2 { font-size: var(--t-sm); }
   .shead.upnext { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
-  .gcard .nowtag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--plum); border-radius: 99px; padding: 2px 8px; margin-bottom: 4px; }
+  .gcard .nowtag { display: inline-block; font-size: var(--t-2xs); font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--plum); border-radius: 99px; padding: 2px 8px; margin-bottom: 4px; }
   .empty-season { text-align: center; padding: 28px 16px; }
-  .empty-season .t1 { font-size: 18px; margin-bottom: 4px; }
+  .empty-season .t1 { font-size: var(--t-xl); margin-bottom: 4px; }
 
-  .pill { background: var(--plum2-bg); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 99px; text-transform: uppercase; letter-spacing: .6px; }
+  .pill { background: var(--plum2-bg); color: #fff; font-size: var(--t-xs); font-weight: 700; padding: 3px 9px; border-radius: 99px; text-transform: uppercase; letter-spacing: .6px; }
   nav { display: flex; gap: 4px; margin-top: 14px; overflow-x: auto; position: relative; scrollbar-width: none; }
   nav::-webkit-scrollbar { display: none; }
   /* center the tabs; auto margins (not justify-content) so a narrow screen still scrolls from the first tab */
   nav button:first-of-type { margin-left: auto; }
   nav button:last-of-type { margin-right: auto; }
-  nav button { background: none; border: 0; color: #b9b2cf; font-size: 14px; font-weight: 700; padding: 10px 10px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+  nav button { background: none; border: 0; color: var(--on-bar-dim); font-size: var(--t-base); font-weight: 700; padding: 10px 10px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
   nav button.on { color: #fff; border-bottom-color: var(--gold); }
   nav button .ti { width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
   html.kb header nav button .ti { width: 14px; height: 14px; vertical-align: -2px; }
   main { max-width: 980px; margin: 0 auto; padding: 18px calc(14px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); background: var(--canvas); min-height: calc(100vh - 120px); }
-  .card { background: var(--card); border: 0; border-radius: 16px; padding: 18px; margin-bottom: 18px; box-shadow: 0 1px 3px var(--shadow); }
+  .card { background: var(--card); border: 0; border-radius: var(--r-lg); padding: 18px; margin-bottom: 18px; box-shadow: 0 1px 3px var(--shadow); }
   /* one small uppercase label style everywhere */
-  .section-title, .eyebrow, .tile b, .field label, .stat .lbl { font-size: 11px; font-weight: 900; color: var(--plum2); text-transform: uppercase; letter-spacing: 1px; }
+  .section-title, .eyebrow, .tile b, .field label, .stat .lbl { font-size: var(--t-xs); font-weight: 900; color: var(--plum2); text-transform: uppercase; letter-spacing: 1px; }
   .section-title { margin: 26px 4px 10px; }
   .muted { color: var(--muted); }
   .stars { color: var(--gold); letter-spacing: 1px; }
-  .loading { text-align: center; padding: 80px 20px; color: var(--muted); font-weight: 500; }
 
   /* hero */
   .hero { display: grid; grid-template-columns: minmax(140px, 260px) 1fr; gap: 20px; align-items: center; }
-  .cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--band); display: block; }
-  .hero h2 { margin: 6px 0 2px; font-size: 30px; line-height: 1.1; }
+  .cover { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-md); background: var(--band); display: block; }
+  .hero h2 { margin: 6px 0 2px; font-size: var(--t-3xl); line-height: 1.1; }
   /* home cover ambience: a blurred, saturated copy of the art glows behind the cover, plus a halo and a card tint in
      the cover's main color (--glow, from artColor; the picker's color until it's read). Breathes slowly unless motion is reduced. */
   .card.hero { --glow: 108 92 157; position: relative; overflow: hidden; isolation: isolate;
@@ -232,7 +241,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .hart::before { content: ''; position: absolute; inset: -3%; border-radius: 50%; z-index: -2; pointer-events: none;
     background: radial-gradient(closest-side, rgb(var(--glow) / .35), rgb(var(--glow) / 0)); transition: background .8s ease; }
   html[data-theme="dark"] .hart .amb { opacity: .55; }
-  .hart .cover { position: relative; box-shadow: 0 8px 22px -8px rgb(var(--glow) / .5), 0 2px 6px rgba(30,27,46,.2); transition: box-shadow .8s ease; }
+  .hart .cover { position: relative; box-shadow: 0 8px 22px -8px rgb(var(--glow) / .5), 0 2px 6px var(--lift); transition: box-shadow .8s ease; }
   @media (prefers-reduced-motion: no-preference) {
     .hart .amb { animation: ambBreathe 9s ease-in-out infinite; }
     .hart::before { animation: ambBreathe 9s ease-in-out -4.5s infinite; }
@@ -240,21 +249,21 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   @keyframes ambBreathe { 0%, 100% { transform: scale(1) rotate(0deg); opacity: .4; } 50% { transform: scale(1.03) rotate(3deg); opacity: .6; } }
   /* tap the home cover or the faces row to open the album popup */
   .hero .open { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .hero .open:focus-visible { outline: 3px solid rgb(var(--glow) / .7); outline-offset: 4px; border-radius: 12px; }
+  .hero .open:focus-visible { outline: 3px solid rgb(var(--glow) / .7); outline-offset: 4px; border-radius: var(--r-md); }
   @media (prefers-reduced-motion: no-preference) {
     .hart.open .cover, .faces.open { transition: transform .15s ease, box-shadow .8s ease; }
     .hart.open:active .cover, .faces.open:active { transform: scale(.97); }
   }
-  .hero .by { font-size: 16px; color: var(--muted); }
+  .hero .by { font-size: var(--t-lg); color: var(--muted); }
   /* waiting on this week's picker: their photo in place of the cover */
   .wface { width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
     font-size: 72px; font-weight: 900; color: #fff; box-shadow: 0 0 0 4px var(--card), 0 0 0 7px rgb(var(--glow) / .45); }
   .wface img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .wwait { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; margin-top: 18px; padding: 12px; border-radius: 12px;
+  .wwait { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; margin-top: 18px; padding: 12px; border-radius: var(--r-md);
     background: rgb(var(--glow) / .10); text-align: left; }
   .wwait .thumb { width: 64px; height: 64px; }
-  .wwait .t1 { font-size: 17px; font-weight: 800; margin: 3px 0 2px; }
-  .waiting .wkick { margin-top: 4px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+  .wwait .t1 { font-size: var(--t-xl); font-weight: 800; margin: 3px 0 2px; }
+  .waiting .wkick { margin-top: 4px; font-size: var(--t-md); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
   /* breathing ring around the picker's photo: its own layer that only scales and fades, so the phone never repaints the photo */
   .waiting .hart::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; opacity: 0;
     box-shadow: 0 0 0 4px var(--card), 0 0 0 10px rgb(var(--glow) / .22); }
@@ -263,22 +272,22 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .htop { display: flex; gap: 16px; align-items: flex-start; }
   .htop > div:first-child { flex: 1; min-width: 0; }
   .bigavg { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; }
-  .bigavg b { font-size: 30px; font-weight: 900; line-height: 1; }
-  .bigavg .stars { font-size: 16px; }
-  .bigavg small { font-size: 13px; color: var(--muted); }
-  .meta { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--muted); }
+  .bigavg b { font-size: var(--t-3xl); font-weight: 900; line-height: 1; }
+  .bigavg .stars { font-size: var(--t-lg); }
+  .bigavg small { font-size: var(--t-md); color: var(--muted); }
+  .meta { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: var(--t-base); color: var(--muted); }
   .meta .mini { margin: 0; width: 24px; height: 24px; }
   .meta b { color: var(--ink); }
   .faces { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
   .faces .row5 { display: flex; gap: 6px; }
   .faces .mini { margin: 0; width: 32px; height: 32px; box-shadow: 0 0 0 2px var(--card); }
   .faces .mini.off { opacity: .3; filter: grayscale(1); }
-  .faces .t2 { font-size: 13px; }
+  .faces .t2 { font-size: var(--t-md); }
   .hero .listen { align-items: center; margin-top: 18px; }
   .btn.out { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); display: inline-flex; align-items: center; gap: 7px; }
   .btn.out::before { content: ''; width: 8px; height: 8px; border-radius: 99px; background: var(--brand); }
   .btn.out.spotify, .btn.out.apple { background: transparent; color: var(--ink); }
-  .btn.out.spotify { --brand: #1db954; } .btn.out.apple { --brand: #fa2d48; }
+  .btn.out.spotify { --brand: var(--spotify); } .btn.out.apple { --brand: var(--apple); }
   .hero .listen .lo { display: none; } /* home: just the brand dot and "Spotify" / "Apple Music" */
   .btn.pick { background: var(--plum); color: #fff; }
   .btn.out.pick { background: transparent; color: var(--ink); --brand: var(--gold); }
@@ -294,26 +303,26 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* small round badge in the member's platform color, with a play triangle cut in white */
   .songlink .play { display: inline-block; position: relative; width: 15px; height: 15px; border-radius: 50%; margin-right: 6px; vertical-align: -2px; background: var(--muted); }
   .songlink .play::after { content: ''; position: absolute; left: 5.5px; top: 4px; border-style: solid; border-width: 3.5px 0 3.5px 5.5px; border-color: transparent transparent transparent #fff; }
-  .songlink .play.spotify { background: #1db954; }
-  .songlink .play.apple { background: #fa2d48; }
+  .songlink .play.spotify { background: var(--spotify); }
+  .songlink .play.apple { background: var(--apple); }
   .pickplat { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-  .pickplat .btn { padding: 13px 12px; font-size: 15px; text-align: center; }
+  .pickplat .btn { padding: 13px 12px; font-size: var(--t-lg); text-align: center; }
   .btn.mine .yours { opacity: .75; font-weight: 500; margin-left: 4px; }
   .tiles { display: flex; gap: 8px; flex-wrap: wrap; }
-  .tile { background: var(--band); border-radius: 10px; padding: 9px 12px; min-width: 96px; }
+  .tile { background: var(--band); border-radius: var(--r-md); padding: 9px 12px; min-width: 96px; }
   .tile b { display: block; margin-bottom: 3px; }
-  .tile span { font-weight: 700; font-size: 15px; }
+  .tile span { font-weight: 700; font-size: var(--t-lg); }
   .listen { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .btn { display: inline-block; text-decoration: none; border: 0; border-radius: 99px; padding: 9px 16px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .btn { display: inline-block; text-decoration: none; border: 0; border-radius: 99px; padding: 9px 16px; font-weight: 700; font-size: var(--t-md); cursor: pointer; }
   .btn:disabled { opacity: .6; cursor: default; }
-  .btn.spotify { background: #1db954; color: #fff; }
-  .btn.apple { background: #fa2d48; color: #fff; }
+  .btn.spotify { background: var(--spotify); color: #fff; }
+  .btn.apple { background: var(--apple); color: #fff; }
   .btn.primary { background: var(--plum); color: #fff; }
   .btn.gold { background: var(--gold); color: #fff; }
   .btn.ghost { background: var(--band); color: var(--plum-text); }
-  .waiting { margin-top: 14px; font-size: 13px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; font-size: 12px; font-weight: 700; margin: 3px 4px 0 0; color: var(--ink); vertical-align: middle; }
-  .tiny { width: 20px; height: 20px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; overflow: hidden; flex: none; background: rgba(255,255,255,.6); }
+  .waiting { margin-top: 14px; font-size: var(--t-md); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; font-size: var(--t-sm); font-weight: 700; margin: 3px 4px 0 0; color: var(--ink); vertical-align: middle; }
+  .tiny { width: 20px; height: 20px; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; font-size: var(--t-2xs); font-weight: 900; overflow: hidden; flex: none; background: rgba(255,255,255,.6); }
   .tiny img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .tile .who2 { display: flex; align-items: center; gap: 8px; }
   .tile .who2 .mini { margin: 0; width: 26px; height: 26px; }
@@ -323,33 +332,33 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* up next strip */
   .next { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; }
   .pending { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
-  .pending .thumb { width: 72px; height: 72px; border-radius: 8px; flex: none; }
+  .pending .thumb { width: 72px; height: 72px; border-radius: var(--r-sm); flex: none; }
   .pending .pinfo { min-width: 0; }
-  .pending .t1 { font-size: 18px; line-height: 1.25; }
-  .pending .t2 { font-size: 14px; margin-top: 3px; }
+  .pending .t1 { font-size: var(--t-xl); line-height: 1.25; }
+  .pending .t2 { font-size: var(--t-base); margin-top: 3px; }
   .pactions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-  .pactions .btn { padding: 11px 12px; font-size: 14px; text-align: center; }
-  .phint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
+  .pactions .btn { padding: 11px 12px; font-size: var(--t-base); text-align: center; }
+  .phint { font-size: var(--t-sm); color: var(--muted); text-align: center; margin-top: 10px; }
   .section-title .tag { margin: 0 0 0 6px; vertical-align: 1px; letter-spacing: .6px; }
   .shareinv { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   .shareinv .btn { flex: none; }
   .next .thumb { width: 64px; height: 64px; }
   .next.empty { grid-template-columns: 1fr auto; background: var(--wait); border-color: var(--wait-edge); }
-  .next .t1 { font-size: 17px; margin: 3px 0 2px; }
+  .next .t1 { font-size: var(--t-xl); margin: 3px 0 2px; }
   .next.tap { cursor: pointer; }
-  .next .chev { font-size: 26px; color: var(--muted); padding: 0 4px; line-height: 1; }
+  .next .chev { font-size: var(--t-3xl); color: var(--muted); padding: 0 4px; line-height: 1; }
   .kickoff { color: var(--gold); }
 
   /* leaderboard: every row is the same height and the columns line up, whatever the text length */
   .board { list-style: none; margin: 0; padding: 0; }
-  .board li { display: grid; grid-template-columns: 34px 52px minmax(0, 1fr) 84px; gap: 12px; align-items: center; height: 70px; padding: 0 10px; border-radius: 10px; cursor: pointer; position: relative; }
+  .board li { display: grid; grid-template-columns: 34px 52px minmax(0, 1fr) 84px; gap: 12px; align-items: center; height: 70px; padding: 0 10px; border-radius: var(--r-md); cursor: pointer; position: relative; }
   .board li + li::before { content: ''; position: absolute; top: 0; left: 10px; right: 10px; border-top: 1px solid var(--line); }
   .board li:hover { background: var(--band); }
   .board li:hover::before, .board li:hover + li::before { border-color: transparent; }
-  .board .rank { width: 30px; height: 30px; border-radius: 99px; display: flex; align-items: center; justify-content: center; font-size: 15px; justify-self: center; }
-  .board li.m1 .rank { background: var(--medal-gold); box-shadow: inset 0 0 0 1.5px #f1d35a; }
+  .board .rank { width: 30px; height: 30px; border-radius: 99px; display: flex; align-items: center; justify-content: center; font-size: var(--t-lg); justify-self: center; }
+  .board li.m1 .rank { background: var(--medal-gold); box-shadow: inset 0 0 0 1.5px var(--medal-gold-edge); }
   .board li.m2 .rank { background: var(--medal-silver); box-shadow: inset 0 0 0 1.5px var(--medal-silver-edge); }
-  .board li.m3 .rank { background: var(--medal-bronze); box-shadow: inset 0 0 0 1.5px #e7b88f; }
+  .board li.m3 .rank { background: var(--medal-bronze); box-shadow: inset 0 0 0 1.5px var(--medal-bronze-edge); }
   .board .pname { display: none; } /* the photo shows who picked it */
   .board-more { text-align: center; padding-top: 10px; }
   .board-wait { text-align: center; padding: 2px 0 10px; }
@@ -360,75 +369,75 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .board .bline .art { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .board .bline .tiny, .board .bline .stag, .board .bline .bw { flex: none; }
   .board .score { white-space: nowrap; }
-  .board .score .stars { font-size: 13px; }
-  .rank { font-weight: 900; font-size: 18px; color: var(--plum-text); text-align: center; }
-  .thumb { width: 52px; height: 52px; border-radius: 6px; object-fit: cover; background: var(--band); }
-  .t1 { font-weight: 700; } .t2 { font-size: 12px; color: var(--muted); }
-  .score { text-align: right; } .score b { font-size: 17px; display: block; }
-  .stag { display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: .5px; background: var(--band); color: var(--plum2); border-radius: 4px; padding: 1px 5px; }
+  .board .score .stars { font-size: var(--t-md); }
+  .rank { font-weight: 900; font-size: var(--t-xl); color: var(--plum-text); text-align: center; }
+  .thumb { width: 52px; height: 52px; border-radius: var(--r-sm); object-fit: cover; background: var(--band); }
+  .t1 { font-weight: 700; } .t2 { font-size: var(--t-sm); color: var(--muted); }
+  .score { text-align: right; } .score b { font-size: var(--t-xl); display: block; }
+  .stag { display: inline-block; font-size: var(--t-2xs); font-weight: 900; letter-spacing: .5px; background: var(--band); color: var(--plum2); border-radius: var(--r-xs); padding: 1px 5px; }
 
   /* rate */
-  select, textarea, input[type=text], input[type=search], input[type=number] { width: 100%; font: inherit; font-size: 16px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  select, textarea, input[type=text], input[type=search], input[type=number] { width: 100%; font: inherit; font-size: var(--t-lg); padding: 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--card); color: var(--ink); }
   select { font-weight: 700; }
   textarea { resize: vertical; min-height: 84px; line-height: 1.4; }
   /* Rate tab: cover on the left, album info and score on the right */
   .ratehead { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 18px; }
-  .ratehead .cover { box-shadow: 0 6px 18px rgba(30,27,46,.25); }
-  .ratehead .rc-t { font-weight: 800; font-size: 18px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .ratehead .rc-a { font-size: 14px; color: var(--muted); margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+  .ratehead .cover { box-shadow: 0 6px 18px var(--lift); }
+  .ratehead .rc-t { font-weight: 800; font-size: var(--t-xl); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ratehead .rc-a { font-size: var(--t-base); color: var(--muted); margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
   .ratehead .rc-art { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ratehead .rc-by { display: inline-flex; align-items: center; gap: 5px; }
   .ratehead .slider { text-align: left; margin: 10px 0 0; }
   .ratehead .slider .big { font-size: 44px; }
-  .ratehead .slider .stars { font-size: 22px; min-height: 28px; margin-top: 2px; }
+  .ratehead .slider .stars { font-size: var(--t-2xl); min-height: 28px; margin-top: 2px; }
   .ratehead + input[type=range] { margin-top: 16px; }
   .slider { text-align: center; margin: 22px 0 8px; }
   .slider .big { font-size: 56px; font-weight: 900; line-height: 1; }
-  .slider .stars { font-size: 30px; display: block; min-height: 38px; margin-top: 4px; }
+  .slider .stars { font-size: var(--t-3xl); display: block; min-height: 38px; margin-top: 4px; }
   input[type=range] { width: 100%; accent-color: var(--plum2); height: 34px; }
-  .scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .scale { display: flex; justify-content: space-between; font-size: var(--t-xs); color: var(--muted); }
   .extras { margin-top: 20px; border-top: 1px solid var(--band); padding-top: 16px; display: grid; gap: 14px; }
   .field label { display: block; margin-bottom: 6px; }
-  .field .hint { font-size: 12px; color: var(--muted); margin-top: 4px; display: flex; justify-content: space-between; }
+  .field .hint { font-size: var(--t-sm); color: var(--muted); margin-top: 4px; display: flex; justify-content: space-between; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-weight: 700; display: none; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: var(--r-md); font-weight: 700; display: none; }
   .msg.ok { display: block; margin-bottom: 12px; background: var(--ok-bg); color: var(--ok-text); } .msg.err { display: block; background: var(--err-bg); color: var(--err-text); }
-  .todo { margin-top: 10px; font-size: 13px; }
+  .todo { margin-top: 10px; font-size: var(--t-md); }
 
   /* add album */
   .searchrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-  .searchrow .btn { padding: 0 20px; font-size: 15px; }
+  .searchrow .btn { padding: 0 20px; font-size: var(--t-lg); }
   .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-top: 14px; }
-  .res { background: var(--card); border: 2px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; text-align: left; padding: 0; color: var(--ink); }
+  .res { background: var(--card); border: 2px solid var(--line); border-radius: var(--r-md); overflow: hidden; cursor: pointer; text-align: left; padding: 0; color: var(--ink); }
   .res:hover { border-color: var(--plum2); }
   .res .cover { border-radius: 0; }
-  .res .info { padding: 8px 9px 10px; } .res .t1 { font-size: 13px; line-height: 1.2; }
-  .tag { display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; background: var(--band); color: var(--plum2); border-radius: 4px; padding: 1px 5px; margin-top: 4px; }
+  .res .info { padding: 8px 9px 10px; } .res .t1 { font-size: var(--t-md); line-height: 1.2; }
+  .tag { display: inline-block; font-size: var(--t-2xs); font-weight: 900; letter-spacing: .6px; text-transform: uppercase; background: var(--band); color: var(--plum2); border-radius: var(--r-xs); padding: 1px 5px; margin-top: 4px; }
   .tag.warn { background: var(--wait); color: var(--warn-text); }
   .chosen { display: grid; grid-template-columns: 150px 1fr; gap: 18px; align-items: start; }
   .chosen .fields { display: grid; gap: 12px; }
-  .note { font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--band); margin-top: 12px; }
+  .note { font-size: var(--t-md); padding: 10px 12px; border-radius: var(--r-md); background: var(--band); margin-top: 12px; }
   .note.warn { background: var(--wait); }
   /* phone notifications (profile) */
-  .pushlist { background: var(--band); border-radius: 14px; padding: 2px 14px; }
+  .pushlist { background: var(--band); border-radius: var(--r-md); padding: 2px 14px; }
   .pushrow { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line);
     padding: 11px 0; text-align: left; color: var(--ink); cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent; }
   .pushrow:last-child { border-bottom: 0; }
-  .pushrow b { display: block; font-size: 14px; }
-  .pushrow small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; line-height: 1.35; }
-  .tgl { flex: none; width: 46px; height: 28px; border-radius: 14px; background: var(--line); position: relative; transition: background .2s; }
+  .pushrow b { display: block; font-size: var(--t-base); }
+  .pushrow small { display: block; color: var(--muted); font-size: var(--t-sm); margin-top: 2px; line-height: 1.35; }
+  .tgl { flex: none; width: 46px; height: 28px; border-radius: 99px; background: var(--line); position: relative; transition: background .2s; }
   .tgl::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
   .tgl.on { background: var(--plum2-bg); }
   .tgl.on::after { transform: translateX(18px); }
   .pushfoot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; }
   .pushmsg { margin-top: 8px; }
-  .linkish { background: none; border: 0; color: var(--plum2); font-weight: 700; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; }
+  .linkish { background: none; border: 0; color: var(--plum2); font-weight: 700; font-size: var(--t-md); cursor: pointer; padding: 0; text-decoration: underline; }
   .queue { list-style: none; margin: 0; padding: 0; }
   .queue li { display: grid; grid-template-columns: 74px 48px 1fr auto; gap: 12px; align-items: center; padding: 8px 6px; border-top: 1px solid var(--band); }
   .queue li:first-child { border-top: 0; }
   .queue li.divider { display: block; padding: 10px 6px 6px; border-top: 0; }
-  .queue li.divider span { display: inline-block; background: var(--plum); color: #fff; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; border-radius: 99px; padding: 3px 10px; }
-  .queue .d { font-weight: 900; font-size: 13px; color: var(--plum-text); }
+  .queue li.divider span { display: inline-block; background: var(--plum); color: #fff; font-size: var(--t-2xs); font-weight: 900; letter-spacing: 1px; text-transform: uppercase; border-radius: 99px; padding: 3px 10px; }
+  .queue .d { font-weight: 900; font-size: var(--t-md); color: var(--plum-text); }
   .queue .thumb { width: 48px; height: 48px; }
   .queue .open { color: var(--muted); font-style: italic; }
   .queue .chip { margin: 0; }
@@ -436,78 +445,78 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 
   /* grid */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-  .gcard { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; }
+  .gcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; cursor: pointer; }
   .gcard .cover { border-radius: 0; }
-  .gcard .info { padding: 9px 10px 11px; } .gcard .t1 { font-size: 14px; line-height: 1.2; }
-  .gcard.m1 { outline: 4px solid #f1d35a; } .gcard.m2 { outline: 4px solid var(--medal-silver-edge); } .gcard.m3 { outline: 4px solid #e7b88f; }
+  .gcard .info { padding: 9px 10px 11px; } .gcard .t1 { font-size: var(--t-base); line-height: 1.2; }
+  .gcard.m1 { outline: 4px solid var(--medal-gold-edge); } .gcard.m2 { outline: 4px solid var(--medal-silver-edge); } .gcard.m3 { outline: 4px solid var(--medal-bronze-edge); }
 
   /* modal */
-  .scrim { position: fixed; inset: 0; background: rgba(30,27,46,.6); display: none; align-items: flex-start; justify-content: center;
+  .scrim { position: fixed; inset: 0; background: var(--scrim); display: none; align-items: flex-start; justify-content: center;
     padding: max(30px, calc(env(safe-area-inset-top) + 16px)) 12px 0; /* bottom gap is the popup's margin, so the pinned Rate bar sits right at the screen's edge */
     overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; z-index: 20; }
   body.locked { overflow: hidden; }
   .scrim.on { display: flex; }
-  .modal { background: var(--card); border-radius: 16px; max-width: 620px; width: 100%; padding: 18px; position: relative; margin-bottom: max(30px, calc(env(safe-area-inset-bottom) + 16px)); }
+  .modal { background: var(--card); border-radius: var(--r-lg); max-width: 620px; width: 100%; padding: 18px; position: relative; margin-bottom: max(30px, calc(env(safe-area-inset-bottom) + 16px)); }
   /* album popup: Rate button stays on screen at the bottom while you scroll */
   .rate-dock { position: sticky; bottom: 0; z-index: 2; margin: 16px -18px -18px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
-    background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 16px 16px; box-shadow: 0 -10px 18px -12px var(--shadow, rgba(0,0,0,.25)); }
-  .rate-dock .btn { width: 100%; padding: 13px; font-size: 15px; }
-  .close { position: absolute; top: 10px; right: 12px; z-index: 1; border: 0; background: var(--band); width: 34px; height: 34px; border-radius: 99px; font-size: 18px; cursor: pointer; color: var(--ink); }
+    background: var(--card); border-top: 1px solid var(--line); border-radius: 0 0 var(--r-lg) var(--r-lg); box-shadow: 0 -10px 18px -12px var(--shadow, rgba(0,0,0,.25)); }
+  .rate-dock .btn { width: 100%; padding: 13px; font-size: var(--t-lg); }
+  .close { position: absolute; top: 10px; right: 12px; z-index: 1; border: 0; background: var(--band); width: 34px; height: 34px; border-radius: 99px; font-size: var(--t-xl); cursor: pointer; color: var(--ink); }
   /* album popup header: cover on the left, title beside it, tiles and buttons under the title */
   .mhero { --peek: 62px; display: grid; grid-template-columns: 190px 1fr; grid-template-areas: "cover head" "cover body"; column-gap: calc(20px + var(--peek)); align-items: start; }
   .mhero > .disc { grid-area: cover; }
   .mhead { grid-area: head; padding-right: 40px; }
-  .mhead h2 { margin: 6px 0 2px; font-size: 24px; line-height: 1.15; }
-  .mhead .by { font-size: 16px; color: var(--muted); margin-bottom: 12px; }
+  .mhead h2 { margin: 6px 0 2px; font-size: var(--t-2xl); line-height: 1.15; }
+  .mhead .by { font-size: var(--t-lg); color: var(--muted); margin-bottom: 12px; }
   .mbody { grid-area: body; }
   table.rt { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  table.rt td { padding: 9px 8px; border-top: 1px solid var(--band); font-size: 14px; vertical-align: top; }
-  table.rt td.n { font-weight: 700; border-radius: 6px; white-space: nowrap; }
-  .take { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  table.rt td { padding: 9px 8px; border-top: 1px solid var(--band); font-size: var(--t-base); vertical-align: top; }
+  table.rt td.n { font-weight: 700; border-radius: var(--r-sm); white-space: nowrap; }
+  .take { font-size: var(--t-md); color: var(--muted); margin-top: 3px; }
   .take .said { font-style: italic; color: var(--ink); }
   .songs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
-  .songs div { background: var(--band); border-radius: 10px; padding: 9px 12px; font-size: 14px; }
-  .songs b { display: block; font-size: 10px; letter-spacing: .8px; color: var(--plum2); text-transform: uppercase; margin-bottom: 3px; }
+  .songs div { background: var(--band); border-radius: var(--r-md); padding: 9px 12px; font-size: var(--t-base); }
+  .songs b { display: block; font-size: var(--t-2xs); letter-spacing: .8px; color: var(--plum2); text-transform: uppercase; margin-bottom: 3px; }
   /* song picks: each picked song in track order, with who loved and who disliked it */
   .sp { list-style: none; margin: 4px 0 0; padding: 0; }
-  .sp li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--band); font-size: 14px; }
+  .sp li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 2px; border-top: 1px solid var(--band); font-size: var(--t-base); }
   .sp li:first-child { border-top: 0; }
-  .sp .tn { color: var(--muted); font-size: 12px; font-weight: 700; text-align: right; }
+  .sp .tn { color: var(--muted); font-size: var(--t-sm); font-weight: 700; text-align: right; }
   .sp .sn { overflow-wrap: anywhere; line-height: 1.25; }
   .sp .sn .tag { margin: 0 0 0 6px; vertical-align: 1px; }
   .sp .pk { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; justify-content: flex-end; max-width: 150px; }
-  .sp .pk .tiny { width: 24px; height: 24px; font-size: 11px; }
-  .lv, .dl { font-weight: 900; font-size: 13px; line-height: 1; }
+  .sp .pk .tiny { width: 24px; height: 24px; font-size: var(--t-xs); }
+  .lv, .dl { font-weight: 900; font-size: var(--t-md); line-height: 1; }
   .lv { color: var(--love); } .dl { color: var(--muted); }
   .sp .pk .lv, .sp .pk .dl { margin: 0 2px 0 5px; }
   .sp .pk .lv:first-child, .sp .pk .dl:first-child { margin-left: 0; }
-  .sp-note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .sp-note { font-size: var(--t-sm); color: var(--muted); margin-top: 6px; }
 
   /* profile */
   .phead { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; padding-right: 40px; }
-  .pbig { width: 64px; height: 64px; border-radius: 99px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; flex: none; }
-  .phead h2 { margin: 0; font-size: 24px; }
-  .you { display: inline-block; background: var(--plum); color: #fff; font-size: 10px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; border-radius: 99px; padding: 2px 8px; vertical-align: middle; margin-left: 6px; }
+  .pbig { width: 64px; height: 64px; border-radius: 99px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: var(--t-3xl); font-weight: 900; flex: none; }
+  .phead h2 { margin: 0; font-size: var(--t-2xl); }
+  .you { display: inline-block; background: var(--plum); color: #fff; font-size: var(--t-2xs); font-weight: 900; letter-spacing: .8px; text-transform: uppercase; border-radius: 99px; padding: 2px 8px; vertical-align: middle; margin-left: 6px; }
   .owe { list-style: none; margin: 6px 0 0; padding: 0; }
   .owe a { color: var(--plum-text); font-weight: 700; text-decoration: none; }
-  .owe li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--band); font-size: 14px; }
+  .owe li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--band); font-size: var(--t-base); }
 
   /* members + stats */
   .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-  .mcard h3 { margin: 0 0 10px; font-size: 20px; display: flex; align-items: center; }
-  .kv { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--band); font-size: 14px; gap: 10px; }
+  .mcard h3 { margin: 0 0 10px; font-size: var(--t-2xl); display: flex; align-items: center; }
+  .kv { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--band); font-size: var(--t-base); gap: 10px; }
   .kv b { font-weight: 700; text-align: right; }
   .stat { display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; }
   .stat .thumb { width: 64px; height: 64px; }
   .stat .lbl { }
-  .bars .row { display: grid; grid-template-columns: 110px 1fr 40px; gap: 10px; align-items: center; margin: 8px 0; font-size: 14px; font-weight: 700; }
+  .bars .row { display: grid; grid-template-columns: 110px 1fr 40px; gap: 10px; align-items: center; margin: 8px 0; font-size: var(--t-base); font-weight: 700; }
   .bars .track { background: var(--band); border-radius: 99px; height: 16px; overflow: hidden; }
   .bars .fill { background: var(--plum); height: 100%; border-radius: 99px; }
   /* the Procrastinator (stats) */
   .procrast .crown { display: flex; align-items: center; gap: 14px; }
   .procrast .crown .pwrap { position: relative; flex: none; }
-  .procrast .crown .snail { position: absolute; right: -6px; bottom: -4px; font-size: 24px; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
-  .procrast .crown h3 { margin: 2px 0 2px; font-size: 22px; }
+  .procrast .crown .snail { position: absolute; right: -6px; bottom: -4px; font-size: var(--t-2xl); line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
+  .procrast .crown h3 { margin: 2px 0 2px; font-size: var(--t-2xl); }
   /* crying filter over the procrastinator's photo: tear streams, rosy cheeks, falling drops */
   .procrast .crown .pwrap { display: flex; align-items: flex-end; }
   .cry { position: relative; display: inline-block; flex: none; border-radius: 99px; }
@@ -521,11 +530,11 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   @media (prefers-reduced-motion: reduce) { .cry .flow, .cry .drop { animation: none; } }
   .pwrap.duo .cry + .cry { margin-left: -14px; }
   .pwrap.duo .cry .pbig { box-shadow: 0 0 0 3px var(--card); }
-  .pwrap.trio .cry .pbig { width: 52px; height: 52px; font-size: 22px; box-shadow: 0 0 0 3px var(--card); }
+  .pwrap.trio .cry .pbig { width: 52px; height: 52px; font-size: var(--t-2xl); box-shadow: 0 0 0 3px var(--card); }
   .pwrap.trio .cry + .cry { margin-left: -16px; }
   .procrast .crown { padding-bottom: 16px; border-bottom: 1px solid var(--band); margin-bottom: 4px; }
   .procrast .crown .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-  .procrast .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 99px; padding: 3px 9px; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; background: var(--band); color: var(--ink); white-space: nowrap; }
+  .procrast .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 99px; padding: 3px 9px; font-size: var(--t-sm); font-weight: 700; letter-spacing: 0; text-transform: none; background: var(--band); color: var(--ink); white-space: nowrap; }
   .procrast .pill.bad { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red); }
   .procrast .bars .row { grid-template-columns: 96px 1fr auto; gap: 10px; margin: 10px 0; }
   .procrast .bars .row > span:first-child { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: flex; }
@@ -533,16 +542,16 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .procrast .bars .fill { background: var(--red); }
   .procrast .bars .row.fast .fill { background: var(--gold); }
   .procrast .bars .val { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 112px; white-space: nowrap; }
-  .procrast .bars .owes { font-size: 11px; font-weight: 800; color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); border-radius: 99px; padding: 2px 7px; }
-  .procrast .bars .zap { font-size: 11px; font-weight: 800; color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); border-radius: 99px; padding: 2px 7px; }
-  .procrast .lbl { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+  .procrast .bars .owes { font-size: var(--t-xs); font-weight: 800; color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); border-radius: 99px; padding: 2px 7px; }
+  .procrast .bars .zap { font-size: var(--t-xs); font-weight: 800; color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); border-radius: 99px; padding: 2px 7px; }
+  .procrast .lbl { font-size: var(--t-xs); font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
   .procrast .shame { list-style: none; margin: 4px 0 0; padding: 0; }
-  .procrast .shame li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--band); font-size: 13px; cursor: pointer; }
+  .procrast .shame li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--band); font-size: var(--t-md); cursor: pointer; }
   .procrast .shame li:first-child { border-top: 0; }
   .procrast .shame li .al { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
   .procrast .shame li .al b, .procrast .shame li .al small { display: block; overflow: hidden; text-overflow: ellipsis; }
   .procrast .shame li .al b { color: var(--ink); }
-  .procrast .shame li .al small { font-size: 12px; }
+  .procrast .shame li .al small { font-size: var(--t-sm); }
   .procrast .shame .faces2 { display: inline-flex; flex: none; }
   .procrast .shame .faces2 .tiny + .tiny { margin-left: -6px; box-shadow: 0 0 0 2px var(--card); }
   .procrast .shame li .days { color: var(--red); font-weight: 800; white-space: nowrap; }
@@ -551,19 +560,19 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 
   /* app: sign in, install tip, refresh */
   .signin { max-width: 460px; margin: 30px auto; text-align: center; padding: 26px 20px; }
-  .signin h2 { margin: 8px 0 8px; font-size: 26px; }
-  .signin .logo { width: 84px; height: 84px; border-radius: 20px; display: block; margin: 0 auto 14px; }
+  .signin h2 { margin: 8px 0 8px; font-size: var(--t-3xl); }
+  .signin .logo { width: 84px; height: 84px; border-radius: var(--r-lg); display: block; margin: 0 auto 14px; }
   .who { display: grid; gap: 10px; margin-top: 18px; }
-  .who button { display: flex; align-items: center; gap: 12px; border: 0; border-radius: 14px; padding: 12px 14px; font-weight: 700; font-size: 17px; cursor: pointer; color: var(--ink); text-align: left; }
-  .who button .mini { width: 40px; height: 40px; font-size: 17px; margin: 0; }
+  .who button { display: flex; align-items: center; gap: 12px; border: 0; border-radius: var(--r-md); padding: 12px 14px; font-weight: 700; font-size: var(--t-xl); cursor: pointer; color: var(--ink); text-align: left; }
+  .who button .mini { width: 40px; height: 40px; font-size: var(--t-xl); margin: 0; }
   .who button:disabled { opacity: .6; }
-  .codebox { text-align: center; font-size: 30px !important; font-weight: 900; letter-spacing: 10px; margin: 18px 0 12px; }
-  .btn.big { width: 100%; padding: 14px; font-size: 16px; }
+  .codebox { text-align: center; font-size: var(--t-3xl) !important; font-weight: 900; letter-spacing: 10px; margin: 18px 0 12px; }
+  .btn.big { width: 100%; padding: 14px; font-size: var(--t-lg); }
   .row2 { display: flex; justify-content: space-between; margin-top: 14px; }
   .install { display: flex; gap: 14px; align-items: center; background: var(--plum); color: #fff; border: 0; }
-  .install img { width: 48px; height: 48px; border-radius: 12px; flex: none; }
-  .install .t2 { color: #d9d4e2; }
-  .install .x { margin-left: auto; background: none; border: 0; color: #d9d4e2; font-size: 22px; cursor: pointer; padding: 4px 8px; }
+  .install img { width: 48px; height: 48px; border-radius: var(--r-md); flex: none; }
+  .install .t2 { color: var(--on-bar-dim); }
+  .install .x { margin-left: auto; background: none; border: 0; color: var(--on-bar-dim); font-size: var(--t-2xl); cursor: pointer; padding: 4px 8px; }
   /* refresh indicator: a thin gold line sweeping along the bottom edge of the header */
   .syncing { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; opacity: 0; transition: opacity .3s; pointer-events: none; font-size: 0; color: transparent; }
   .syncing.on { opacity: 1; }
@@ -576,7 +585,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* ---------- motion and graphics ---------- */
   /* vinyl record that sits behind the cover in the album popup */
   .disc { position: relative; }
-  .disc .cover { position: relative; z-index: 1; box-shadow: 0 6px 18px rgba(30,27,46,.28); }
+  .disc .cover { position: relative; z-index: 1; box-shadow: 0 6px 18px var(--lift); }
   .vinyl { position: absolute; top: 4%; left: 4%; width: 92%; height: 92%; z-index: 0; transform: translateX(var(--peek)); }
   .rec { position: relative; width: 100%; height: 100%; border-radius: 50%;
     background: conic-gradient(from 0deg, transparent 0 6%, rgba(255,255,255,.16) 11%, transparent 17% 52%, rgba(255,255,255,.1) 57%, transparent 63%),
@@ -591,7 +600,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 
   /* album color glow: tint behind the popup header plus a colored halo */
   .modal { --glow: 108 92 157; isolation: isolate; transition: box-shadow .6s ease; }
-  .modal::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 320px; border-radius: 16px 16px 0 0; z-index: -1; pointer-events: none;
+  .modal::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 320px; border-radius: var(--r-lg) var(--r-lg) 0 0; z-index: -1; pointer-events: none;
     background: linear-gradient(180deg, rgb(var(--glow) / .32), rgb(var(--glow) / 0)); opacity: 0; transition: opacity .5s ease; }
   .modal.album.glowing::before { opacity: 1; }
   .modal.album.glowing { box-shadow: 0 18px 70px -8px rgb(var(--glow) / .8); }
@@ -610,7 +619,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 
   /* sliding gold underline under the tabs */
   /* 100px wide and stretched with scaleX, so sliding it never changes layout (width) or repaints the header */
-  .ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 100px; background: var(--gold); border-radius: 3px 3px 0 0; pointer-events: none;
+  .ink { position: absolute; left: 0; bottom: 0; height: 3px; width: 100px; background: var(--gold); border-radius: var(--r-xs) var(--r-xs) 0 0; pointer-events: none;
     transform-origin: 0 0; transform: scaleX(0); will-change: transform; }
   .ink.ready { transition: transform .38s cubic-bezier(.2,.8,.2,1); }
   nav.inked button.on { border-bottom-color: transparent; }
@@ -618,11 +627,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* confetti layer */
   .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
 
-  /* spinning record while loading */
-  .loading::before { content: ''; display: block; width: 58px; height: 58px; margin: 0 auto 16px; border-radius: 50%;
-    background: radial-gradient(circle, var(--canvas) 0 5%, transparent 5.5%), radial-gradient(circle at 50% 36%, #fff 0 4%, transparent 4.5%),
-      radial-gradient(circle, var(--gold) 0 30%, transparent 30.5%), repeating-radial-gradient(circle, #1e1b2e 0 2px, #2e2a40 2px 3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,.25); }
 
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
   @keyframes fadeIn { from { opacity: 0; } }
@@ -654,7 +658,6 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .scrim.on .disc .cover { animation: coverIn .5s cubic-bezier(.2,.9,.3,1.15) .08s backwards; }
     .scrim.on .vinyl { animation: slideOut .8s cubic-bezier(.2,.8,.2,1) .28s backwards; }
     .rec { animation: spin 2.6s linear infinite; }
-    .loading::before { animation: spin 1.4s linear infinite; }
 
     /* taps feel physical */
     .btn, nav button, .seg button, .who button, .close, .res { transition: transform .12s ease; }
@@ -684,12 +687,12 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .waiting .hart { max-width: 160px; margin-top: 10px; }
     .waiting > div:last-child { text-align: center; }
     .card.hero, html[data-theme="dark"] .card.hero { background: radial-gradient(110% 70% at 50% 0%, rgb(var(--glow) / .12), transparent 55%), var(--card); }
-    .hero h2 { font-size: 26px; }
+    .hero h2 { font-size: var(--t-3xl); }
     .board li { grid-template-columns: 24px 46px minmax(0, 1fr) 72px; gap: 10px; height: 64px; padding: 0 8px; }
-    .board .score b { font-size: 16px; }
-    .board .score .stars { font-size: 11px; }
-    .board .rank { width: 24px; height: 24px; font-size: 13px; }
-    .bigavg b { font-size: 28px; }
+    .board .score b { font-size: var(--t-lg); }
+    .board .score .stars { font-size: var(--t-xs); }
+    .board .rank { width: 24px; height: 24px; font-size: var(--t-md); }
+    .bigavg b { font-size: var(--t-3xl); }
     /* Rate it button full width (album name is the listen link now) */
     .hero .listen { display: grid; grid-template-columns: 1fr; }
     .hero .listen .btn { justify-content: center; text-align: center; padding: 11px 12px; }
@@ -698,9 +701,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .chosen { grid-template-columns: 1fr; }
     .chosen .cover { max-width: 200px; }
     .ratehead { grid-template-columns: 118px minmax(0, 1fr); gap: 14px; }
-    .ratehead .rc-t { font-size: 16px; }
+    .ratehead .rc-t { font-size: var(--t-lg); }
     .ratehead .slider .big { font-size: 38px; }
-    .ratehead .slider .stars { font-size: 20px; min-height: 24px; }
+    .ratehead .slider .stars { font-size: var(--t-2xl); min-height: 24px; }
     .next { grid-template-columns: 56px 1fr; }
     .next.tap { grid-template-columns: 56px 1fr auto; }
     .next .thumb { width: 56px; height: 56px; }
@@ -709,15 +712,15 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     .results { grid-template-columns: repeat(2, 1fr); }
     .queue li { grid-template-columns: 54px 42px 1fr auto; gap: 10px; }
     .queue .thumb { width: 42px; height: 42px; }
-    .brand h1 { font-size: 19px; }
+    .brand h1 { font-size: var(--t-xl); }
     /* album popup on phones: small cover beside the title, everything else full width below */
     .scrim { padding-left: 8px; padding-right: 8px; }
     .modal { padding: 14px; }
     .rate-dock { margin: 14px -14px -14px; padding-left: 14px; padding-right: 14px; }
     .mhero { --peek: 34px; grid-template-columns: 88px 1fr; grid-template-areas: "cover head" "body body"; column-gap: calc(12px + var(--peek)); align-items: center; }
     .mhead { padding-right: 34px; min-width: 0; }
-    .mhead h2 { font-size: 21px; overflow-wrap: anywhere; }
-    .mhead .by { font-size: 14px; margin-bottom: 0; }
+    .mhead h2 { font-size: var(--t-2xl); overflow-wrap: anywhere; }
+    .mhead .by { font-size: var(--t-base); margin-bottom: 0; }
     .mbody { margin-top: 14px; }
     .mbody .tile { flex: 1 1 auto; }
     .mbody .listen .btn { flex: 1; text-align: center; }
@@ -725,40 +728,40 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
 
   /* ---------- club chat ---------- */
   .chat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 8px; }
-  .chat .day { align-self: center; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
+  .chat .day { align-self: center; font-size: var(--t-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; }
   .chat .msg-row { display: flex; align-items: flex-end; gap: 8px; max-width: 86%; }
   .chat .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
-  .chat .msg-row .mini { margin-right: 0; width: 28px; height: 28px; font-size: 12px; }
+  .chat .msg-row .mini { margin-right: 0; width: 28px; height: 28px; font-size: var(--t-sm); }
   .chat .msg-row .gap { width: 28px; flex: none; }
   .chat .msg-row.first { margin-top: 8px; }
-  .chat .bub { background: var(--card); color: var(--ink); border-radius: 18px; padding: 8px 12px; box-shadow: 0 1px 2px var(--shadow); font-size: 15px; line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+  .chat .bub { background: var(--card); color: var(--ink); border-radius: var(--r-lg); padding: 8px 12px; box-shadow: 0 1px 2px var(--shadow); font-size: var(--t-lg); line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
   .chat .msg-row.me .bub { background: var(--plum2-bg); color: #fff; }
   .chat .msg-row.me .bub a { color: #fff; }
   .chat .bub a { color: var(--plum2); font-weight: 500; }
-  .chat .who2 { font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 0 2px 2px; }
-  .chat .when { font-size: 11px; color: var(--muted); margin: 0 4px 4px; white-space: nowrap; flex: none; }
+  .chat .who2 { font-size: var(--t-sm); font-weight: 700; color: var(--muted); margin: 0 0 2px 2px; }
+  .chat .when { font-size: var(--t-xs); color: var(--muted); margin: 0 4px 4px; white-space: nowrap; flex: none; }
   .chat .pending .bub { opacity: .6; }
   .chat .failed .bub { box-shadow: 0 0 0 2px var(--err-text); }
-  .chat .del { display: none; border: 0; background: none; color: var(--err-text); font-size: 12px; font-weight: 700; cursor: pointer; padding: 0 4px 6px; flex: none; }
+  .chat .del { display: none; border: 0; background: none; color: var(--err-text); font-size: var(--t-sm); font-weight: 700; cursor: pointer; padding: 0 4px 6px; flex: none; }
   .chat .msg-row.sel .del { display: inline-block; }
   .chat .msg-row.me .bub { cursor: pointer; }
   .chat-empty { text-align: center; padding: 30px 10px; }
   .composer { position: sticky; bottom: 0; z-index: 5; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: var(--canvas); }
   .composer .crow { display: flex; gap: 8px; align-items: flex-end; }
-  .composer .gifbtn { width: 42px; padding: 0; font-size: 12px; font-weight: 800; letter-spacing: 0; line-height: 1; border-radius: 21px; display: inline-flex; align-items: center; justify-content: center; background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+  .composer .gifbtn { width: 42px; padding: 0; font-size: var(--t-sm); font-weight: 800; letter-spacing: 0; line-height: 1; border-radius: 99px; display: inline-flex; align-items: center; justify-content: center; background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
   .composer .gifbtn.on { background: var(--plum2-bg); color: #fff; box-shadow: none; }
-  .gifpanel { background: var(--card); border-radius: 16px; box-shadow: 0 2px 10px var(--shadow); padding: 10px; margin-bottom: 10px; }
-  .gifpanel input { width: 100%; margin: 0 0 8px; font-size: 16px; border-radius: 12px; }
+  .gifpanel { background: var(--card); border-radius: var(--r-lg); box-shadow: 0 2px 10px var(--shadow); padding: 10px; margin-bottom: 10px; }
+  .gifpanel input { width: 100%; margin: 0 0 8px; font-size: var(--t-lg); border-radius: var(--r-md); }
   .gifgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; height: 252px; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
-  .gifgrid button { border: 0; padding: 0; margin: 0; background: var(--canvas); border-radius: 8px; overflow: hidden; height: 80px; cursor: pointer; }
+  .gifgrid button { border: 0; padding: 0; margin: 0; background: var(--canvas); border-radius: var(--r-sm); overflow: hidden; height: 80px; cursor: pointer; }
   .gifgrid img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .gifgrid .gifmsg { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: 14px; padding: 40px 10px; }
-  .gifpanel .giffoot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: var(--muted); }
-  .gifpanel .giffoot button { border: 0; background: none; color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer; padding: 2px 4px; }
-  .chat .bub.gif { padding: 0; background: none; box-shadow: none; border-radius: 14px; overflow: hidden; line-height: 0; }
+  .gifgrid .gifmsg { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: var(--t-base); padding: 40px 10px; }
+  .gifpanel .giffoot { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: var(--t-xs); color: var(--muted); }
+  .gifpanel .giffoot button { border: 0; background: none; color: var(--muted); font-size: var(--t-sm); font-weight: 700; cursor: pointer; padding: 2px 4px; }
+  .chat .bub.gif { padding: 0; background: none; box-shadow: none; border-radius: var(--r-md); overflow: hidden; line-height: 0; }
   .chat .msg-row.me .bub.gif { background: none; }
-  .chat .bub.gif img { display: block; width: 220px; max-width: 100%; height: auto; border-radius: 14px; background: var(--card); }
-  .composer textarea { flex: 1; min-height: 42px; max-height: 140px; resize: none; border-radius: 21px; padding: 10px 14px; font-size: 16px; margin: 0; }
+  .chat .bub.gif img { display: block; width: 220px; max-width: 100%; height: auto; border-radius: var(--r-md); background: var(--card); }
+  .composer textarea { flex: 1; min-height: 42px; max-height: 140px; resize: none; border-radius: 99px; padding: 10px 14px; font-size: var(--t-lg); margin: 0; }
   .composer .btn { height: 42px; padding: 0 18px; flex: none; }
   main.chatting { padding-bottom: 0; display: flex; flex-direction: column; }
   main.chatting .chat { flex: 1; justify-content: flex-end; }
@@ -786,13 +789,13 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   html.kb .gifgrid { height: min(252px, calc(var(--vvh, 600px) * .3)); }
   nav button .dot { display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--gold); margin-left: 5px; vertical-align: 2px; pointer-events: none; }
   /* ---------- Cover Flow (full screen carousel of every album, opened from Albums) ---------- */
-  .flowbtn { display: flex; align-items: center; gap: 14px; width: 100%; margin: 0 0 14px; padding: 12px 16px; border: 0; border-radius: 14px; cursor: pointer; text-align: left;
-    background: linear-gradient(135deg, #1e1b2e, #3d3557); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
-  .flowbtn b { display: block; font-size: 16px; }
-  .flowbtn small { display: block; font-size: 13px; opacity: .75; margin-top: 2px; }
-  .flowbtn .chev { margin-left: auto; font-size: 22px; opacity: .7; }
+  .flowbtn { display: flex; align-items: center; gap: 14px; width: 100%; margin: 0 0 14px; padding: 12px 16px; border: 0; border-radius: var(--r-md); cursor: pointer; text-align: left;
+    background: linear-gradient(135deg, var(--deep), var(--deep2)); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
+  .flowbtn b { display: block; font-size: var(--t-lg); }
+  .flowbtn small { display: block; font-size: var(--t-md); opacity: .75; margin-top: 2px; }
+  .flowbtn .chev { margin-left: auto; font-size: var(--t-2xl); opacity: .7; }
   .fb-stack { position: relative; width: 74px; height: 44px; flex: none; perspective: 200px; }
-  .fb-stack i { position: absolute; top: 2px; width: 40px; height: 40px; border-radius: 3px; background: #6c5c9d center / cover no-repeat; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .fb-stack i { position: absolute; top: 2px; width: 40px; height: 40px; border-radius: var(--r-xs); background: var(--plum2-bg) center / cover no-repeat; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
   .fb-stack i:nth-child(1) { left: 0; transform: rotateY(55deg); }
   .fb-stack i:nth-child(2) { right: 0; transform: rotateY(-55deg); }
   .fb-stack i:nth-child(3) { left: 17px; z-index: 1; }
@@ -805,12 +808,12 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
     -webkit-mask-image: radial-gradient(closest-side, #000, transparent); mask-image: radial-gradient(closest-side, #000, transparent); }
   .fl-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px;
     padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left)); }
-  .fl-x, .fl-fs { flex: none; width: 38px; height: 38px; border-radius: 99px; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; cursor: pointer; display: grid; place-items: center; }
+  .fl-x, .fl-fs { flex: none; width: 38px; height: 38px; border-radius: 99px; border: 0; background: rgba(255,255,255,.12); color: #fff; font-size: var(--t-2xl); cursor: pointer; display: grid; place-items: center; }
   .fl-sp { width: 38px; flex: none; }
   .fl-seg { flex: 1; display: flex; justify-content: center; gap: 6px; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
   .fl-seg::-webkit-scrollbar { display: none; }
-  .fl-seg button { flex: none; border: 0; border-radius: 99px; padding: 7px 13px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); font-size: 13px; font-weight: 700; cursor: pointer; }
-  .fl-seg button.on { background: #fff; color: #1e1b2e; }
+  .fl-seg button { flex: none; border: 0; border-radius: 99px; padding: 7px 13px; background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); font-size: var(--t-md); font-weight: 700; cursor: pointer; }
+  .fl-seg button.on { background: #fff; color: var(--deep); }
   .fl-glow.on { opacity: .42; }
   .fl-stage { position: absolute; left: 0; right: 0; top: var(--st); height: var(--s); cursor: grab;
     transform-style: preserve-3d; perspective: var(--persp, 900px); perspective-origin: 50% 50%; }
@@ -825,35 +828,35 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fl-item.flip .fl-refl { opacity: 0; }
   .fl-card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3,.9,.3,1); }
   .fl-item.flip .fl-card { transform: rotateY(180deg); }
-  .fl-front, .fl-back { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: 3px; overflow: hidden; }
+  .fl-front, .fl-back { position: absolute; inset: 0; -webkit-backface-visibility: hidden; backface-visibility: hidden; border-radius: var(--r-xs); overflow: hidden; }
   .fl-front img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
-  .fl-blank { width: 100%; height: 100%; display: grid; place-items: center; padding: 12%; text-align: center; font-weight: 900; font-size: calc(var(--s) / 9); color: #1e1b2e; }
+  .fl-blank { width: 100%; height: 100%; display: grid; place-items: center; padding: 12%; text-align: center; font-weight: 900; font-size: calc(var(--s) / 9); color: var(--deep); }
   .fl-back { transform: rotateY(180deg); background: linear-gradient(160deg, #2a2540, #141221); display: flex; flex-direction: column; padding: 10px 10px 8px; border: 1px solid rgba(255,255,255,.12); }
-  .fl-back h4 { margin: 0 0 6px; font-size: 13px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fl-back ol { flex: 1; margin: 0; padding: 0; list-style: none; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; font-size: 12px; }
+  .fl-back h4 { margin: 0 0 6px; font-size: var(--t-md); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-back ol { flex: 1; margin: 0; padding: 0; list-style: none; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; font-size: var(--t-sm); }
   .fl-back li { display: flex; gap: 8px; padding: 5px 2px; border-top: 1px solid rgba(255,255,255,.08); }
   .fl-back li span { opacity: .5; width: 18px; text-align: right; flex: none; }
   .fl-back li em { font-style: normal; flex: 1; }
-  .fl-back li b { color: #f46a9b; font-weight: 700; flex: none; }
-  .fl-back .fl-none { flex: 1; display: grid; place-items: center; opacity: .6; font-size: 13px; text-align: center; }
-  .fl-back button { margin-top: 8px; border: 0; border-radius: 99px; padding: 8px; background: #fff; color: #1e1b2e; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .fl-back li b { color: var(--dark-love); font-weight: 700; flex: none; }
+  .fl-back .fl-none { flex: 1; display: grid; place-items: center; opacity: .6; font-size: var(--t-md); text-align: center; }
+  .fl-back button { margin-top: 8px; border: 0; border-radius: 99px; padding: 8px; background: #fff; color: var(--deep); font-weight: 700; font-size: var(--t-md); cursor: pointer; }
   .fl-info { position: absolute; left: 0; right: 0; top: var(--it); z-index: 2; text-align: center; padding: 0 20px; pointer-events: none; contain: layout style; }
   .fl-info { transition: opacity .25s ease; }
   #flow.flipped .fl-info { opacity: 0; }
   .fl-t { font-size: clamp(18px, 4.6vw, 28px); font-weight: 900; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fl-a { margin-top: 3px; font-size: clamp(14px, 3.4vw, 18px); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fl-m { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; font-size: 13px; color: rgba(255,255,255,.75); }
-  .fl-who { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; color: #1e1b2e; font-weight: 700; }
+  .fl-m { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; font-size: var(--t-md); color: rgba(255,255,255,.75); }
+  .fl-who { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; color: var(--deep); font-weight: 700; }
   .fl-who .mini { width: 22px; height: 22px; }
-  .fl-score { color: #ffd76a; font-weight: 900; }
-  .fl-tag { padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.14); font-weight: 700; font-size: 12px; }
+  .fl-score { color: var(--dark-score); font-weight: 900; }
+  .fl-tag { padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.14); font-weight: 700; font-size: var(--t-sm); }
   .fl-bot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 12px;
     padding: 8px calc(16px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); touch-action: pan-x; }
-  .fl-n { flex: none; margin: 0 auto; text-align: center; font-size: 13px; color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
-  .flowhint { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 16px; border-radius: 14px;
-    background: linear-gradient(135deg, #1e1b2e, #3d3557); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
-  .flowhint b { display: block; font-size: 16px; }
-  .flowhint small { display: block; font-size: 13px; opacity: .75; margin-top: 2px; }
+  .fl-n { flex: none; margin: 0 auto; text-align: center; font-size: var(--t-md); color: rgba(255,255,255,.7); font-variant-numeric: tabular-nums; }
+  .flowhint { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 16px; border-radius: var(--r-md);
+    background: linear-gradient(135deg, var(--deep), var(--deep2)); color: #fff; box-shadow: 0 4px 14px var(--shadow); }
+  .flowhint b { display: block; font-size: var(--t-lg); }
+  .flowhint small { display: block; font-size: var(--t-md); opacity: .75; margin-top: 2px; }
   .fh-phone { flex: none; width: 44px; height: 44px; display: grid; place-items: center; }
   .fh-phone i { width: 20px; height: 34px; border: 2.5px solid #fff; border-radius: 5px; position: relative; animation: fhTurn 3.2s ease-in-out infinite; }
   .fh-phone i::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 6px; height: 2px; margin-left: -3px; border-radius: 2px; background: #fff; }
@@ -862,13 +865,13 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   /* Sideways phone: everything slimmer so the covers get the height. */
   @media (max-height: 500px) {
     .fl-top { padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 4px; }
-    .fl-x, .fl-fs { width: 32px; height: 32px; font-size: 17px; }
+    .fl-x, .fl-fs { width: 32px; height: 32px; font-size: var(--t-xl); }
     .fl-sp { width: 32px; }
-    .fl-seg button { padding: 5px 11px; font-size: 12px; }
+    .fl-seg button { padding: 5px 11px; font-size: var(--t-sm); }
     .fl-info { padding: 0 calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left)); }
-    .fl-t { font-size: 18px; }
-    .fl-a { font-size: 13px; margin-top: 1px; }
-    .fl-m { margin-top: 5px; flex-wrap: nowrap; white-space: nowrap; font-size: 12px; }
+    .fl-t { font-size: var(--t-xl); }
+    .fl-a { font-size: var(--t-md); margin-top: 1px; }
+    .fl-m { margin-top: 5px; flex-wrap: nowrap; white-space: nowrap; font-size: var(--t-sm); }
     .fl-who { padding: 2px 8px 2px 2px; }
     .fl-who .mini { width: 18px; height: 18px; }
     .fl-bot { padding-top: 4px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
@@ -888,7 +891,7 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   #flow.playing .fl-spot { opacity: 1; }
   /* Season divider: a cardboard crate tab */
   .fl-dv { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3em; text-align: center; padding: 10%;
-    font-size: calc(var(--s) * .05); color: #3a2a17; border-radius: 3px;
+    font-size: calc(var(--s) * .05); color: #3a2a17; border-radius: var(--r-xs);
     background: linear-gradient(170deg, #c9a273, #a87d4f 60%, #8c6640); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15), inset 0 0 2.4em rgba(60,35,10,.35); }
   .fl-dv::before { content: ''; position: absolute; inset: 0; opacity: .25; border-radius: inherit;
     background: repeating-linear-gradient(90deg, rgba(0,0,0,.07) 0 2px, transparent 2px 7px); }
@@ -898,30 +901,30 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .fl-n i { font-style: normal; opacity: .65; }
   /* The little player that takes the counter's place while a preview plays */
   .fl-np { position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(8px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 8px; max-width: min(36vw, 300px); height: 28px; padding: 0 12px 0 4px; border: 0; border-radius: 99px;
-    background: rgba(255,255,255,.12); color: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+    background: rgba(255,255,255,.12); color: #fff; font: inherit; font-size: var(--t-md); cursor: pointer; }
   .fl-np b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .fl-np.none b { font-weight: 600; opacity: .7; }
   .fl-rec { flex: none; width: 22px; height: 22px; border-radius: 50%;
-    background: radial-gradient(circle, #050407 0 7%, var(--lab, #f46a9b) 8% 30%, #111 31% 33%, transparent 34%), repeating-radial-gradient(circle, #1a1a1a 0 1px, #2b2b2b 1px 2px);
+    background: radial-gradient(circle, #050407 0 7%, var(--lab, var(--dark-love)) 8% 30%, #111 31% 33%, transparent 34%), repeating-radial-gradient(circle, #1a1a1a 0 1px, #2b2b2b 1px 2px);
     box-shadow: 0 0 0 1px rgba(255,255,255,.15); animation: flSpin 1.8s linear infinite; }
   .fl-np.load .fl-rec { animation-duration: .7s; }
   .fl-np.none .fl-rec, .fl-np.tap .fl-rec { animation: none; }
   @keyframes flSpin { to { transform: rotate(360deg); } }
   .fl-eq { flex: none; display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
-  .fl-eq i { width: 3px; height: 100%; border-radius: 1px; background: #8ff0c4; transform-origin: bottom; animation: flEq .9s ease-in-out infinite alternate; }
+  .fl-eq i { width: 3px; height: 100%; border-radius: 1px; background: var(--dark-live); transform-origin: bottom; animation: flEq .9s ease-in-out infinite alternate; }
   .fl-eq i:nth-child(2) { animation-delay: -.3s; } .fl-eq i:nth-child(3) { animation-delay: -.6s; }
   @keyframes flEq { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
-  .fl-back li.pv em { color: #8ff0c4; }
-  .fl-back li.pv span { opacity: 1; color: #8ff0c4; }
+  .fl-back li.pv em { color: var(--dark-live); }
+  .fl-back li.pv span { opacity: 1; color: var(--dark-live); }
   .fl-back li { cursor: pointer; }
   @media (prefers-reduced-motion: reduce) { .fl-rec, .fl-eq i { animation: none; } }
-  @media (max-height: 500px) { .fl-np { height: 24px; font-size: 12px; bottom: max(4px, calc(env(safe-area-inset-bottom) - 2px)); } .fl-rec { width: 18px; height: 18px; } }
+  @media (max-height: 500px) { .fl-np { height: 24px; font-size: var(--t-sm); bottom: max(4px, calc(env(safe-area-inset-bottom) - 2px)); } .fl-rec { width: 18px; height: 18px; } }
   #flow.resting > :not(.fl-rest) { opacity: 0; pointer-events: none; }
   .fl-rest { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
     text-align: center; opacity: 0; pointer-events: none; cursor: pointer; }
   #flow.resting .fl-rest { opacity: 1; pointer-events: auto; }
-  .fl-rest b { font-size: 18px; margin-top: 14px; }
-  .fl-rest small { font-size: 13px; color: rgba(255,255,255,.6); }
+  .fl-rest b { font-size: var(--t-xl); margin-top: 14px; }
+  .fl-rest small { font-size: var(--t-md); color: rgba(255,255,255,.6); }
   .fr-phone { width: 64px; height: 64px; display: grid; place-items: center; }
   .fr-phone i { width: 30px; height: 50px; border: 3px solid #fff; border-radius: 7px; position: relative; animation: frTurn 2.6s ease-in-out infinite; }
   .fr-phone i::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 8px; height: 2px; margin-left: -4px; border-radius: 2px; background: #fff; }
@@ -929,24 +932,77 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   @media (prefers-reduced-motion: reduce) { .fr-phone i { animation: none; } }
   .fl-empty { position: absolute; inset: 0; display: grid; place-items: center; opacity: .7; }
   @media (prefers-reduced-motion: reduce) { .fl-card, .fl-refl, .fl-glow { transition: none; } }
+
+  /* ---------- small helpers (used instead of one off inline styles); they win over component styles on purpose ---------- */
+  .mt0 { margin-top: 0 !important; } .mt4 { margin-top: 4px !important; } .mt6 { margin-top: 6px !important; }
+  .mt8 { margin-top: 8px !important; } .mt10 { margin-top: 10px !important; } .mt12 { margin-top: 12px !important; }
+  .mt14 { margin-top: 14px !important; } .mt16 { margin-top: 16px !important; } .mt18 { margin-top: 18px !important; }
+  .mb6 { margin-bottom: 6px !important; } .mb8 { margin-bottom: 8px !important; } .mb10 { margin-bottom: 10px !important; }
+  .ml0 { margin-left: 0 !important; } .ml-auto { margin-left: auto !important; } .pr40 { padding-right: 40px; }
+  .tc { text-align: center; } .jc-c { justify-content: center; } .jself-c { justify-self: center; }
+  .min0 { min-width: 0; } .grow200 { flex: 1; min-width: 200px; } .ptr { cursor: pointer; }
+  .vstack { display: grid; gap: 8px; } .vstack6 { display: grid; gap: 6px; }
+  .c-red { color: var(--red) !important; } .c-plum2 { color: var(--plum2) !important; } .c-gold { color: var(--gold) !important; }
+  .c-muted { color: var(--muted) !important; } .c-err { color: var(--err-text) !important; }
+  .btn.wide { width: 100%; padding: 14px; font-size: var(--t-lg); }
+  .lead { font-size: var(--t-xl); margin: 4px 0; }
+  .bigemoji { font-size: 44px; line-height: 1; }
+  .next.slot { border-radius: var(--r-md); padding: 12px; }
+  /* ---------- loading placeholders: gray shapes where the content will land, with a soft sweep ---------- */
+  .sk { background: var(--band); border-radius: var(--r-sm); position: relative; overflow: hidden; }
+  .sk::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, var(--shine), transparent); }
+  @media (prefers-reduced-motion: no-preference) { .sk::after { animation: skSweep 1.3s ease-in-out infinite; } }
+  @keyframes skSweep { to { transform: translateX(100%); } }
+  .sk.ln { height: 12px; margin-top: 10px; border-radius: 99px; }
+  .sk.ln.big { height: 22px; margin-top: 14px; }
+  .sk.round { border-radius: 99px; }
+  .skhero { display: grid; grid-template-columns: minmax(140px, 260px) 1fr; gap: 20px; align-items: center; }
+  .skhero .sk.art { aspect-ratio: 1; border-radius: var(--r-md); }
+  .skrow { display: grid; grid-template-columns: 30px 52px 1fr 48px; gap: 12px; align-items: center; height: 70px; padding: 0 10px; }
+  .skrow .sk.ln { margin: 0; }
+  .skrow .lines .sk.ln + .sk.ln { margin-top: 8px; }
+  .skchat { display: grid; gap: 12px; padding: 8px 4px; }
+  .skchat .b { height: 38px; border-radius: var(--r-lg); width: 62%; }
+  .skchat .b.me { justify-self: end; width: 48%; background: color-mix(in srgb, var(--plum2) 22%, var(--band)); }
+  .skchat .b.short { width: 38%; }
+  .skwho { display: grid; gap: 10px; margin-top: 18px; }
+  .skwho .sk { height: 64px; border-radius: var(--r-md); }
+  .gifgrid .sk { aspect-ratio: 1; border-radius: var(--r-sm); }
+  @media (max-width: 640px) { .skhero { grid-template-columns: 1fr; } .skhero .sk.art { max-width: 260px; width: 100%; margin: 0 auto; } }
+
+  /* ---------- one look for every "couldn't load" / "didn't save" ---------- */
+  .oops { text-align: center; padding: 26px 14px 22px; }
+  .oops .ico { width: 44px; height: 44px; margin: 0 auto 10px; border-radius: 99px; display: grid; place-items: center;
+    background: var(--err-bg); color: var(--err-text); }
+  .oops .ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .oops .t1 { font-size: var(--t-xl); }
+  .oops .t2 { font-size: var(--t-base); margin-top: 4px; }
+  .oops .btn { margin-top: 14px; }
+  .gifmsg .btn { margin-top: 10px; }
+  .msg.err { display: flex; gap: 8px; align-items: flex-start; }
+  .msg.err::before { content: '!'; flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 99px; display: grid; place-items: center;
+    background: var(--err-text); color: var(--err-bg); font-size: var(--t-sm); font-weight: 900; line-height: 1; }
+  /* keyboard focus: a clear ring on anything tappable */
+  [role=button]:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--plum2); outline-offset: 2px; }
 </style>
 </head>
 <body>
 <header>
   <div class="brand"><h1>Club Music</h1>
     <button class="avatar" id="avatar" style="display:none" onclick="openProfile()" aria-label="Your profile"></button></div>
-  <nav id="nav" class="inked">
+  <nav id="nav" class="inked" aria-label="Pages">
     <span class="ink" id="ink"></span>
-    <button data-v="home" class="on"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/></svg>Home</button>
+    <button data-v="home" class="on" aria-current="page"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5.5h4V20"/></svg>Home</button>
     <button data-v="albums"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 5.5a6.5 6.5 0 0 1 6.5 6.5"/></svg>Albums</button>
     <button data-v="stats"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><path d="M7 20v-6"/><path d="M12 20V8"/><path d="M17 20v-9"/></svg>Stats</button>
     <button data-v="chat" id="chatTab"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a7.5 7.5 0 0 1-11 6.6L4 20l1.4-4.4A7.5 7.5 0 1 1 20 12z"/></svg>Chat</button>
   </nav>
   <div class="syncing" id="syncing" role="status">Updating…</div>
 </header>
-<main id="app"><div class="loading">Loading this week's album…</div></main>
+<main id="app"><div class="card" aria-busy="true" aria-label="Loading"><div class="skhero"><div class="sk art"></div><div><div class="sk ln" style="width:40%"></div><div class="sk ln big" style="width:75%"></div><div class="sk ln" style="width:50%"></div><div class="sk ln big" style="width:30%"></div><div class="sk ln round" style="height:40px;margin-top:18px"></div></div></div></div><div class="card"><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:70%"></div><div class="sk ln" style="width:45%"></div></div><div class="sk ln"></div></div><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:55%"></div><div class="sk ln" style="width:30%"></div></div><div class="sk ln"></div></div><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:80%"></div><div class="sk ln" style="width:55%"></div></div><div class="sk ln"></div></div><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:60%"></div><div class="sk ln" style="width:35%"></div></div><div class="sk ln"></div></div></div></main>
 <div class="flow" id="flow" role="dialog" aria-label="Cover Flow"></div>
-<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<div class="scrim" id="scrim"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
 
 <script>
 var AVATARS = {};
@@ -972,6 +1028,28 @@ function stars(v) { if (v == null) return ''; var h = Math.round(v); return '★
 function fmt(v) { return v == null ? '' : v.toFixed(2); }
 function num(v) { return v == null ? '' : String(Math.round(v * 100) / 100); }
 function fmtDate(s, long) { if (!s) return ''; var p = s.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]); return d.toLocaleDateString('en-US', long ? { weekday: 'long', month: 'long', day: 'numeric' } : { month: 'short', day: 'numeric' }); }
+/* Loading placeholders (gray shapes that sweep) and the shared "couldn't load" card. */
+var SK_HOME = '<div class="card" aria-busy="true" aria-label="Loading"><div class="skhero"><div class="sk art"></div><div><div class="sk ln" style="width:40%"></div><div class="sk ln big" style="width:75%"></div><div class="sk ln" style="width:50%"></div><div class="sk ln big" style="width:30%"></div><div class="sk ln round" style="height:40px;margin-top:18px"></div></div></div></div><div class="card"><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:70%"></div><div class="sk ln" style="width:45%"></div></div><div class="sk ln"></div></div><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:55%"></div><div class="sk ln" style="width:30%"></div></div><div class="sk ln"></div></div><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:80%"></div><div class="sk ln" style="width:55%"></div></div><div class="sk ln"></div></div><div class="skrow"><div class="sk round" style="width:30px;height:30px"></div><div class="sk" style="width:52px;height:52px"></div><div class="lines"><div class="sk ln" style="width:60%"></div><div class="sk ln" style="width:35%"></div></div><div class="sk ln"></div></div></div>';
+function skChat() {
+  return '<div class="skchat" aria-busy="true" aria-label="Loading the chat"><div class="sk b"></div><div class="sk b short"></div>' +
+    '<div class="sk b me"></div><div class="sk b"></div><div class="sk b me short"></div></div>';
+}
+function skGifs() { var h = ''; for (var i = 0; i < 9; i++) h += '<div class="sk"></div>'; return h; }
+function skWho(n) { var h = '<div class="skwho" aria-busy="true" aria-label="Loading the club">'; for (var i = 0; i < (n || 5); i++) h += '<div class="sk"></div>'; return h + '</div>'; }
+var OOPS_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v5"/><path d="M12 16.5v.01"/><circle cx="12" cy="12" r="9"/></svg>';
+/* title: what failed; e: the error (or its text); retry: code for the Try again button (optional). */
+function oops(title, e, retry) {
+  return '<div class="oops" role="alert"><div class="ico">' + OOPS_ICO + '</div><div class="t1">' + esc(title) + '</div>' +
+    '<div class="t2 muted">' + esc(errText(e)) + '</div>' +
+    (retry ? '<button class="btn primary" onclick="' + retry + '">Try again</button>' : '') + '</div>';
+}
+/* An error's text for people: always ends in a full stop and a "Try again", never two of them. */
+function errText(e, lead) {
+  var t = String(e && e.message || e || '').trim() || 'Something went wrong.';
+  if (!/[.!?]$/.test(t)) t += '.';
+  if (lead) t = lead + ' ' + t.charAt(0).toLowerCase() + t.slice(1);
+  return /try again/i.test(t) ? t : t + ' Try again.';
+}
 function img(a, cls) { return a.cover ? '<img class="' + cls + '" src="' + esc(a.cover) + '" alt="">' : '<div class="' + cls + '"></div>'; }
 /* A member's club photo, or their initial on their color if there's no photo. */
 function face(name, cls) {
@@ -1113,8 +1191,8 @@ var askFor = null;
 function askPlatform(kind, row, song) {
   var fromAlbum = document.getElementById('scrim').classList.contains('on') && !!document.querySelector('#modal .mhead');
   askFor = { kind: kind, row: row, song: song, back: fromAlbum };
-  document.getElementById('modal').innerHTML = '<button class="close" onclick="closeAlbum()">×</button>' +
-    '<div style="padding-right:40px"><div class="eyebrow">Listen on</div><h2 style="margin:4px 0 6px">Where do you listen?</h2>' +
+  document.getElementById('modal').innerHTML = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button>' +
+    '<div class="pr40"><div class="eyebrow">Listen on</div><h2 class="mt4 mb6">Where do you listen?</h2>' +
     '<div class="t2">Pick once and every album name, artist name and song opens there. You can change it anytime under your profile.</div></div>' +
     '<div class="pickplat"><button class="btn spotify" onclick="choosePlatform(\'spotify\')">Spotify</button>' +
     '<button class="btn apple" onclick="choosePlatform(\'apple\')">Apple Music</button></div>';
@@ -1215,7 +1293,7 @@ function platformSeg() {
   var p = platformPref();
   return '<div class="seg" id="platSeg">' + [['spotify', 'Spotify'], ['apple', 'Apple Music']].map(function (o) {
     return '<button class="' + (p === o[0] ? 'on' : '') + '" onclick="setPlatform(\'' + o[0] + '\')">' + o[1] + '</button>';
-  }).join('') + '</div><div class="t2" id="platNote" style="margin-top:6px">' + esc(platformNote()) + '</div>';
+  }).join('') + '</div><div class="mt6 t2" id="platNote">' + esc(platformNote()) + '</div>';
 }
 function setPlatform(p) {
   savePlatform(p);
@@ -1253,7 +1331,7 @@ function pushBox() {
   if (Notification.permission === 'denied') return note(AD_IOS ? 'Notifications are blocked. Turn them on in Settings › Notifications › Club Music, then come back here.' : 'Notifications are blocked for this site. Allow them in your browser\'s site settings, then come back here.');
   if (!pushState.checked) return note('Checking…');
   var msg = pushState.msg ? '<div class="t2 pushmsg">' + esc(pushState.msg) + '</div>' : '';
-  if (!pushState.sub) return '<div class="t2" style="margin-bottom:10px">Get notified on this phone about chat messages, new picks, ratings and reminders. You choose which.</div>' +
+  if (!pushState.sub) return '<div class="mb10 t2">Get notified on this phone about chat messages, new picks, ratings and reminders. You choose which.</div>' +
     '<button class="btn primary"' + (pushState.busy ? ' disabled' : '') + ' onclick="pushOn()">' + (pushState.busy ? 'Turning on…' : 'Turn on notifications') + '</button>' + msg;
   var p = pushPrefsNow();
   return '<div class="pushlist">' + PUSH_KINDS.map(function (k) {
@@ -1522,7 +1600,7 @@ function prep(data) {
 
 /* Shown on Rate and Add Album when this Google account isn't one of the members. */
 function notMember() {
-  return '<div class="card"><div class="eyebrow">Not on the club list</div><h2 style="margin:6px 0 8px">Who\'s this?</h2>' +
+  return '<div class="card"><div class="eyebrow">Not on the club list</div><h2 class="mt6 mb8">Who\'s this?</h2>' +
     '<div class="muted">' + (D.me.email ? 'You\'re signed in to Google as <b>' + esc(D.me.email) + '</b>, which isn\'t linked to a member.'
       : 'The site couldn\'t tell which Google account you\'re using.') +
     ' Sign out from your profile and sign in again, or ask Jonathan to check the member list.</div></div>';
@@ -1658,7 +1736,7 @@ function homeBoard() {
       '<div class="t2">' + (seasonObj(seasonSel) && seasonObj(seasonSel).start > D.today ? 'It kicks off ' + esc(fmtDate(seasonObj(seasonSel).start, true)) + '.' : 'The board fills in as albums get rated.') + '</div></div>';
     if (champ) {
       h += statCard(prev + ' champion', 'var(--gold)', champ, fmt(champ.avg) + ' <span class="stars">' + stars(champ.avg) + '</span> · picked by ' + esc(champ.pickedBy)) +
-        '<div style="text-align:center"><button class="btn ghost" onclick="pickSeason(\'' + jsq(prev) + '\')">See the ' + esc(prev) + ' standings</button></div>';
+        '<div class="tc"><button class="btn ghost" onclick="pickSeason(\'' + jsq(prev) + '\')">See the ' + esc(prev) + ' standings</button></div>';
     }
     return head + '<div class="sswap">' + h + '</div>';
   }
@@ -1720,7 +1798,7 @@ function renderRate() {
 
   if (!rateState.member) return notMember();
   var h = '<div class="card">';
-  h += '<div class="eyebrow" style="margin-bottom:8px">Rating as ' + chip(rateState.member) + '</div><select id="albumSel" onchange="pickAlbum(this.value)">';
+  h += '<div class="mb8 eyebrow">Rating as ' + chip(rateState.member) + '</div><select id="albumSel" onchange="pickAlbum(this.value)">';
   // Every album you can rate, grouped by season (newest season first).
   seasonNames().slice().reverse().forEach(function (sn) {
     var list = D.albums.filter(function (x) { return x.season === sn && !(x.date && x.date > D.today && x.row !== rateState.row); }).reverse();
@@ -1762,7 +1840,7 @@ function renderRate() {
       '<div class="hint"><span>Optional</span><span id="count">' + rateState.comment.length + ' / ' + max + '</span></div></div>' +
     '</div>';
 
-  h += '<div style="margin-top:16px"><button class="btn primary" style="width:100%;padding:14px;font-size:16px" id="saveBtn" onclick="save()">' +
+  h += '<div class="mt16"><button class="wide btn primary" id="saveBtn" onclick="save()">' +
     (already ? 'Update my rating' : 'Submit rating') + '</button></div>' +
     '<div class="msg" id="msg"></div>';
 
@@ -1787,7 +1865,7 @@ function renderAdd() {
   var slot = changing ? { row: addState.changeRow, date: (albumByRow(addState.changeRow) || {}).date } : slotFor(m);
 
   if (addState.flash) {
-    h += '<div class="msg ok" style="margin-top:0">' + addState.flash + '</div>';
+    h += '<div class="mt0 msg ok">' + addState.flash + '</div>';
     addState.flash = null;
   }
 
@@ -1825,7 +1903,7 @@ function renderAdd() {
 
   if (addState.picked) {
     var p = addState.picked;
-    h += '<div class="chosen" style="margin-top:14px">' + (p.cover ? '<img class="cover" src="' + esc(p.cover) + '" alt="">' : '<div class="cover"></div>') +
+    h += '<div class="mt14 chosen">' + (p.cover ? '<img class="cover" src="' + esc(p.cover) + '" alt="">' : '<div class="cover"></div>') +
       '<div class="fields">' +
         '<div class="field"><label>Album</label><input type="text" id="pAlbum" value="' + esc(p.album) + '" oninput="addState.picked.album=this.value" maxlength="150"></div>' +
         '<div class="field"><label>Artist</label><input type="text" id="pArtist" value="' + esc(p.artist) + '" oninput="addState.picked.artist=this.value" maxlength="150"></div>' +
@@ -1833,13 +1911,13 @@ function renderAdd() {
         (p.kind && p.kind !== 'Album' ? '<div class="note warn">Heads up: Apple lists this as a' + (p.kind === 'EP' ? 'n EP' : ' single') + ', not a full album.</div>' : '') +
         (/\b(deluxe|remaster|edition|anniversary|expanded)\b/i.test(p.album) ? '<div class="t2">This is a special edition, so ratings and song picks will use its full song list.</div>' : '') +
       '</div></div>' +
-      '<div style="margin-top:16px;display:grid;gap:8px">' +
-        '<button class="btn primary" style="width:100%;padding:14px;font-size:16px" id="pickBtn" onclick="savePick()">' +
+      '<div class="mt16 vstack">' +
+        '<button class="wide btn primary" id="pickBtn" onclick="savePick()">' +
           (changing ? 'Swap in this album' : 'Lock it in for ' + esc(fmtDate(slot.date))) + '</button>' +
-        '<button class="linkish" style="justify-self:center" onclick="addState.picked=null;show(\'add\')">Pick a different album</button>' +
+        '<button class="jself-c linkish" onclick="addState.picked=null;show(\'add\')">Pick a different album</button>' +
       '</div>';
   } else {
-    h += '<div class="searchrow" style="margin-top:14px"><input type="search" id="q" placeholder="Search an album or artist" value="' + esc(addState.query) + '" onkeydown="if(event.key===\'Enter\')runSearch()" autocomplete="off">' +
+    h += '<div class="mt14 searchrow"><input type="search" id="q" placeholder="Search an album or artist" value="' + esc(addState.query) + '" onkeydown="if(event.key===\'Enter\')runSearch()" autocomplete="off">' +
       '<button class="btn primary" onclick="runSearch()"' + (addState.searching ? ' disabled' : '') + '>' + (addState.searching ? 'Searching…' : 'Search') + '</button></div>';
     if (addState.results) {
       if (!addState.results.length) h += '<div class="note">No matches. Try adding the artist name, or type it in yourself below.</div>';
@@ -1854,9 +1932,9 @@ function renderAdd() {
         h += '</div>';
       }
     }
-    h += '<div style="margin-top:12px"><button class="linkish" onclick="manual()">Can\'t find it? Type it in yourself</button></div>';
+    h += '<div class="mt12"><button class="linkish" onclick="manual()">Can\'t find it? Type it in yourself</button></div>';
   }
-  if (changing) h += '<div style="margin-top:10px"><button class="linkish" onclick="addState.changeRow=null;addState.picked=null;show(\'add\')">Keep my current pick</button></div>';
+  if (changing) h += '<div class="mt10"><button class="linkish" onclick="addState.changeRow=null;addState.picked=null;show(\'add\')">Keep my current pick</button></div>';
   h += '<div class="msg" id="addMsg"></div></div>';
   return h + addTail();
 }
@@ -1905,7 +1983,7 @@ function shareCard(pick) {
   var mine = myShareOn(pick.date, m);
   var changing = !!(mine && shareState.changeRow === mine.row);
   var h = '<div class="section-title">Heard it before?<span class="tag">Optional</span></div><div class="card">';
-  if (shareState.flash) { h += '<div class="msg ok" style="margin-top:0;margin-bottom:10px">' + shareState.flash + '</div>'; shareState.flash = null; }
+  if (shareState.flash) { h += '<div class="mt0 mb10 msg ok">' + shareState.flash + '</div>'; shareState.flash = null; }
 
   if (mine && !changing) {
     h += '<div class="eyebrow">Your bonus share with ' + esc(pick.album) + ' · ' + esc(fmtDate(pick.date)) + '</div>' +
@@ -1919,7 +1997,7 @@ function shareCard(pick) {
   }
 
   if (!shareState.open && !changing) {
-    h += '<div class="shareinv"><div class="t2" style="flex:1;min-width:200px">Got an album you already love? Share it next to <b>' + esc(pick.album) + '</b> (' + esc(fmtDate(pick.date)) + ') and everyone can rate it too. It\'s a bonus, so it won\'t count toward the leaderboard.</div>' +
+    h += '<div class="shareinv"><div class="grow200 t2">Got an album you already love? Share it next to <b>' + esc(pick.album) + '</b> (' + esc(fmtDate(pick.date)) + ') and everyone can rate it too. It\'s a bonus, so it won\'t count toward the leaderboard.</div>' +
       '<button class="btn ghost" onclick="shareState.open=true;show(\'add\')">Share one</button></div>';
     return h + '</div>';
   }
@@ -1927,19 +2005,19 @@ function shareCard(pick) {
   h += '<div class="eyebrow">' + (changing ? 'Swap your bonus share' : 'Share an album you already know') + ' · with ' + esc(pick.album) + '</div>';
   if (shareState.picked) {
     var p = shareState.picked;
-    h += '<div class="chosen" style="margin-top:14px">' + (p.cover ? '<img class="cover" src="' + esc(p.cover) + '" alt="">' : '<div class="cover"></div>') +
+    h += '<div class="mt14 chosen">' + (p.cover ? '<img class="cover" src="' + esc(p.cover) + '" alt="">' : '<div class="cover"></div>') +
       '<div class="fields">' +
         '<div class="field"><label>Album</label><input type="text" value="' + esc(p.album) + '" oninput="shareState.picked.album=this.value" maxlength="150"></div>' +
         '<div class="field"><label>Artist</label><input type="text" value="' + esc(p.artist) + '" oninput="shareState.picked.artist=this.value" maxlength="150"></div>' +
         '<div class="field"><label>Year</label><input type="number" value="' + esc(p.year) + '" oninput="shareState.picked.year=this.value" min="1900" max="2030" inputmode="numeric"></div>' +
         (p.kind && p.kind !== 'Album' ? '<div class="note warn">Heads up: Apple lists this as a' + (p.kind === 'EP' ? 'n EP' : ' single') + ', not a full album.</div>' : '') +
       '</div></div>' +
-      '<div style="margin-top:16px;display:grid;gap:8px">' +
-        '<button class="btn primary" style="width:100%;padding:14px;font-size:16px" id="shareBtn" onclick="saveShare(' + pick.row + ')">' + (changing ? 'Swap in this album' : 'Share it') + '</button>' +
-        '<button class="linkish" style="justify-self:center" onclick="shareState.picked=null;show(\'add\')">Pick a different album</button>' +
+      '<div class="mt16 vstack">' +
+        '<button class="wide btn primary" id="shareBtn" onclick="saveShare(' + pick.row + ')">' + (changing ? 'Swap in this album' : 'Share it') + '</button>' +
+        '<button class="jself-c linkish" onclick="shareState.picked=null;show(\'add\')">Pick a different album</button>' +
       '</div>';
   } else {
-    h += '<div class="searchrow" style="margin-top:14px"><input type="search" id="sq" placeholder="Search an album you already love" value="' + esc(shareState.query) + '" onkeydown="if(event.key===\'Enter\')runShareSearch()" autocomplete="off">' +
+    h += '<div class="mt14 searchrow"><input type="search" id="sq" placeholder="Search an album you already love" value="' + esc(shareState.query) + '" onkeydown="if(event.key===\'Enter\')runShareSearch()" autocomplete="off">' +
       '<button class="btn primary" onclick="runShareSearch()"' + (shareState.searching ? ' disabled' : '') + '>' + (shareState.searching ? 'Searching…' : 'Search') + '</button></div>';
     if (shareState.results) {
       if (!shareState.results.length) h += '<div class="note">No matches. Try adding the artist name, or type it in yourself below.</div>';
@@ -1955,9 +2033,9 @@ function shareCard(pick) {
         h += '</div>';
       }
     }
-    h += '<div style="margin-top:12px"><button class="linkish" onclick="manualShare()">Can\'t find it? Type it in yourself</button></div>';
+    h += '<div class="mt12"><button class="linkish" onclick="manualShare()">Can\'t find it? Type it in yourself</button></div>';
   }
-  h += '<div style="margin-top:10px"><button class="linkish" onclick="cancelShare()">' + (changing ? 'Keep my current share' : 'Never mind, just my pick') + '</button></div>';
+  h += '<div class="mt10"><button class="linkish" onclick="cancelShare()">' + (changing ? 'Keep my current share' : 'Never mind, just my pick') + '</button></div>';
   return h + '<div class="msg" id="shareMsg"></div></div>';
 }
 
@@ -1975,7 +2053,7 @@ function runShareSearch() {
   shareState.searching = true; show('add');
   google.script.run
     .withSuccessHandler(function (list) { shareState.searching = false; shareState.results = list || []; show('add'); })
-    .withFailureHandler(function (e) { shareState.searching = false; shareState.results = null; show('add'); shareError(e.message || 'Search failed. Try again.'); })
+    .withFailureHandler(function (e) { shareState.searching = false; shareState.results = null; show('add'); shareError(errText(e.message ? e : 'Search failed.')); })
     .searchAlbums(shareState.query);
 }
 function chooseShare(i) {
@@ -2000,14 +2078,14 @@ function saveShare(pickRow) {
       show('add');
       confetti();
     })
-    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Try again'; shareError(e.message || 'Something went wrong.'); })
+    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Try again'; shareError(errText(e)); })
     .submitShare(p.album, p.artist, p.year, p.cover, pickRow, shareState.changeRow);
 }
 function confirmRemoveShare(row) {
   var a = albumByRow(row); if (!a) return;
-  var h = '<button class="close" onclick="closeAlbum()">×</button>' +
-    '<div class="stat" style="padding-right:40px">' + img(a, 'thumb') + '<div><div class="eyebrow" style="color:var(--red)">Remove bonus share</div>' +
-    '<div class="t1" style="font-size:18px;margin:3px 0">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + ' · shared by ' + esc(a.pickedBy) + '</div></div></div>' +
+  var h = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button>' +
+    '<div class="pr40 stat">' + img(a, 'thumb') + '<div><div class="c-red eyebrow">Remove bonus share</div>' +
+    '<div class="lead t1">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + ' · shared by ' + esc(a.pickedBy) + '</div></div></div>' +
     '<div class="note">This takes it off the Shared Albums tab. Your pick for the week stays put.</div>' +
     '<div class="actions"><button class="btn danger solid" id="rmBtn" onclick="doRemoveShare(' + a.row + ')">Remove it</button>' +
     '<button class="btn ghost" onclick="closeAlbum()">Keep it</button></div><div class="msg" id="rmMsg"></div>';
@@ -2026,7 +2104,7 @@ function doRemoveShare(row) {
     })
     .withFailureHandler(function (e) {
       btn.disabled = false; btn.textContent = 'Remove it';
-      var m = document.getElementById('rmMsg'); m.className = 'msg err'; m.textContent = e.message || 'Something went wrong.';
+      var m = document.getElementById('rmMsg'); m.className = 'msg err'; m.textContent = errText(e);
     })
     .removeShare(row);
 }
@@ -2061,7 +2139,7 @@ function albumCards(list) {
     var now = !soon && a === cur;
     h += '<div class="gcard ' + medalClass(a) + '" onclick="openAlbum(' + a.row + ')">' + img(a, 'cover') +
       '<div class="info">' + (now ? '<div class="nowtag">This week</div>' : '') + '<div class="t1">' + esc(a.album) + '</div><div class="t2">' + artistLink(a) + '</div>' +
-      '<div class="t2" style="margin-top:4px">' + (a.shared ? 'Shared by ' + esc(a.pickedBy) + ' · ' + (a.avg == null ? 'Not rated yet' : '<b>' + fmt(a.avg) + '</b>') : soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<b>' + fmt(a.avg) + '</b>') + '</div></div></div>';
+      '<div class="mt4 t2">' + (a.shared ? 'Shared by ' + esc(a.pickedBy) + ' · ' + (a.avg == null ? 'Not rated yet' : '<b>' + fmt(a.avg) + '</b>') : soon ? 'Coming ' + esc(fmtDate(a.date)) + ' · ' + esc(a.pickedBy) : a.avg == null ? 'Not rated yet' : '<b>' + fmt(a.avg) + '</b>') + '</div></div></div>';
   });
   return h + '</div>';
 }
@@ -2157,9 +2235,9 @@ function statsBody() {
 
   var pairs = pairStats(list).sort(function (x, y) { return x.gap - y.gap; });
   if (pairs.length) {
-    h += '<div class="card"><div class="stat"><div></div><div><div class="lbl" style="color:var(--plum2)">Taste twins</div><div class="t1" style="font-size:18px;margin:4px 0">' + chip(pairs[0].a) + chip(pairs[0].b) + '</div><div class="t2">Ratings differ by ' + pairs[0].gap.toFixed(1) + ' on average</div></div></div></div>';
+    h += '<div class="card"><div class="stat"><div></div><div><div class="c-plum2 lbl">Taste twins</div><div class="lead t1">' + chip(pairs[0].a) + chip(pairs[0].b) + '</div><div class="t2">Ratings differ by ' + pairs[0].gap.toFixed(1) + ' on average</div></div></div></div>';
     var far = pairs[pairs.length - 1];
-    h += '<div class="card"><div class="stat"><div></div><div><div class="lbl" style="color:var(--plum2)">Least in sync</div><div class="t1" style="font-size:18px;margin:4px 0">' + chip(far.a) + chip(far.b) + '</div><div class="t2">Ratings differ by ' + far.gap.toFixed(1) + ' on average</div></div></div></div>';
+    h += '<div class="card"><div class="stat"><div></div><div><div class="c-plum2 lbl">Least in sync</div><div class="lead t1">' + chip(far.a) + chip(far.b) + '</div><div class="t2">Ratings differ by ' + far.gap.toFixed(1) + ' on average</div></div></div></div>';
   }
   h += '</div>';
 
@@ -2169,7 +2247,7 @@ function statsBody() {
   }).sort(function (x, y) { return (x.v == null) - (y.v == null) || x.v - y.v; }).forEach(function (r) {
     h += '<div class="row"><span>' + face(r.m, 'tiny') + esc(r.m) + '</span><div class="track"><div class="fill" style="width:' + (r.v == null ? 0 : r.v * 10) + '%"></div></div><span>' + (r.v == null ? '–' : r.v.toFixed(1)) + '</span></div>';
   });
-  h += '<div class="t2" style="margin-top:8px">Average rating each person gives. Shortest bar is the toughest critic.</div></div>';
+  h += '<div class="mt8 t2">Average rating each person gives. Shortest bar is the toughest critic.</div></div>';
   return h + procrastinator(list);
 }
 
@@ -2256,15 +2334,15 @@ function procrastinator(list) {
 
   if (anyLate) {
   h += '<div class="crown"><div class="pwrap' + (tied.length === 2 ? ' duo' : tied.length > 2 ? ' trio' : '') + '">' +
-    tied.slice(0, 3).map(function (r) { return crying(r.m); }).join('') + '<span class="snail" aria-hidden="true">🐌</span></div><div style="min-width:0">' +
-    '<div class="lbl" style="color:var(--red)">' + (tied.length > 1 ? (isAll() ? 'Tied of all time' : 'Tied for procrastinator') : (isAll() ? 'Procrastinator of all time' : 'Reigning procrastinator')) + '</div>' +
+    tied.slice(0, 3).map(function (r) { return crying(r.m); }).join('') + '<span class="snail" aria-hidden="true">🐌</span></div><div class="min0">' +
+    '<div class="c-red lbl">' + (tied.length > 1 ? (isAll() ? 'Tied of all time' : 'Tied for procrastinator') : (isAll() ? 'Procrastinator of all time' : 'Reigning procrastinator')) + '</div>' +
     '<h3>' + nameLine + '</h3><div class="meta">' + pills + '</div></div></div>';
 
   } else {
-    h += '<div class="crown"><div class="pwrap" style="font-size:44px;line-height:1">🎧</div><div><div class="lbl" style="color:var(--gold)">No procrastinator</div><h3>Everyone\'s on time</h3></div></div>';
+    h += '<div class="crown"><div class="bigemoji pwrap">🎧</div><div><div class="c-gold lbl">No procrastinator</div><h3>Everyone\'s on time</h3></div></div>';
   }
   var max = Math.max.apply(null, counted.map(function (r) { return r.v; })) || 1;
-  h += '<div class="lbl sub first" style="color:var(--muted)">Days late (clock starts Monday)</div><div class="bars">';
+  h += '<div class="c-muted lbl sub first">Days late (clock starts Monday)</div><div class="bars">';
   rows.slice().sort(function (x, y) { return (x.v == null) - (y.v == null) || y.v - x.v; }).forEach(function (r) {
     var isFast = fast && r.m === fast.m;
     var tag = r.owed.length ? '<span class="owes">owes ' + r.owed.length + '</span>' : isFast ? '<span class="zap">⚡ fastest</span>' : onTime(r) ? '<span class="zap">on time</span>' : '';
@@ -2285,13 +2363,13 @@ function procrastinator(list) {
   }); });
   shame.sort(function (x, y) { return y.d - x.d; });
   if (shame.length) {
-    h += '<div class="lbl sub" style="color:var(--red)">Wall of shame</div><ul class="shame">';
+    h += '<div class="c-red lbl sub">Wall of shame</div><ul class="shame">';
     shame.slice(0, 5).forEach(function (s) {
       h += '<li onclick="openAlbum(' + s.a.row + ')"><span class="faces2">' + s.ms.map(function (m) { return face(m, 'tiny'); }).join('') + '</span>' +
         '<span class="al"><b>' + esc(s.a.album) + '</b><small>' + s.ms.map(esc).join(', ') + '</small></span><span class="days">' + Math.floor(s.d) + 'd late</span></li>';
     });
     h += '</ul>';
-    if (shame.length > 5) h += '<div class="t2" style="margin-top:4px">+' + (shame.length - 5) + ' more overdue</div>';
+    if (shame.length > 5) h += '<div class="mt4 t2">+' + (shame.length - 5) + ' more overdue</div>';
   }
   return h + '</div>';
 }
@@ -2303,7 +2381,7 @@ function openAlbum(row) {
   var r = rankOf(a);
   var soon = a.date && a.date > D.today;
   var medal = r && r <= 3 ? ' · ' + ['Gold', 'Silver', 'Bronze'][r - 1] : '';
-  var h = '<button class="close" onclick="closeAlbum()">×</button><div class="mhero"><div class="disc"><div class="vinyl"><div class="rec"></div></div>' + img(a, 'cover') + '</div>' +
+  var h = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button><div class="mhero"><div class="disc"><div class="vinyl"><div class="rec"></div></div>' + img(a, 'cover') + '</div>' +
     '<div class="mhead"><div class="eyebrow">' + (a.shared ? 'Heard it before · shared ' + esc(fmtDate(a.date, true)) : esc(a.season) + ' · ' + (soon ? 'Coming ' : 'Picked ') + esc(fmtDate(a.date, true))) + '</div><h2>' + albumLink(a) + '</h2><div class="by">by ' + artistLink(a) + (a.year ? ' · ' + esc(a.year) : '') + '</div></div>' +
     '<div class="mbody"><div class="tiles"><div class="tile" style="background:' + color(a.pickedBy) + '"><b>' + (a.shared ? 'Shared by' : 'Picked by') + '</b><span class="who2">' + face(a.pickedBy, 'mini') + esc(a.pickedBy) + '</span></div>' +
     '<div class="tile"><b>Group avg</b><span>' + (a.avg == null ? 'Not rated yet' : cnt(a.avg) + ' <span class="stars">' + stars(a.avg) + '</span>') + '</span></div>' +
@@ -2311,7 +2389,7 @@ function openAlbum(row) {
       : '<div class="tile"><b>' + esc(a.season) + ' rank</b><span>' + (r ? '#' + r + ' of ' + (seasonRanks[a.season] || []).length + medal : a.avg != null ? 'Starts at ' + MIN_RANKED + ' rated' : 'Not ranked yet') + '</span></div>') + '</div></div></div>';
 
   if (!soon) {
-    h += '<div class="section-title" style="margin-left:0">Ratings</div><table class="rt">';
+    h += '<div class="ml0 section-title">Ratings</div><table class="rt">';
     D.members.forEach(function (m) {
       var v = a.ratings[m];
       var extra = '';
@@ -2358,7 +2436,7 @@ function songPicks(a) {
     return list.map(function (m) { return '<span title="' + esc(m) + '">' + face(m, 'tiny') + '</span>'; }).join('');
   };
   var pickers = D.members.filter(function (m) { return a.fav[m] || a.least[m]; }).length;
-  var h = '<div class="section-title" style="margin-left:0">Song picks</div><ul class="sp">';
+  var h = '<div class="ml0 section-title">Song picks</div><ul class="sp">';
   order.forEach(function (song) {
     var p = picks[song], n = tracks.indexOf(song);
     h += '<li><span class="tn">' + (n < 0 ? '' : n + 1) + '</span>' +
@@ -2376,7 +2454,7 @@ function songPicks(a) {
 /* ---------- profile ---------- */
 
 function openProfile() {
-  var m = rateState.member, h = '<button class="close" onclick="closeAlbum()">×</button>';
+  var m = rateState.member, h = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button>';
   if (!m) {
     document.getElementById('modal').innerHTML = h + notMember().replace('class="card"', 'class=""');
     openScrim();
@@ -2393,32 +2471,32 @@ function openProfile() {
   h += '<div class="phead">' + face(m, 'pbig') +
     '<div><h2>' + esc(m) + '</h2><div class="t2">Signed in on this phone</div></div></div>';
 
-  h += '<div class="eyebrow" style="margin-bottom:6px">All seasons</div><div class="tiles">' +
+  h += '<div class="mb6 eyebrow">All seasons</div><div class="tiles">' +
     '<div class="tile"><b>Albums rated</b><span>' + given.length + ' of ' + due.length + '</span></div>' +
     '<div class="tile"><b>Avg you give</b><span>' + (given.length ? fmt(avgOf(given)) : '–') + '</span></div>' +
     '<div class="tile"><b>Your picks</b><span>' + picks.length + (pickAvg != null ? ' · ' + fmt(pickAvg) + ' avg' : '') + '</span></div>' +
     '</div>';
   if (top) h += '<div class="note">Your favorite so far: <b>' + esc(top.album) + '</b> (' + num(top.ratings[m]) + ', ' + esc(top.season) + ')</div>';
 
-  h += '<div class="section-title" style="margin-left:0">Your next pick</div>';
+  h += '<div class="ml0 section-title">Your next pick</div>';
   if (pending) h += '<div class="next">' + img(pending, 'thumb') + '<div><div class="eyebrow">' + esc(fmtDate(pending.date, true)) + seasonTag(pending.date) + '</div><div class="t1">' + esc(pending.album) + '</div><div class="t2">' + esc(pending.artist) + '</div></div>' +
-    '<div style="display:grid;gap:6px"><button class="btn ghost" onclick="closeAlbum();startChange(' + pending.row + ')">Change</button>' +
+    '<div class="vstack6"><button class="btn ghost" onclick="closeAlbum();startChange(' + pending.row + ')">Change</button>' +
     '<button class="btn danger" onclick="confirmRemove(' + pending.row + ')">Remove</button></div></div>';
-  else if (slot) h += '<div class="next empty" style="border-radius:10px;padding:12px"><div><div class="t1">Nothing lined up yet</div><div class="t2">Your next turn is ' + esc(fmtDate(slot.date, true)) + seasonTag(slot.date) + '.</div></div>' +
+  else if (slot) h += '<div class="slot next empty"><div><div class="t1">Nothing lined up yet</div><div class="t2">Your next turn is ' + esc(fmtDate(slot.date, true)) + seasonTag(slot.date) + '.</div></div>' +
     '<button class="btn gold" onclick="closeAlbum();show(\'add\')">Add album</button></div>';
   else h += '<div class="muted">No open turn for you on the sheet yet.</div>';
-  h += '<div style="margin-top:8px"><button class="linkish" onclick="closeAlbum();show(\'add\')">Pick order, bonus share and what\'s coming up ›</button></div>';
+  h += '<div class="mt8"><button class="linkish" onclick="closeAlbum();show(\'add\')">Pick order, bonus share and what\'s coming up ›</button></div>';
 
-  h += '<div class="section-title" style="margin-left:0">Still to finish</div>';
+  h += '<div class="ml0 section-title">Still to finish</div>';
   h += owed.length ? '<ul class="owe">' + owed.slice(0, 8).map(function (a) {
     return '<li><a href="#" onclick="closeAlbum();goRate(' + a.row + ');return false">' + esc(a.album) + '</a><span class="muted">' + missingFor(a, m).join(', ') + '</span></li>';
-  }).join('') + '</ul>' + (owed.length > 8 ? '<div class="t2" style="margin-top:6px">Plus ' + (owed.length - 8) + ' more on the Rate page.</div>' : '')
+  }).join('') + '</ul>' + (owed.length > 8 ? '<div class="mt6 t2">Plus ' + (owed.length - 8) + ' more on the Rate page.</div>' : '')
     : '<div><b>You\'re all caught up.</b></div>';
 
-  h += '<div class="section-title" style="margin-left:0">Listen on</div>' + platformSeg();
-  h += '<div class="section-title" style="margin-left:0">Notifications</div><div id="pushBox">' + pushBox() + '</div>';
-  h += '<div class="section-title" style="margin-left:0">Appearance</div>' + themeSeg();
-  h += '<div class="actions" style="margin-top:18px"><button class="btn ghost" onclick="signOut()">Sign out</button></div>';
+  h += '<div class="ml0 section-title">Listen on</div>' + platformSeg();
+  h += '<div class="ml0 section-title">Notifications</div><div id="pushBox">' + pushBox() + '</div>';
+  h += '<div class="ml0 section-title">Appearance</div>' + themeSeg();
+  h += '<div class="mt18 actions"><button class="btn ghost" onclick="signOut()">Sign out</button></div>';
   document.getElementById('modal').innerHTML = h;
   openScrim();
   pushCheck();
@@ -2428,9 +2506,9 @@ function openProfile() {
 
 function confirmRemove(row) {
   var a = albumByRow(row); if (!a) return;
-  var h = '<button class="close" onclick="closeAlbum()">×</button>' +
-    '<div class="stat" style="padding-right:40px">' + img(a, 'thumb') + '<div><div class="eyebrow" style="color:var(--red)">Remove album</div>' +
-    '<div class="t1" style="font-size:18px;margin:3px 0">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + ' · ' + esc(fmtDate(a.date, true)) + '</div></div></div>' +
+  var h = '<button class="close" onclick="closeAlbum()" aria-label="Close">×</button>' +
+    '<div class="pr40 stat">' + img(a, 'thumb') + '<div><div class="c-red eyebrow">Remove album</div>' +
+    '<div class="lead t1">' + esc(a.album) + '</div><div class="t2">' + esc(a.artist) + ' · ' + esc(fmtDate(a.date, true)) + '</div></div></div>' +
     '<div class="note">This takes it off the sheet. Nobody has rated it yet, so nothing else is lost. ' + esc(fmtDate(a.date)) + ' stays ' + esc(a.pickedBy) + '\'s turn.</div>' +
     '<div class="actions"><button class="btn danger solid" id="rmBtn" onclick="doRemove(' + a.row + ')">Remove it</button>' +
     '<button class="btn ghost" onclick="closeAlbum()">Keep it</button></div><div class="msg" id="rmMsg"></div>';
@@ -2448,7 +2526,7 @@ function doRemove(row) {
     })
     .withFailureHandler(function (e) {
       btn.disabled = false; btn.textContent = 'Remove it';
-      var m = document.getElementById('rmMsg'); m.className = 'msg err'; m.textContent = e.message || 'Something went wrong.';
+      var m = document.getElementById('rmMsg'); m.className = 'msg err'; m.textContent = errText(e);
     })
     .removePick(row, false);
 }
@@ -2728,8 +2806,8 @@ function vals(a) { return D.members.map(function (m) { return a.ratings[m]; }).f
 function avgOf(arr) { arr = arr.filter(function (v) { return v != null; }); return arr.length ? arr.reduce(function (s, v) { return s + v; }, 0) / arr.length : null; }
 function kv(k, v) { return '<div class="kv"><span class="muted">' + k + '</span><b>' + v + '</b></div>'; }
 function statCard(label, col, a, line) {
-  return '<div class="card" style="cursor:pointer" onclick="openAlbum(' + a.row + ')"><div class="stat">' + img(a, 'thumb') + '<div><div class="lbl" style="color:' + col + '">' + esc(label) + '</div>' +
-    '<div class="t1" style="font-size:18px;margin:3px 0">' + esc(a.album) + '</div><div class="t2">' + line + '</div></div></div></div>';
+  return '<div class="ptr card" onclick="openAlbum(' + a.row + ')"><div class="stat">' + img(a, 'thumb') + '<div><div class="lbl" style="color:' + col + '">' + esc(label) + '</div>' +
+    '<div class="lead t1">' + esc(a.album) + '</div><div class="t2">' + line + '</div></div></div></div>';
 }
 function pairStats(list) {
   list = list || D.albums;
@@ -3416,6 +3494,39 @@ function flowResized() {
 }
 window.addEventListener('resize', flowResized);
 document.addEventListener('fullscreenchange', function () { setTimeout(flowResized, 60); });
+/* ---------- screen readers and keyboards ----------
+   Tappable cards and rows (anything with an onclick that isn't already a button or link) get button semantics
+   and Enter / Space; toggle buttons (season, theme, platform pickers) say which one is on. Runs after each redraw. */
+(function () {
+  var queued = false;
+  function tidy() {
+    queued = false;
+    Array.prototype.forEach.call(document.querySelectorAll('[onclick]:not(button):not(a):not(input):not(textarea):not(select):not([role])'), function (el) {
+      if (el.closest('button, a')) return;
+      el.setAttribute('role', 'button'); if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.seg button, .fl-seg button'), function (b) {
+      b.setAttribute('aria-pressed', b.classList.contains('on') ? 'true' : 'false');
+    });
+  }
+  function soon() { if (!queued) { queued = true; requestAnimationFrame(tidy); } }
+  new MutationObserver(function (recs) {
+    // only redraws, or a picker button changing which one is on; animation class flips elsewhere are ignored
+    for (var i = 0; i < recs.length; i++) {
+      var r = recs[i];
+      if (r.type === 'childList' || (r.target.tagName === 'BUTTON' && r.target.parentNode && /\b(fl-)?seg\b/.test(r.target.parentNode.className))) { soon(); return; }
+    }
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  soon();
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if ((e.key === 'Enter' || e.key === ' ') && t.getAttribute && t.getAttribute('role') === 'button' && !/BUTTON|A/.test(t.tagName) && !t.hasAttribute('onkeydown')) {
+      e.preventDefault(); t.click(); return;
+    }
+    // Escape closes the album / profile popup (Cover Flow has its own Escape)
+    if (e.key === 'Escape' && document.getElementById('scrim').classList.contains('on') && !/INPUT|TEXTAREA|SELECT/.test(t.tagName || '')) { e.stopImmediatePropagation(); closeAlbum(); }
+  });
+})();
 document.addEventListener('keydown', function (e) {
   if (!flowOpen || popupOpen || !FLOW.list || /INPUT|TEXTAREA|SELECT/.test((e.target.tagName || '')) && e.target.type !== 'range') return;
   var F = FLOW, k = e.key;
@@ -3445,7 +3556,10 @@ function show(v, quiet) { // quiet: a swipe already slid the page in, so skip th
   var entering = v !== shownView;
   view = v; shownView = v;
   var tab = SUBS[v] ? subFrom : v;
-  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.dataset.v === tab); });
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
+    b.classList.toggle('on', b.dataset.v === tab);
+    if (b.dataset.v === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
   var app = document.getElementById('app');
   app.classList.remove('enter');
   // Go to the top before the new tab goes in. Swapping a long page for a short one while scrolled down makes the
@@ -3521,7 +3635,7 @@ function save() {
       if (view === 'rate' && rateState.row === row) {
         loadMine(); show('rate');
         var m2 = document.getElementById('msg'); m2.className = 'msg err';
-        m2.textContent = 'That didn\'t save: ' + (e.message || 'something went wrong') + ' Try again.';
+        m2.textContent = errText(e, 'That didn\'t save:');
       } else {
         toast('Your rating for ' + a.album + ' didn\'t save. Open Rate to try again.');
       }
@@ -3551,7 +3665,7 @@ function runSearch() {
   addState.searching = true; show('add');
   google.script.run
     .withSuccessHandler(function (list) { addState.searching = false; addState.results = list || []; show('add'); })
-    .withFailureHandler(function (e) { addState.searching = false; addState.results = null; show('add'); addError(e.message || 'Search failed. Try again.'); })
+    .withFailureHandler(function (e) { addState.searching = false; addState.results = null; show('add'); addError(errText(e.message ? e : 'Search failed.')); })
     .searchAlbums(addState.query);
 }
 function choose(i) {
@@ -3576,7 +3690,7 @@ function savePick() {
       show('add');
       confetti();
     })
-    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Try again'; addError(e.message || 'Something went wrong.'); })
+    .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'Try again'; addError(errText(e)); })
     .submitPick(who, p.album, p.artist, p.year, p.cover, addState.changeRow);
 }
 
@@ -3813,13 +3927,12 @@ function renderSignIn() {
   chrome(false);
   var h = '<div class="card signin"><img class="logo" src="icons/icon-192.png" alt=""><div class="eyebrow">Club Music</div>';
   if (!signState.members) {
-    h += '<h2>Who are you?</h2><div class="muted">' + (signState.err ? '' : 'Loading the club…') + '</div>' +
-      (signState.err ? '<div class="actions" style="justify-content:center"><button class="btn primary" onclick="loadMembers()">Try again</button></div>' : '');
+    h += signState.err ? oops('Couldn\'t load the club', signState.err, 'loadMembers()') : '<h2>Who are you?</h2>' + skWho(5);
   } else if (!signState.name) {
     h += '<h2>Who are you?</h2><div class="muted">Tap your name and we\'ll email you a code. You only do this once on each phone.</div><div class="who">' +
       signState.members.map(function (n) {
         return '<button style="background:' + color(n) + '" onclick="sendCode(\'' + jsq(n) + '\')"' + (signState.busy ? ' disabled' : '') + '>' + face(n, 'mini') + esc(n) +
-          (signState.busy === n ? '<span class="t2" style="margin-left:auto">Sending…</span>' : '') + '</button>';
+          (signState.busy === n ? '<span class="ml-auto t2">Sending…</span>' : '') + '</button>';
       }).join('') + '</div>';
   } else {
     h += '<h2>Check your email</h2><div class="muted">We sent a 6 digit code to <b>' + esc(signState.hint) + '</b>. It works for 10 minutes.</div>' +
@@ -3828,7 +3941,7 @@ function renderSignIn() {
       '<div class="row2"><button class="linkish" onclick="sendCode(signState.name)">Send a new code</button>' +
       '<button class="linkish" onclick="signState.name=null;signState.err=\'\';renderSignIn()">Not ' + esc(signState.name) + '?</button></div>';
   }
-  if (signState.err) h += '<div class="msg err">' + esc(signState.err) + '</div>';
+  if (signState.err && signState.members) h += '<div class="msg err">' + esc(signState.err) + '</div>';
   document.getElementById('app').innerHTML = h + '</div>';
   var c = document.getElementById('code'); if (c && !signState.busy) c.focus();
 }
@@ -3906,7 +4019,7 @@ function installCard() {
   if (!ios && !deferredInstall) return '';
   return '<div class="card install"><img src="icons/icon-192.png" alt=""><div><div class="t1">Put Club Music on your home screen</div>' +
     '<div class="t2">' + (ios ? 'In Safari, tap the Share button, then <b>Add to Home Screen</b>. You\'ll stay signed in, no new code.' : 'Opens full screen like any other app. You\'ll stay signed in.') + '</div>' +
-    (ios ? '' : '<button class="btn gold" style="margin-top:8px" onclick="installApp()">Install</button>') +
+    (ios ? '' : '<button class="mt8 btn gold" onclick="installApp()">Install</button>') +
     '</div><button class="x" onclick="hideInstall()" aria-label="Hide">×</button></div>';
 }
 function installApp() { if (!deferredInstall) return; deferredInstall.prompt(); deferredInstall.userChoice.then(function () { deferredInstall = null; show(view); }); }
@@ -3969,8 +4082,8 @@ function chatListHtml() {
   var me = chatMe(), all = CHAT.msgs.concat(CHAT.pending), h = '';
   if (!all.length) {
     return '<div class="card chat-empty">' + (CHAT.fresh || CHAT.cached
-      ? '<div class="t1">No messages yet</div><div class="t2" style="margin-top:4px">Start the conversation about this week\'s album.</div>'
-      : '<div class="loading">Loading the chat…</div>') + '</div>';
+      ? '<div class="t1">No messages yet</div><div class="mt4 t2">Start the conversation about this week\'s album.</div>'
+      : skChat()) + '</div>';
   }
   var GAP = 5 * 60000;
   all.forEach(function (m, i) {
@@ -3984,9 +4097,9 @@ function chatListHtml() {
     var tap = m.failed ? ' onclick="chatRetry(' + m.tmp + ')"' : (mine && m.id ? ' onclick="chatPick(this)"' : '');
     h += '<div class="' + cls + '"' + (m.id ? ' data-id="' + m.id + '"' : '') + '>';
     if (!mine) h += last ? face(m.name, 'mini') : '<span class="gap"></span>';
-    h += '<div style="min-width:0">' + (!mine && first ? '<div class="who2">' + esc(m.name) + '</div>' : '') +
+    h += '<div class="min0">' + (!mine && first ? '<div class="who2">' + esc(m.name) + '</div>' : '') +
       chatBubble(m.text, tap) + '</div>';
-    if (m.failed) h += '<span class="when" style="color:var(--err-text)">Didn\'t send · tap to retry</span>';
+    if (m.failed) h += '<span class="c-err when">Didn\'t send · tap to retry</span>';
     else if (m.pending) h += last ? '<span class="when">Sending…</span>' : '';
     else if (last) h += '<span class="when">' + esc(chatTime(m.time)) + '</span>';
     if (mine && m.id) h += '<button class="del" onclick="chatDelete(' + m.id + ')">Delete</button>';
@@ -4035,7 +4148,7 @@ function gifOpen() {
   GIF.open = true; GIF.q = '';
   panel.innerHTML = '<input id="gifQ" type="search" placeholder="Search GIFs" aria-label="Search GIFs" autocomplete="off" enterkeyhint="search"' +
     ' oninput="gifTyped(this.value)" onkeydown="if(event.key===\'Escape\')gifClose()">' +
-    '<div class="gifgrid" id="gifGrid"><div class="gifmsg">Loading GIFs…</div></div>' +
+    '<div class="gifgrid" id="gifGrid">' + skGifs() + '</div>' +
     '<div class="giffoot"><span>Powered by KLIPY</span><button onclick="gifClose()">Close</button></div>';
   panel.hidden = false;
   var b = document.getElementById('gifBtn'); if (b) { b.classList.add('on'); b.setAttribute('aria-expanded', 'true'); }
@@ -4051,7 +4164,11 @@ function gifTyped(v) {
   clearTimeout(GIF.timer);
   GIF.timer = setTimeout(function () { gifLoad(v.trim()); }, 350);
 }
-function gifMsg(t) { var g = document.getElementById('gifGrid'); if (g) g.innerHTML = '<div class="gifmsg">' + esc(t) + '</div>'; }
+function gifMsg(t, retry) {
+  var g = document.getElementById('gifGrid');
+  if (g) g.innerHTML = '<div class="gifmsg">' + esc(t) + (retry ? '<br><button class="btn ghost" onclick="gifRetry()">Try again</button>' : '') + '</div>';
+}
+function gifRetry() { var g = document.getElementById('gifGrid'); if (g) g.innerHTML = skGifs(); gifLoad(GIF.q); }
 function gifLoad(q) {
   GIF.q = q; var seq = ++GIF.seq;
   if (!q && GIF.trending) { gifShow(GIF.trending); return; }
@@ -4066,7 +4183,7 @@ function gifLoad(q) {
       if (!q) GIF.trending = items;
       gifShow(items);
     });
-  }).catch(function () { if (seq === GIF.seq) gifMsg('Couldn\'t reach KLIPY. Try again in a moment.'); });
+  }).catch(function () { if (seq === GIF.seq) gifMsg('Couldn\'t reach KLIPY.', true); });
 }
 /* Picks the small file for the grid and a mid size file to send. */
 function gifItem(r) {
@@ -4386,7 +4503,7 @@ function refresh(first) {
   }, function (e) {
     clearTimeout(slow); badge.classList.remove('on');
     if (!storeGet('ad.session')) return; // signed out: sign in screen is up
-    if (!D) document.getElementById('app').innerHTML = '<div class="card">' + esc(e.message) + '<div class="actions"><button class="btn primary" onclick="refresh(true)">Try again</button></div></div>';
+    if (!D) document.getElementById('app').innerHTML = '<div class="card">' + oops('Couldn\'t load the club', e, 'document.getElementById(\'app\').innerHTML=SK_HOME;refresh(true)') + '</div>';
     else toast(e.message);
   });
 }
