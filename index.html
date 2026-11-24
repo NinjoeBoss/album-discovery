@@ -171,6 +171,9 @@ try { if (AD_START_KEY && !adStandalone()) adCleanUrl(''); adApplyAppKey(); } ca
   .btn.danger.solid { background: var(--danger); color: #fff; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bar); color: #fff; border: 1px solid rgba(255,255,255,.12); padding: 12px 18px; border-radius: 99px; font-weight: 700; font-size: var(--t-base); z-index: 30; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 90vw; text-align: center; }
+  .toast.update { border: 0; cursor: pointer; font-family: inherit; bottom: calc(24px + env(safe-area-inset-bottom)); animation: upIn .25s ease-out; }
+  @keyframes upIn { from { opacity: 0; transform: translate(-50%, 12px); } }
+  @media (prefers-reduced-motion: reduce) { .toast.update { animation: none; } }
 
 
   /* season bar on Albums, Members, Stats */
@@ -1081,7 +1084,19 @@ function errText(e, lead) {
   if (lead) t = lead + ' ' + t.charAt(0).toLowerCase() + t.slice(1);
   return /try again/i.test(t) ? t : t + ' Try again.';
 }
-function img(a, cls) { return a.cover ? '<img class="' + cls + '" src="' + esc(a.cover) + '" alt="">' : '<div class="' + cls + '"></div>'; }
+/* Apple covers come at 600px. Small spots (thumbs are 72px at most, so 216 real pixels on a 3x phone) ask Apple
+   for a 240px copy: about a tenth of the bytes. One small size for everything, so each cover downloads once.
+   Covers from anywhere else are left as they are. */
+var THUMB_PX = 240;
+function artAt(url, px) {
+  if (!url || !/mzstatic\.com\//.test(url)) return url;
+  return url.replace(/\/\d+x\d+([a-z-]*)\.(jpg|jpeg|png|webp)$/i, '/' + px + 'x' + px + '$1.$2');
+}
+function img(a, cls) {
+  if (!a.cover) return '<div class="' + cls + '"></div>';
+  var src = cls === 'thumb' ? artAt(a.cover, THUMB_PX) : a.cover;
+  return '<img class="' + cls + '" src="' + esc(src) + '" alt=""' + (cls === 'thumb' ? ' decoding="async"' : '') + '>';
+}
 /* A member's club photo, or their initial on their color if there's no photo. */
 function face(name, cls) {
   var url = AVATARS[name];
@@ -1458,11 +1473,14 @@ function runPendingGo() {
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function (e) {
   var d = e.data || {};
   if (d.type === 'chat') { liveNudge(); return; }
+  if (d.type === 'update') { updateNote(); return; }
   if (d.type !== 'go') return;
   pendingGo = parseGo(d.url);
   runPendingGo();
   if (D && storeGet('ad.session')) refresh(false);
 });
+// A "new version" note the service worker sent while this page was still loading can be dropped, so ask for it.
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({ type: 'ask' });
 
 /* ---------- seasons ---------- */
 
@@ -2944,7 +2962,7 @@ function flowBtn() {
   var n = D.albums.length + (D.shared || []).filter(shareOut).length;
   if (!n) return '';
   return '<button class="flowbtn" onclick="openFlow()"><span class="fb-stack" aria-hidden="true">' +
-    [last[0], last[2], last[1]].map(function (a) { return '<i' + (a ? ' style="background-image:url(\'' + esc(a.cover) + '\')"' : '') + '></i>'; }).join('') +
+    [last[0], last[2], last[1]].map(function (a) { return '<i' + (a ? ' style="background-image:url(\'' + esc(artAt(a.cover, THUMB_PX)) + '\')"' : '') + '></i>'; }).join('') +
     '</span><span><b>Cover Flow</b><small>Swipe through all ' + n + ' albums we\'ve suggested</small></span><span class="chev">›</span></button>';
 }
 function openFlow() {
@@ -4638,6 +4656,19 @@ document.addEventListener('visibilitychange', function () {
   if (D && storeGet('ad.session') && Date.now() - lastHidden > 60000) refresh(false);
 });
 
+/* A newer copy of the app was saved in the background (the app opens from its saved copy so it never waits on
+   the network). Offer it; tapping reloads. Ignoring it is fine, the next open uses it. */
+function updateNote() {
+  if (document.getElementById('updateNote')) return;
+  var b = document.createElement('button');
+  b.id = 'updateNote'; b.type = 'button'; b.className = 'toast update';
+  b.textContent = 'New version ready · Tap to update';
+  b.onclick = function () { b.disabled = true; location.reload(); };
+  document.body.appendChild(b);
+}
+// A new service worker taking over (sw.js changed) also means a new saved copy. Not on the very first install.
+var hadWorker = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+if (hadWorker) navigator.serviceWorker.addEventListener('controllerchange', function () { updateNote(); });
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('sw.js').then(function (reg) {
