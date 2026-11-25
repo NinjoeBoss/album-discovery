@@ -2238,7 +2238,10 @@ function renderMembers() {
     var pickAvg = avgOf(picks.map(function (a) { return a.avg; }));
     var given = list.map(function (a) { return a.ratings[m]; }).filter(function (v) { return v != null; });
     var said = due.filter(function (a) { return a.comments[m]; }).length;
-    var mine = pairs.filter(function (p) { return p.a === m || p.b === m; }).sort(function (x, y) { return x.gap - y.gap; })[0];
+    var myPairs = pairs.filter(function (p) { return p.a === m || p.b === m; }).sort(function (x, y) { return x.gap - y.gap; });
+    var mine = myPairs[0];
+    /* Most polarized: the member whose ratings land furthest from this member's on shared albums (needs 2+ pairs so it isn't the twin). */
+    var opp = myPairs.length >= 2 ? myPairs[myPairs.length - 1] : null;
     var fav = list.filter(function (a) { return a.ratings[m] != null; }).sort(function (x, y) { return y.ratings[m] - x.ratings[m]; })[0];
     h += '<div class="card mcard" style="border-top:8px solid ' + color(m) + '"><h3>' + face(m, 'mini') + esc(m) + (m === rateState.member ? '<span class="you">You</span>' : '') + '</h3>' +
       kv('Picks', picks.length) +
@@ -2249,6 +2252,7 @@ function renderMembers() {
         kv('Albums rated', given.length + ' of ' + due.length) +
         kv('Comments left', said + ' of ' + due.length) +
         kv('Taste twin', mine ? esc(mine.a === m ? mine.b : mine.a) + ' (' + mine.gap.toFixed(1) + ' apart)' : 'Not enough shared ratings') +
+        kv('Most polarized with', opp ? esc(opp.a === m ? opp.b : opp.a) + ' (' + opp.gap.toFixed(1) + ' apart)' : 'Not enough shared ratings') +
         kv('Heard it before shares', (D.shared || []).filter(function (a) { return a.pickedBy === m; }).length) +
       '</details></div>';
   });
